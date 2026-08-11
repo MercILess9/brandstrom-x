@@ -1197,7 +1197,7 @@ const BOppApp = (() => {
                 _newOppId = oppId;
                 for (const qt of _qts) await insertQTToDB(oppId, qt, 'original');
                 // fire-and-forget email notification
-                fetch('https://hdulohaxociujwaziszy.supabase.co/functions/v1/send-notification', {
+                fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

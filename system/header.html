@@ -17,8 +17,8 @@
         padding: 0 32px;
         justify-content: space-between;
         font-family: 'Outfit', 'Sarabun', sans-serif;
-        border-bottom: 11px solid var(--sys-brand);
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border-bottom: 1px solid #f0f0f0;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
     }
 
     /* ─── Brand zone ─── */
@@ -48,66 +48,84 @@
         color: #222;
     }
 
+    .sys-version-badge {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: #888;
+        background: #f2f2f2;
+        border-radius: 6px;
+        padding: 2px 8px;
+        margin-left: 10px;
+        letter-spacing: 0.03em;
+    }
+
+    .sys-version-badge:empty {
+        display: none;
+    }
+
     /* ─── Center menu ─── */
     #sys-nav-inject {
         display: flex;
         align-items: center;
         height: 100%;
-        gap: 4px;
+        gap: 28px;
         position: absolute;
         left: 50%;
         transform: translateX(-50%);
     }
 
     .sys-menu-link {
-        color: #999 !important;
+        position: relative;
+        color: #666 !important;
         text-decoration: none !important;
-        font-size: 0.78rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        padding: 6px 16px;
+        font-size: 1rem;
+        font-weight: 500;
+        padding: 6px 2px;
         display: flex;
         align-items: center;
-        border-radius: 20px;
-        transition: color 0.15s, background 0.15s;
+        transition: color 0.15s;
         cursor: pointer;
         white-space: nowrap;
     }
 
-    .sys-menu-link:hover {
-        color: #fff !important;
+    .sys-menu-link::after {
+        content: '';
+        position: absolute;
+        left: 0; right: 0; bottom: -3px;
+        height: 2px;
         background: var(--sys-brand);
+        transform: scaleX(0);
+        transition: transform 0.15s;
+    }
+
+    .sys-menu-link:hover {
+        color: var(--sys-brand) !important;
     }
 
     .sys-menu-link.active {
-        color: #fff !important;
-        background: var(--sys-brand);
+        color: var(--sys-brand) !important;
         font-weight: 800;
+    }
+
+    .sys-menu-link.active::after {
+        transform: scaleX(1);
     }
 
     /* ─── Right zone ─── */
     .sys-user-zone {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 14px;
     }
 
-    .sys-codename {
-        font-size: 0.78rem;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        color: #555;
-        text-transform: uppercase;
-    }
-
-    .btn-logout {
+    .sys-icon-btn {
+        position: relative;
         background: none;
         border: none;
-        color: #bbb;
-        font-size: 1.15rem;
+        color: #666;
+        font-size: 1.2rem;
         cursor: pointer;
-        padding: 7px 9px;
+        padding: 7px 8px;
         border-radius: 10px;
         transition: color 0.15s, background 0.15s;
         display: flex;
@@ -116,9 +134,174 @@
         line-height: 1;
     }
 
-    .btn-logout:hover {
+    .sys-icon-btn:hover {
+        color: var(--sys-dark);
+        background: #f2f2f2;
+    }
+
+    .sys-noti-dot {
+        position: absolute;
+        top: 5px; right: 6px;
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: #e74c3c;
+        border: 1.5px solid #fff;
+        display: none;
+    }
+
+    .sys-noti-dot.show {
+        display: block;
+    }
+
+    .sys-profile-wrap {
+        position: relative;
+    }
+
+    .sys-avatar-btn {
+        width: 34px; height: 34px;
+        border-radius: 50%;
+        background: var(--sys-brand);
+        color: #fff;
+        border: none;
+        font-size: 1.05rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s;
+    }
+
+    .sys-avatar-btn:hover {
+        background: var(--sys-dark);
+    }
+
+    .sys-profile-menu {
+        display: none;
+        position: absolute;
+        top: 44px; right: 0;
+        background: #fff;
+        border: 1px solid #eee;
+        border-radius: 16px;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.14);
+        width: 250px;
+        padding: 20px 16px 14px;
+        z-index: 1001;
+    }
+
+    .sys-profile-menu.open {
+        display: block;
+    }
+
+    .sys-profile-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding-bottom: 14px;
+        border-bottom: 1px solid #f0f0f0;
+        margin-bottom: 12px;
+    }
+
+    .sys-avatar-lg {
+        width: 56px; height: 56px;
+        border-radius: 50%;
+        background: var(--sys-brand);
+        color: #fff;
+        font-size: 1.6rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+    }
+
+    .sys-profile-name {
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: #222;
+        word-break: break-word;
+    }
+
+    .sys-profile-fullname {
+        font-size: 0.76rem;
+        font-weight: 600;
+        color: #888;
+        margin-top: 2px;
+        word-break: break-word;
+    }
+
+    .sys-profile-email {
+        font-size: 0.74rem;
+        font-weight: 600;
+        color: var(--sys-brand) !important;
+        text-decoration: none !important;
+        margin-top: 4px;
+        word-break: break-word;
+    }
+
+    .sys-profile-email:hover {
+        text-decoration: underline !important;
+    }
+
+    .sys-profile-badges {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        padding-bottom: 14px;
+        border-bottom: 1px solid #f0f0f0;
+        margin-bottom: 12px;
+    }
+
+    .sys-profile-badge {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: #666;
+        background: #f5f5f5;
+        border-radius: 20px;
+        padding: 4px 12px;
+        text-transform: capitalize;
+    }
+
+    .sys-profile-badge:empty {
+        display: none;
+    }
+
+    .sys-profile-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .sys-profile-action, .btn-logout {
+        flex: 1;
+        background: #f5f5f5;
+        border: none;
+        font-size: 0.76rem;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 9px 8px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: background 0.15s;
+    }
+
+    .sys-profile-action {
+        color: #444;
+    }
+
+    .sys-profile-action:hover {
+        background: #ebebeb;
+    }
+
+    .btn-logout {
         color: #e74c3c;
         background: #fff0ee;
+    }
+
+    .btn-logout:hover {
+        background: #ffe1dc;
     }
 </style>
 
@@ -130,15 +313,38 @@
         </a>
         <div class="sys-divider"></div>
         <span class="sys-project-name" id="project-title">---</span>
+        <span class="sys-version-badge" id="project-version"></span>
     </div>
 
     <div id="sys-nav-inject"></div>
 
     <div class="sys-user-zone">
-        <span class="sys-codename" id="user-display"></span>
-        <button class="btn-logout" onclick="handleLogout()" title="Logout">
-            <i class="bi bi-box-arrow-right"></i>
+        <button class="sys-icon-btn" title="Notifications">
+            <i class="bi bi-bell-fill"></i>
+            <span class="sys-noti-dot" id="noti-dot"></span>
         </button>
+        <div class="sys-profile-wrap">
+            <button class="sys-avatar-btn" id="profile-avatar-btn" title="Account"><i class="bi bi-person-fill"></i></button>
+            <div class="sys-profile-menu" id="profile-menu">
+                <div class="sys-profile-card">
+                    <div class="sys-avatar-lg"><i class="bi bi-person-fill"></i></div>
+                    <div class="sys-profile-name" id="user-display"></div>
+                    <div class="sys-profile-fullname" id="user-fullname"></div>
+                    <a class="sys-profile-email" id="user-email" href="#"></a>
+                </div>
+                <div class="sys-profile-badges">
+                    <span class="sys-profile-badge" id="user-department"></span>
+                </div>
+                <div class="sys-profile-actions">
+                    <button class="sys-profile-action" onclick="handleEditProfile()">
+                        <i class="bi bi-pencil-fill"></i> Edit
+                    </button>
+                    <button class="btn-logout" onclick="handleLogout()">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
 </div>

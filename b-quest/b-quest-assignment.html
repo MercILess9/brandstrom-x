@@ -220,8 +220,8 @@
 
     function setupRolePills() {
         const p = getBquestPerms();
-        const canDes = p?._god || p?.ae || p?.designer;
-        const canCre = p?._god || p?.ae || p?.creative;
+        const canDes = p?._god || !!p?.roles?.['Designer'];
+        const canCre = p?._god || !!p?.roles?.['Creative'];
         const desPill = document.getElementById('pill-des');
         const crePill = document.getElementById('pill-cre');
         if (!canDes) { desPill.style.display = 'none'; desPill.classList.remove('active-des'); }
@@ -229,10 +229,12 @@
     }
 
     async function loadProfiles() {
-        const { data } = await supabaseClient.from('b-quest-setting').select('codename, designer, creative').order('codename');
+        const { data } = await supabaseClient
+            .from('b-quest-member-role')
+            .select('codename, role:"b-quest-role"(name)');
         if (!data) return;
-        designers = data.filter(p => p.designer).map(p => p.codename);
-        creatives = data.filter(p => p.creative).map(p => p.codename);
+        designers = data.filter(r => r.role?.name === 'Designer').map(r => r.codename);
+        creatives = data.filter(r => r.role?.name === 'Creative').map(r => r.codename);
     }
 
     async function loadWorkList() {
@@ -325,8 +327,8 @@
 
     function applyFilters() {
         const p = getBquestPerms();
-        const canDes = p?._god || p?.ae || p?.designer;
-        const canCre = p?._god || p?.ae || p?.creative;
+        const canDes = p?._god || !!p?.roles?.['Designer'];
+        const canCre = p?._god || !!p?.roles?.['Creative'];
 
         const qInput = document.getElementById('filterSearch').value.trim().toLowerCase();
         const workInput = document.getElementById('filterWork').value;

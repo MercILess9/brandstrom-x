@@ -1,5 +1,6 @@
 const B_FINANCE_CONFIG = {
     projectName: "B-FINANCE",
+    version: "1.0.4",
     accessKey: 'bfinance',
     menus: [
         { name: "Finance",  link: "b-finance-list.html" },

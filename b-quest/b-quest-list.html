@@ -17,112 +17,196 @@
     <style>
         body { padding-bottom: 120px; }
 
-        /* --- Filter Zone --- */
+        /* ==========================================================================
+           REUSABLE FILTER ZONE — search + sliding status segment + date/today
+           + select dropdowns + collapsible advance panel + reset.
+           Portable pattern: copy this block (CSS + matching HTML + the filter JS
+           near the top of the script block below) into another project's list
+           page as-is; only the data-specific bits (columns, options) need to change.
+           ========================================================================== */
+
         .flt-wrapper { background: #fff; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; }
         .flt-inner { max-width: 1300px; margin: 0 auto; }
         .flt-row { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; }
-        .flt-search { position: relative; flex: 1; min-width: 120px; }
-        .flt-search i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--c-text-muted); }
-        .flt-search-input { background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 15px 8px 40px; font-size: 0.85rem; width: 100%; outline: none; }
-        .flt-pill-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-        .flt-date-group { display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 12px; padding: 0 12px; height: 38px; flex-shrink: 0; }
-        .flt-date-input { border: none; background: transparent; font-size: 0.82rem; color: var(--c-slate); outline: none; font-family: inherit; }
-        
-        .flt-pill { border: 1.5px solid #e2e8f0; background: #fff; border-radius: 20px; padding: 5px 14px; font-size: 0.75rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
-        #pill-designer:hover { background: var(--c-des-bg); border-color: var(--c-des-border); color: var(--c-des); }
-        #pill-designer.active-role { background: var(--c-des-bg); color: var(--c-des); border-color: var(--c-des-border); }
-        #pill-creative:hover { background: var(--c-cre-bg); border-color: var(--c-cre-border); color: var(--c-cre); }
-        #pill-creative.active-role { background: var(--c-cre-bg); color: var(--c-cre); border-color: var(--c-cre-border); }
-        .status-seg { display: flex; border: 1.5px solid #e2e8f0; border-radius: 10px; overflow: hidden; flex-shrink: 0; height: 38px; }
-        .seg-btn { border: none; border-right: 1.5px solid #e2e8f0; background: #fff; padding: 0 18px; font-size: 0.78rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; flex: 1; min-width: 80px; }
-        .seg-btn:last-child { border-right: none; }
-        .seg-btn.active { background: var(--c-accent); color: #1e293b; }
-        .seg-btn:not(.active):hover { background: var(--c-bg); }
+        .flt-right-group { display: flex; align-items: center; gap: 12px; margin-left: auto; }
 
-        .flt-btn-adv { border: 1px solid #e2e8f0; background: #fff; border-radius: 10px; padding: 0 15px; height: 38px; font-size: 0.78rem; font-weight: 700; color: var(--c-slate); cursor: pointer; margin-left: auto; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
-        .flt-btn-adv:hover { background: var(--c-bg); border-color: #cbd5e1; }
-        .flt-btn-adv.active { background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
-        .flt-btn-today { border: 1px solid #e2e8f0; background: #fff; border-radius: 10px; padding: 0 14px; height: 38px; font-size: 0.78rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
-        .flt-btn-today:hover { background: var(--c-bg); border-color: #cbd5e1; }
-        .flt-btn-today.active { background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
-        .bqc-btn-edit:hover { background: var(--c-accent) !important; border-color: var(--c-accent) !important; color: #1e293b !important; }
-        .bqc-btn-more:hover { color: var(--c-text-main); background: #f1f5f9; border-radius: 8px; }
+        /* Shared control affordances, applied once via combined selectors below
+           instead of repeating the same hover/active triplet per widget. */
+        .flt-search-input:hover, .flt-date-group:hover, .flt-btn-adv:hover,
+        .flt-btn-today:hover, .flt-btn-reset:hover {
+            border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(189,196,50,0.2); transform: translateY(-1px);
+        }
+        .flt-btn-adv:hover, .flt-btn-reset:hover { color: var(--c-accent); }
+        .flt-btn-adv.active, .flt-btn-today.active {
+            background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500;
+        }
 
-        .flt-advanced-zone { 
-            max-height: 0; 
-            overflow: hidden; 
-            transition: max-height 0.4s ease-out, opacity 0.3s ease; 
+        /* --- Search --- */
+        .flt-search { position: relative; flex: 0 1 340px; min-width: 120px; }
+        .flt-search .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--c-text-muted); z-index: 2; pointer-events: none; }
+        .flt-search-input { background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; padding: 8px 34px 8px 40px; font-size: 0.85rem; width: 100%; outline: none; transition: 0.2s; }
+        .clear-search-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #cbd5e1; cursor: pointer; z-index: 2; font-size: 0.85rem; transition: color 0.15s; }
+        .clear-search-btn:hover { color: #94a3b8; }
+
+        /* --- Date range + Today --- */
+        .flt-date-today-wrap { display: flex; align-items: center; flex-shrink: 0; }
+        .flt-date-group { display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-right: none; border-radius: 20px 0 0 20px; padding: 0 10px; height: 38px; flex-shrink: 0; transition: 0.2s; }
+        .flt-date-today-wrap.active-filter .flt-date-group { background: var(--c-accent-light); border-color: var(--c-accent); }
+        .flt-date-input { border: none; background: transparent; font-size: 0.78rem; color: var(--c-slate); outline: none; font-family: inherit; width: 108px; }
+        .flt-btn-today { border: 1px solid #e2e8f0; background: #fff; border-radius: 0 20px 20px 0; padding: 0 14px; height: 38px; font-size: 0.78rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
+
+        /* --- Status: iOS-style sliding segmented control, scrolls if it grows --- */
+        .status-seg-wrap { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; flex-shrink: 0; width: 300px; overflow: hidden; }
+        .status-seg-label { flex-shrink: 0; background: #f1f5f9; color: #64748b; font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; }
+        .status-seg-scroll-outer { position: relative; flex: 1; min-width: 0; height: 100%; }
+        .status-seg-scroll { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; height: 100%; padding: 3px; overflow-x: auto; scrollbar-width: none; }
+        .status-seg-scroll::-webkit-scrollbar { display: none; }
+        .status-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
+        .status-seg-scroll-outer::before, .status-seg-scroll-outer::after { content: ''; position: absolute; top: 1px; bottom: 1px; width: 32px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s; }
+        .status-seg-scroll-outer::before { left: 0; background: linear-gradient(to right, rgba(30,41,59,0.16), transparent); }
+        .status-seg-scroll-outer::after { right: 0; background: linear-gradient(to left, rgba(30,41,59,0.16), transparent); }
+        .status-seg-scroll-outer.fade-left::before { opacity: 1; }
+        .status-seg-scroll-outer.fade-right::after { opacity: 1; }
+        .status-seg-btn { position: relative; z-index: 1; border: none; background: transparent; padding: 0 14px; height: 100%; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; flex-shrink: 0; }
+        .status-seg-btn.active { color: #7a8500; }
+        .status-seg-btn:not(.active):hover { color: var(--c-accent); }
+
+        /* --- Select dropdowns (Owner in main row + Role/Work/Type/Assign in advance panel) --- */
+        .flt-right-group .flt-select-box, .flt-advanced-row .flt-select-box { width: 175px; flex-shrink: 0; }
+        .flt-advanced-row .flt-select-box.flt-select-wide { width: 230px; }
+        .flt-right-group .flt-select-input, .flt-advanced-row .flt-select-input { text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+
+        /* --- Advance toggle + Reset --- */
+        .flt-btn-adv { width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; font-size: 1rem; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .flt-btn-reset { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; visibility: hidden; pointer-events: none; }
+        .flt-btn-reset.has-filters { visibility: visible; pointer-events: auto; }
+
+        /* --- Advance panel (collapsible) --- */
+        .flt-advanced-zone {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out, opacity 0.3s ease;
             opacity: 0;
             border-top: 1px dashed transparent;
         }
-        .flt-advanced-zone.show { 
-            max-height: 200px; 
+        .flt-advanced-zone.show {
+            max-height: 200px;
             opacity: 1;
             margin-top: 15px;
             padding-top: 15px;
             border-top: 1px dashed #eee;
         }
         .flt-advanced-row { display: flex; align-items: center; gap: 12px; justify-content: center; flex-wrap: nowrap; }
-        
 
-        .btn-reset { border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; font-size: 0.7rem; font-weight: 800; border-radius: 8px; padding: 6px 15px; cursor: pointer; transition: 0.2s; }
-        .btn-reset:hover { background: #f8fafc; color: var(--c-text-main); border-color: #cbd5e1; }
 
         /* --- Card Styles --- */
-        .bqc-card { background: white; border: 1px solid #eef2f7; border-radius: var(--radius-card); margin-bottom: 12px; border-left: 5px solid #e2e8f0; transition: box-shadow 0.2s ease, transform 0.2s ease; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.05); }
+        .bqc-card { position: relative; z-index: 1; background: white; border: 1px solid #eef2f7; border-radius: var(--radius-card); margin-bottom: 12px; border-left: 5px solid #e2e8f0; transition: box-shadow 0.2s ease, transform 0.2s ease; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.05); }
         .bqc-card:hover { box-shadow: 0 8px 24px -4px rgba(0,0,0,0.09); transform: translateY(-1px); }
-        .bqc-status-done { border-left-color: var(--c-done); }
-        .bqc-status-progress { border-left-color: var(--c-progress); }
-        .bqc-header { padding: 18px 24px; display: flex; align-items: center; }
-        .bqc-info-zone { width: 50%; flex-shrink: 0; padding-right: 20px; cursor: pointer; }
-        .bqc-title { font-weight: 700; font-size: 0.95rem; color: var(--c-text-main); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .bqc-subtitle { font-size: 0.78rem; color: var(--c-text-muted); }
-        .bqc-dl-grid { display: grid; grid-template-columns: 140px 140px; gap: 20px; flex-grow: 1; justify-content: center; cursor: pointer; }
-        .bqc-dl-col { text-align: center; display: flex; flex-direction: column; justify-content: center; height: 42px; }
-        .bqc-dl-label { font-size: 0.55rem; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.5px; }
-        .bqc-dl-label-des { color: var(--c-des); }
-        .bqc-dl-label-cre { color: var(--c-cre); }
-        .bqc-tag { border-radius: 20px; padding: 4px 14px; font-size: 0.76rem; font-weight: 700; display: inline-block; border: 1px solid transparent; }
-        .bqc-tag-des { background: var(--c-des-bg); color: var(--c-des); border-color: var(--c-des-border); }
-        .bqc-tag-cre { background: var(--c-cre-bg); color: var(--c-cre); border-color: var(--c-cre-border); }
-        .bqc-tag-done { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; }
-        .bqc-dl-label-done { color: #94a3b8; }
+        /* :hover's transform gives a card its own stacking context — once
+           the mouse moves off the card that opened the dropdown (into the
+           dropdown itself, which overlaps the next card below), THAT next
+           card gets hovered instead and its own transform/actions can
+           paint on top, since it's later in DOM order. Force the card
+           whose dropdown is actually open above any sibling, independent
+           of which one currently has :hover. */
+        .bqc-card:has(.dropdown-menu.show) { z-index: 20; }
+        .bqc-header { padding: 18px 24px; display: flex; align-items: center; gap: 16px; }
+        .bqc-info-zone { width: 460px; flex-shrink: 0; min-width: 0; cursor: pointer; display: flex; align-items: flex-start; gap: 20px; }
+        .bqc-id-badge { font-size: 0.68rem; font-weight: 800; color: var(--c-muted); letter-spacing: 1px; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 8px; padding: 3px 8px; display: inline-block; flex-shrink: 0; margin-top: 1px; }
+        .bqc-name-col { min-width: 0; flex: 1; }
+        .bqc-title { font-weight: 700; font-size: 0.95rem; color: var(--c-text-main); margin-bottom: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.25; }
+        .bqc-subtitle { font-size: 0.78rem; color: var(--c-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .bqc-actions { width: 170px; display: flex; justify-content: flex-end; align-items: center; gap: 8px; opacity: 0; transition: 0.2s; }
+        /* --- Header role badges (compact, left-aligned, +N overflow) --- */
+        .bqc-badge-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; flex: 1; justify-content: flex-start; cursor: pointer; min-width: 330px; margin-left: 30px; }
+        .bqc-role-badge { border-radius: 20px; padding: 4px 12px; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; border: 1px solid transparent; white-space: nowrap; }
+        .bqc-role-badge .bqc-dot { margin-right: 0; }
+        .bqc-no-role { font-size: 0.72rem; color: #cbd5e1; font-weight: 700; letter-spacing: 0.5px; }
+
+        /* --- Owner / Last Update, stacked, right of badges --- */
+        .bqc-meta-zone { width: 150px; flex-shrink: 0; padding-left: 16px; border-left: 1px solid #eef2f7; }
+        .bqc-meta-line { font-size: 0.7rem; margin-bottom: 4px; white-space: nowrap; display: flex; align-items: center; gap: 4px; min-width: 0; }
+        .bqc-meta-line:last-child { margin-bottom: 0; }
+        .bqc-meta-line i { color: #64748b; font-size: 0.78rem; width: 14px; flex-shrink: 0; text-align: center; }
+        .bqc-meta-line .val { color: #64748b; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+        .bqc-actions { flex-shrink: 0; display: flex; align-items: center; gap: 8px; opacity: 0; transition: 0.2s; }
         .bqc-card:hover .bqc-actions { opacity: 1; }
-        .bqc-btn-more { color: var(--c-text-muted); padding: 6px 8px; border: none; background: transparent; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; border-radius: 8px; transition: 0.15s; }
+        /* The dropdown menu renders below the card's own bounds, so moving
+           the mouse down into it leaves .bqc-card:hover — without this, the
+           menu (and its own button) fades away mid-click, right as you try
+           to reach Share/Delete. Keep it visible for as long as Bootstrap's
+           dropdown is actually open, independent of hover. */
+        .bqc-card:has(.dropdown-menu.show) .bqc-actions { opacity: 1; }
+        /* View + "more" now match — both plain icon-only circles, no
+           border/label — View used to be a bordered pill with a text
+           label, sitting oddly next to the icon-only "more" button. */
+        .bqc-btn-more, .bqc-btn-view { width: 32px; height: 32px; padding: 0; border: none; background: transparent; cursor: pointer; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: 0.15s; flex-shrink: 0; }
+        .bqc-btn-more { color: var(--c-text-muted); }
         .bqc-btn-more:hover, .bqc-btn-more:focus, .bqc-btn-more:active, .bqc-btn-more.show { background: #f1f5f9 !important; color: var(--c-slate) !important; }
+        .bqc-btn-view { color: var(--c-slate); }
+        .bqc-btn-view:hover { background: var(--c-accent); color: #1e293b; }
 
         .bqc-body { background: #fafbfc; border-top: 1px solid #f1f5f9; padding: 20px 24px; border-radius: 0 0 var(--radius-card) var(--radius-card); }
         .bqc-meta-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
         .bqc-meta-pill { background: white; border: 1px solid #eef2f7; padding: 5px 12px; border-radius: 10px; display: flex; align-items: center; gap: 7px; }
+        .bqc-meta-pill i, .bqc-btn-link i { font-size: 0.95rem; line-height: 1; }
         .bqc-meta-label { font-size: 0.65rem; font-weight: 800; color: var(--c-text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
         .bqc-meta-val { font-size: 0.82rem; font-weight: 600; color: var(--c-slate); }
         .bqc-last-update { font-size: 0.7rem; color: var(--c-text-muted); font-weight: 500; display: flex; align-items: center; gap: 5px; }
-        .bqc-btn-link { background: #f0f4c3; border: 1px solid #d4db6a; border-radius: 10px; padding: 5px 12px; font-size: 0.75rem; font-weight: 600; color: #5a6000; text-decoration: none; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .bqc-btn-link { background: #fff; border: 1px solid var(--c-accent); border-radius: 10px; padding: 5px 12px; font-size: 0.75rem; font-weight: 600; color: #7a8500; text-decoration: none; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
         .bqc-btn-link:hover { background: var(--c-accent); border-color: var(--c-accent); color: #1e293b; }
-        .bqc-btn-edit { border-color: #e2e8f0 !important; color: var(--c-slate) !important; height: 31px; padding-top: 0 !important; padding-bottom: 0 !important; display: inline-flex !important; flex-direction: row; align-items: center; justify-content: center; white-space: nowrap; }
-
-        .bqc-layout-row { display: flex; gap: 16px; align-items: stretch; }
-        .bqc-col-30 { width: 30%; display: flex; flex-direction: column; }
-        .bqc-col-40 { width: 40%; display: flex; flex-direction: column; }
-        .bqc-panel-label { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
-        .bqc-panel-label-des { color: var(--c-des); }
-        .bqc-panel-label-cre { color: var(--c-cre); }
+        /* --- Body: Detail (fixed) + role panels (fixed width, scrollable) --- */
+        .bqc-scroll-wrap { position: relative; }
+        /* Was a fade to the panel's own background color — same idea as
+           the status-segmented-control fade, but blending to background
+           instead of a real shadow made it nearly invisible as a "you can
+           scroll" cue. Darker gradient + only shown while there's actually
+           more to scroll (has-scroll, toggled in JS) + a small chevron
+           make the affordance obvious instead of just implied. */
+        .bqc-scroll-wrap::after {
+            content: '';
+            position: absolute;
+            top: 0; right: 0; bottom: 4px;
+            width: 56px;
+            background: linear-gradient(to right, transparent, rgba(30,41,59,0.1));
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .bqc-scroll-wrap.has-scroll::after { opacity: 1; }
+        .bqc-scroll-chevron {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            width: 24px; height: 24px; border-radius: 50%;
+            background: #fff; border: 1px solid #e2e8f0; color: #94a3b8;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.72rem; pointer-events: none;
+            opacity: 0; transition: opacity 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .bqc-scroll-wrap.has-scroll .bqc-scroll-chevron { opacity: 1; }
+        .bqc-layout-row { display: flex; gap: 16px; align-items: stretch; overflow-x: auto; padding-bottom: 4px; }
+        .bqc-col-detail { width: 420px; flex-shrink: 0; display: flex; flex-direction: column; }
+        .bqc-col-role { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; }
+        .bqc-panel-label { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 7px; margin-bottom: 10px; white-space: nowrap; }
         .bqc-panel-label-detail { color: var(--c-slate); }
 
         .bqc-panel { background: #fff; border: 1px solid #eef2f7; border-radius: 14px; padding: 16px 18px; flex: 1; }
-        .bqc-panel-des { border-color: var(--c-des-border); border-left: 3px solid var(--c-des); }
-        .bqc-panel-cre { border-color: var(--c-cre-border); border-left: 3px solid var(--c-cre); }
+        .bqc-panel-role { border-left: 3px solid; }
         .bqc-panel-empty { border: 1.5px dashed #e2e8f0; background: transparent; border-radius: 14px; flex: 1; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
 
         .bqc-item { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.8rem; color: var(--c-slate); }
         .bqc-val { font-weight: 600; color: var(--c-text-main); }
         .bqc-dot { height: 7px; width: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-        .bqc-dot-progress { background-color: var(--c-progress); }
-        .bqc-dot-done { background-color: var(--c-done); }
 
         .fab-add { position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px; background: #1e293b; color: #bdc432; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); cursor: pointer; border: none; z-index: 1000; transition: 0.3s; }
+
+        /* --- Slim scrollbars for the card body (Detail vertical + role panel row horizontal) --- */
+        .bqc-panel, .bqc-layout-row { scrollbar-width: thin; scrollbar-color: #d4dae3 transparent; }
+        .bqc-panel::-webkit-scrollbar, .bqc-layout-row::-webkit-scrollbar { width: 6px; height: 6px; }
+        .bqc-panel::-webkit-scrollbar-track, .bqc-layout-row::-webkit-scrollbar-track { background: transparent; }
+        .bqc-panel::-webkit-scrollbar-thumb, .bqc-layout-row::-webkit-scrollbar-thumb { background: #d4dae3; border-radius: 10px; }
+        .bqc-panel::-webkit-scrollbar-thumb:hover, .bqc-layout-row::-webkit-scrollbar-thumb:hover { background: #b8c0cc; }
         .fab-add:hover { transform: scale(1.1) rotate(90deg); background: #0f172a; }
     </style>
 </head>
@@ -132,36 +216,41 @@
     <div class="flt-inner">
         <div class="flt-row">
             <div class="flt-search">
-                <i class="bi bi-search"></i>
+                <i class="bi bi-search search-icon"></i>
                 <input type="text" class="flt-search-input" id="globalSearch" placeholder="Search...">
+                <i class="bi bi-x-circle-fill clear-search-btn" id="clearSearchBtn" style="display:none;"></i>
             </div>
-            <div class="flt-date-group">
-                <input type="date" class="flt-date-input" id="startDate">
-                <span style="color:#cbd5e1; padding: 0 5px;">-</span>
-                <input type="date" class="flt-date-input" id="endDate">
+            <div class="flt-right-group">
+                <div class="status-seg-wrap">
+                    <span class="status-seg-label">Status</span>
+                    <div class="status-seg-scroll-outer" id="statusSegOuter">
+                        <div class="status-seg-scroll" id="statusSegWrap">
+                            <div class="status-seg-slider" id="statusSegSlider"></div>
+                            <!-- Buttons rendered by renderStatusSeg() from b-quest-status — Status
+                                 is admin-configurable, so this can't be a fixed All/Progress/Done set. -->
+                        </div>
+                    </div>
+                </div>
+                <div class="flt-date-today-wrap">
+                    <div class="flt-date-group">
+                        <input type="date" class="flt-date-input" id="startDate">
+                        <span style="color:#cbd5e1; padding: 0 2px;">-</span>
+                        <input type="date" class="flt-date-input" id="endDate">
+                    </div>
+                    <button class="flt-btn-today" id="btnToday">Today</button>
+                </div>
+                <div class="flt-select-box"><span class="flt-select-tag">Owner</span><select class="flt-select-input" id="filterOwner"></select></div>
+                <button class="flt-btn-adv" id="toggleFilters" title="Advance Filters"><i class="bi bi-sliders"></i></button>
+                <button class="flt-btn-reset" id="clearAllBtn" onclick="resetAllFilters()" title="Clear all filters"><i class="bi bi-arrow-counterclockwise"></i></button>
             </div>
-            <button class="flt-btn-today" id="btnToday"><i class="bi bi-calendar-check"></i> Today</button>
-            <div style="width: 1px; height: 24px; background: #e2e8f0; margin: 0 5px;"></div>
-            <div class="flt-pill-group">
-                <button id="pill-designer" class="flt-pill" onclick="togglePill(this, 'designer')"><i class="bi bi-brush"></i> Designer</button>
-                <button id="pill-creative" class="flt-pill" onclick="togglePill(this, 'creative')"><i class="bi bi-rocket"></i> Creative</button>
-            </div>
-            <button class="flt-btn-adv" id="toggleFilters"><i class="bi bi-sliders"></i> Advance</button>
         </div>
 
         <div class="flt-advanced-zone" id="advancedFilterZone">
             <div class="flt-advanced-row">
-                <div class="status-seg">
-                    <button id="seg-all" class="seg-btn active" onclick="setStatusFilter('all')"><i class="bi bi-grid-fill"></i> All</button>
-                    <button id="seg-progress" class="seg-btn" onclick="setStatusFilter('progress')"><i class="bi bi-hourglass-split"></i> Progress</button>
-                    <button id="seg-done" class="seg-btn" onclick="setStatusFilter('done')"><i class="bi bi-check-circle"></i> Done</button>
-                </div>
-                <div style="width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; flex-shrink:0;"></div>
-                <div class="flt-select-box"><span class="flt-select-tag">Work</span><select class="flt-select-input" id="filterWork"></select></div>
+                <div class="flt-select-box"><span class="flt-select-tag">Role</span><select class="flt-select-input" id="filterRole"><option value="">All</option></select></div>
+                <div class="flt-select-box flt-select-wide"><span class="flt-select-tag">Work</span><select class="flt-select-input" id="filterWork"></select></div>
                 <div class="flt-select-box"><span class="flt-select-tag">Type</span><select class="flt-select-input" id="filterType"></select></div>
                 <div class="flt-select-box"><span class="flt-select-tag">Assign</span><select class="flt-select-input" id="filterAssign"></select></div>
-                <div class="flt-select-box"><span class="flt-select-tag">Owner</span><select class="flt-select-input" id="filterOwner"></select></div>
-                <button class="btn-reset" onclick="resetAdvanced()">RESET</button>
             </div>
         </div>
     </div>
@@ -179,9 +268,14 @@
 
 
 <script>
-    const SEARCH_COLUMNS = ['account_name', 'opportunity_name', 'task_name', 'detail', 'designer_assign', 'creative_assign', 'owner'];
+    const SEARCH_COLUMNS = ['account_name', 'opportunity_name', 'task_name', 'detail', 'owner'];
     let dataList = [];
-    let assignList = [];
+    let roleList = [];       // [{id, name, color, active}]
+    let roleColorMap = {};   // role_id -> color
+    let roleNameMap = {};    // role_id -> name (role_id is what's actually stored on task-role/work rows; name can be renamed anytime from Settings, so display always goes through this live lookup, never a frozen copy)
+    let statusList = [];     // [{id, name, color}], sort_order-ascending, as configured in Settings — drives the Status segmented filter and card status colors, no fixed set assumed
+    let statusColorMap = {}; // status_id -> color (id-keyed, not name — a rename in Settings must not break filtering/display of tasks saved under the old name)
+    let statusNameMap = {};  // status_id -> name (current, live — a task-role row's own .status text is frozen at save time)
     let currentPage = 0;
     let isFetching = false;
     let hasMore = true;
@@ -208,26 +302,89 @@
         selectEl.appendChild(group);
     }
 
+    function activeRoles() {
+        const v = document.getElementById('filterRole')?.value;
+        return v ? [v] : [];
+    }
+
     // --- Main Logic ---
     async function loadMasterData() {
         try {
-            const [workRes, profileRes] = await Promise.all([
-                supabaseClient.from('b-quest-work').select('work, day, weight, role').order('work'),
-                supabaseClient.from('b-quest-setting').select('codename, designer, creative').order('codename')
+            const [workRes, roleRes, taskRoleRes, typeRes, statusRes] = await Promise.all([
+                supabaseClient.from('b-quest-work').select('work, day, weight, max_per_day, role_id').order('work'),
+                supabaseClient.from('b-quest-role').select('id, name, color, active').order('name'),
+                supabaseClient.from('b-quest-task-role').select('role_id, assign').not('assign', 'is', null),
+                supabaseClient.from('b-quest-type').select('name').eq('active', true).order('sort_order'),
+                supabaseClient.from('b-quest-status').select('id, name, color, active').order('sort_order')
             ]);
 
             dataList = workRes.data || [];
-            assignList = profileRes.data || [];
+            // roleList feeds the Filter dropdown (active-only, same as
+            // before — you shouldn't be able to filter by a retired role).
+            // roleNameMap/roleColorMap feed card display + permission
+            // checks and must cover EVERY role including deactivated ones,
+            // since an existing task can still reference one — otherwise a
+            // deactivated role's name/color lookup silently comes back
+            // empty and canBquestActOnRole() has no role name to match on,
+            // locking Edit/Delete out of tasks that still use it.
+            const allRoles = roleRes.data || [];
+            roleList = allRoles.filter(r => r.active !== false);
+            roleColorMap = Object.fromEntries(allRoles.map(r => [r.id, r.color || '#64748b']));
+            roleNameMap = Object.fromEntries(allRoles.map(r => [r.id, r.name]));
+            // statusList (active-only, sort_order-ascending — order matters,
+            // see resolveCardStatusColor) drives the filter buttons; the
+            // name/color maps cover EVERY status including deactivated
+            // ones, same reasoning as roleNameMap/roleColorMap above.
+            const allStatuses = statusRes.data || [];
+            statusList = allStatuses.filter(s => s.active !== false);
+            statusColorMap = Object.fromEntries(allStatuses.map(s => [s.id, s.color || '#94a3b8']));
+            statusNameMap = Object.fromEntries(allStatuses.map(s => [s.id, s.name]));
 
+            renderRoleFilter();
             renderFilterWork();
-            renderFilterAssign();
+            renderFilterAssign(taskRoleRes.data || []);
+            renderStatusSeg();
 
             const typeEl = document.getElementById('filterType');
             setupDefaultOptions(typeEl, "Type");
-            B_QUEST_CONFIG.listTypes.forEach(t => typeEl.add(new Option(t, t)));
+            (typeRes.data || []).forEach(t => typeEl.add(new Option(t.name, t.name)));
 
             await refreshOwnerFilter();
         } catch (e) { console.error(e); }
+    }
+
+    function renderRoleFilter() {
+        const sel = document.getElementById('filterRole');
+        if (!sel) return;
+        const prev = sel.value;
+        sel.innerHTML = `<option value="">All</option>` + roleList.map(r =>
+            `<option value="${esc(r.id)}">${esc(r.name)}</option>`
+        ).join('');
+        if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+    }
+
+    // Buttons come straight from Settings' Status list — "All" plus one
+    // per configured status, filtered by status_id (see
+    // getMatchingQuestIds) — not name, so renaming a Status in Settings
+    // can't break this filter or desync it from already-saved tasks.
+    // No fixed Progress/Done pair assumed.
+    function renderStatusSeg() {
+        const wrap = document.getElementById('statusSegWrap');
+        if (!wrap) return;
+        const prevValue = getStatusFilter();
+        const buttons = [{ label: 'All', value: '' }, ...statusList.map(s => ({ label: s.name, value: s.id }))];
+        const activeValue = buttons.some(b => b.value === prevValue) ? prevValue : '';
+
+        wrap.querySelectorAll('.status-seg-btn').forEach(b => b.remove());
+        buttons.forEach(b => {
+            const btn = document.createElement('button');
+            btn.className = 'status-seg-btn' + (b.value === activeValue ? ' active' : '');
+            btn.dataset.status = b.value;
+            btn.textContent = b.label;
+            btn.onclick = () => setStatusFilter(b.value);
+            wrap.appendChild(btn);
+        });
+        positionStatusSlider();
     }
 
     async function refreshOwnerFilter() {
@@ -248,55 +405,119 @@
         const currentSelection = filterWork.value;
         setupDefaultOptions(filterWork, "Work");
 
-        const desActive = document.getElementById('pill-designer').classList.contains('active-role');
-        const creActive = document.getElementById('pill-creative').classList.contains('active-role');
-        const showAll = !desActive && !creActive;
-
-        if (desActive || showAll) appendRoleGroup(filterWork, "Designer Work", dataList, 'role', 'Designer', 'work', 'work');
-        if (creActive || showAll) appendRoleGroup(filterWork, "Creative Work", dataList, 'role', 'Creative', 'work', 'work');
+        const active = activeRoles();
+        const showAll = active.length === 0;
+        roleList.forEach(r => {
+            if (showAll || active.includes(r.id)) appendRoleGroup(filterWork, `${r.name} Work`, dataList, 'role_id', r.id, 'work', 'work');
+        });
 
         filterWork.value = currentSelection;
         updateHighlight('filterWork');
     }
 
-    function renderFilterAssign() {
+    function renderFilterAssign(taskRoleRows) {
         const filterAssign = document.getElementById('filterAssign');
         if (!filterAssign) return;
         const currentSelection = filterAssign.value;
         setupDefaultOptions(filterAssign, "Assign");
 
-        const desActive = document.getElementById('pill-designer').classList.contains('active-role');
-        const creActive = document.getElementById('pill-creative').classList.contains('active-role');
-        const showAll = !desActive && !creActive;
+        const active = activeRoles();
+        const showAll = active.length === 0;
+        const byRole = {};
+        taskRoleRows.forEach(r => { (byRole[r.role_id] ||= new Set()).add(r.assign); });
 
-        if (desActive || showAll) appendRoleGroup(filterAssign, "Designers", assignList, 'designer', true, 'codename', 'codename');
-        if (creActive || showAll) appendRoleGroup(filterAssign, "Creatives", assignList, 'creative', true, 'codename', 'codename');
+        roleList.forEach(r => {
+            if (!showAll && !active.includes(r.id)) return;
+            const names = [...(byRole[r.id] || [])].sort((a, b) => a.localeCompare(b, 'th'));
+            if (!names.length) return;
+            const group = document.createElement('optgroup');
+            group.label = `── ${r.name}s ──`;
+            names.forEach(name => group.appendChild(new Option(name, name)));
+            filterAssign.appendChild(group);
+        });
 
         filterAssign.value = currentSelection;
         updateHighlight('filterAssign');
     }
 
     function setStatusFilter(type) {
-        ['all', 'progress', 'done'].forEach(t => {
-            document.getElementById(`seg-${t}`).classList.toggle('active', t === type);
+        const value = type === 'all' ? '' : type;
+        document.querySelectorAll('.status-seg-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.status === value);
         });
+        positionStatusSlider();
         applyFilters();
     }
 
-    function togglePill(btn, type) {
-        const className = 'active-role';
-        btn.classList.toggle(className);
-        if (type === 'designer' || type === 'creative') {
-            renderFilterWork();
-            renderFilterAssign();
-        }
-        applyFilters();
+    function getStatusFilter() {
+        return document.querySelector('.status-seg-btn.active')?.dataset.status || '';
+    }
+
+    function positionStatusSlider() {
+        const active = document.querySelector('.status-seg-btn.active');
+        const slider = document.getElementById('statusSegSlider');
+        if (!active || !slider) return;
+        slider.style.left = active.offsetLeft + 'px';
+        slider.style.width = active.offsetWidth + 'px';
+        active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        updateStatusFade();
+    }
+
+    function updateStatusFade() {
+        const scroll = document.getElementById('statusSegWrap');
+        const outer = document.getElementById('statusSegOuter');
+        if (!scroll || !outer) return;
+        outer.classList.toggle('fade-left', scroll.scrollLeft > 2);
+        outer.classList.toggle('fade-right', scroll.scrollLeft + scroll.clientWidth < scroll.scrollWidth - 2);
+    }
+
+    function onRoleFilterChange() {
+        updateHighlight('filterRole');
+        renderFilterWork();
+        loadMasterData().then(applyFilters); // refresh Work/Assign options against new role selection, then requery
     }
 
     function applyFilters() {
         currentPage = 0; hasMore = true;
-        document.getElementById("taskContainer").innerHTML = ''; 
+        document.getElementById("taskContainer").innerHTML = '';
         fetchQuests();
+        updateClearAllVisibility();
+    }
+
+    function updateClearAllVisibility() {
+        const val = (id) => document.getElementById(id)?.value || "";
+        const anyActive = val('globalSearch') || val('startDate') || val('endDate') || val('filterRole') ||
+            getStatusFilter() || val('filterWork') || val('filterType') || val('filterAssign') || val('filterOwner');
+        const btn = document.getElementById('clearAllBtn');
+        if (btn) btn.classList.toggle('has-filters', !!anyActive);
+    }
+
+    // Query "b-quest-task-role" to find which quest_ids satisfy role/work/type/assign/status/date
+    // filters. Returns null when no such filter is active (= no restriction from this step).
+    // Status filters by status_id (not name — see renderStatusSeg) — a
+    // task shows if ANY of its open roles currently has that status.
+    async function getMatchingQuestIds() {
+        const val = (id) => document.getElementById(id)?.value || "";
+        const roles = activeRoles();
+        const work = val('filterWork'), type = val('filterType'), assign = val('filterAssign');
+        const status = getStatusFilter();
+        const startDate = val('startDate'), endDate = val('endDate');
+
+        let ids = null;
+        if (roles.length || work || type || assign || status || startDate || endDate) {
+            let q = supabaseClient.from('b-quest-task-role').select('quest_id');
+            if (roles.length) q = q.in('role_id', roles);
+            if (work) q = q.eq('work', work);
+            if (type) q = q.eq('type', type);
+            if (assign) q = q.eq('assign', assign);
+            if (status) q = q.eq('status_id', status);
+            if (startDate) q = q.gte('deadline', startDate);
+            if (endDate) q = q.lte('deadline', endDate);
+            const { data } = await q;
+            ids = [...new Set((data || []).map(r => r.quest_id))];
+        }
+
+        return ids;
     }
 
     async function fetchQuests(isFirst = false) {
@@ -306,56 +527,25 @@
         const from = currentPage * limit;
         const to = from + limit - 1;
 
-        let query = supabaseClient.from('b-quest-list').select('*');
-
-        const search = document.getElementById('globalSearch').value.trim();
-        if (search) query = query.or(SEARCH_COLUMNS.map(col => `${col}.ilike.%${search}%`).join(','));
-
-        const designerActive = document.getElementById('pill-designer').classList.contains('active-role');
-        const creativeActive = document.getElementById('pill-creative').classList.contains('active-role');
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-
-        const buildDatePart = (r) => {
-            let conds = [];
-            if (startDate) conds.push(`${r}_deadline.gte.${startDate}`);
-            if (endDate) conds.push(`${r}_deadline.lte.${endDate}`);
-            return conds.length === 1 ? conds[0] : `and(${conds.join(',')})`;
-        };
-
-        if (designerActive || creativeActive) {
-            const build = (r) => {
-                let conds = [`${r}.neq.-`, `${r}.not.is.null`];
-                if (startDate) conds.push(`${r}_deadline.gte.${startDate}`);
-                if (endDate) conds.push(`${r}_deadline.lte.${endDate}`);
-                return `and(${conds.join(',')})`;
-            };
-            let parts = [];
-            if (designerActive) parts.push(build('designer'));
-            if (creativeActive) parts.push(build('creative'));
-            query = query.or(parts.join(','));
-        } else if (startDate || endDate) {
-            query = query.or(`${buildDatePart('designer')},${buildDatePart('creative')}`);
-        }
-
-        const statusFilter = ['all','progress','done'].find(t => document.getElementById(`seg-${t}`)?.classList.contains('active')) || 'all';
-
-        if (statusFilter === 'progress') query = query.or('designer_status.neq.Done,creative_status.neq.Done');
-        else if (statusFilter === 'done') {
-            query = query
-                .or('designer.is.null,designer.eq.-,designer_status.eq.Done')
-                .or('creative.is.null,creative.eq.-,creative_status.eq.Done');
-        }
-
-        const val = (id) => document.getElementById(id)?.value || "";
-        if (val('filterWork')) query = query.or(`designer.eq."${val('filterWork')}",creative.eq."${val('filterWork')}"`);
-        if (val('filterType')) query = query.or(`designer_type.eq."${val('filterType')}",creative_type.eq."${val('filterType')}"`);
-        if (val('filterAssign')) query = query.or(`designer_assign.eq."${val('filterAssign')}",creative_assign.eq."${val('filterAssign')}"`);
-        if (val('filterOwner')) query = query.eq('owner', val('filterOwner'));
-
-        query = query.range(from, to).order('last_update', { ascending: false });
-
         try {
+            const matchIds = await getMatchingQuestIds();
+            if (matchIds !== null && matchIds.length === 0) {
+                if (currentPage === 0) renderCards([]);
+                hasMore = false;
+                return;
+            }
+
+            let query = supabaseClient.from('b-quest-list').select('*, roles:"b-quest-task-role"(*)');
+            if (matchIds !== null) query = query.in('id', matchIds);
+
+            const search = document.getElementById('globalSearch').value.trim();
+            if (search) query = query.or(SEARCH_COLUMNS.map(col => `${col}.ilike.%${search}%`).join(','));
+
+            const val = (id) => document.getElementById(id)?.value || "";
+            if (val('filterOwner')) query = query.eq('owner', val('filterOwner'));
+
+            query = query.range(from, to).order('last_update', { ascending: false });
+
             const { data, error } = await query;
             if (error) throw error;
             if (data.length < limit) hasMore = false;
@@ -364,11 +554,51 @@
         } catch (e) { console.error(e); } finally { isFetching = false; }
     }
 
+    // A card can have multiple open roles, each with its own status — the
+    // card itself needs one representative color. Rule (as specified):
+    // one role -> that status's color; multiple roles all sharing the same
+    // status -> that status's color; multiple roles with different
+    // statuses -> whichever of those statuses sits highest in the Settings
+    // list wins (statusList is already sort_order-ascending, so this is
+    // just "first match in list order").
+    function resolveCardStatusColor(roles) {
+        if (!roles.length) return '#e2e8f0';
+        const present = new Set(roles.map(r => r.status_id).filter(Boolean));
+        const top = statusList.find(s => present.has(s.id));
+        return (top && top.color) || '#94a3b8';
+    }
+
+    // Edit/Delete are scoped Own/All per role now (see canBquestActOnRole),
+    // so unlike Duplicate/Share (flat, task-independent) these can't be
+    // computed once for the whole list — a task's own role rows (who's
+    // assigned to each) decide it per task.
+    // Edit shows if the user can act on AT LEAST ONE role present (the
+    // Modal itself further disables the role cards they don't own).
+    // Delete only shows if they fully cover EVERY role on the task — a
+    // partial-coverage user removes their own role via Edit instead of
+    // hard-deleting a task that still has someone else's work on it.
+    function taskEditDelete(task) {
+        const roles = task.roles || [];
+        // No role rows at all (e.g. an orphaned task from a save that
+        // failed partway through) — there's nothing to check Own/All
+        // against, so fall back to the flat permission instead of leaving
+        // it permanently stuck with neither button ever showing.
+        if (!roles.length) return { canEdit: canBquest('edit'), canDel: canBquest('delete') };
+        let editable = 0, deletable = 0;
+        roles.forEach(r => {
+            const roleName = roleNameMap[r.role_id];
+            if (canBquestActOnRole(roleName, r.assign, 'edit')) editable++;
+            if (canBquestActOnRole(roleName, r.assign, 'delete')) deletable++;
+        });
+        return { canEdit: editable > 0, canDel: deletable === roles.length };
+    }
+
     function renderCards(data) {
         const container = document.getElementById("taskContainer");
-        const canEdit = canBquest('edit');
-        const canNew  = canBquest('new');
-        const canDel  = canBquest('delete');
+        const canDuplicate = canBquest('duplicate');
+        const canShare = canBquest('share');
+
+        if (currentPage === 0) container.innerHTML = '';
 
         if (data.length === 0 && currentPage === 0) {
             container.innerHTML = `
@@ -381,47 +611,68 @@
         }
 
         data.forEach(task => {
-            // --- 1. เช็คสถานะการเปิด Card (Designer / Creative) ---
-            const hasD = !!task.designer && task.designer !== '-' && task.designer !== '';
-            const hasC = !!task.creative && task.creative !== '-' && task.creative !== '';
-            
-            // --- 2. เช็ค Status รวม (ถ้าเปิด Card ไหน ต้อง Done ทุก Card ที่เปิดถึงจะเป็นสีเทา) ---
-            // ถ้าไม่เปิดเลย หรือที่เปิดอยู่ยังไม่ Done จะเป็นสีน้ำเงิน (Progress)
-            const isDone = (hasD || hasC) && 
-                        (!hasD || task.designer_status === 'Done') && 
-                        (!hasC || task.creative_status === 'Done');
-
+            const roles = task.roles || [];
+            const { canEdit, canDel } = taskEditDelete(task);
             const collapseId = `collapse-${task.id}`;
             const card = document.createElement("div");
             card.className = "col-12";
-            
+
+            const badgeHtml = roles.length ? roles.map(r => {
+                const color = roleColorMap[r.role_id] || '#64748b';
+                const roleName = roleNameMap[r.role_id] || 'Unknown';
+                return `<span class="bqc-role-badge" style="background:${color}1a; color:${color}; border-color:${color}40">
+                    <span class="bqc-dot" style="background:${color}"></span>${esc(roleName)}
+                </span>`;
+            }).join('') : '<span class="bqc-no-role">NO ROLE</span>';
+
+            const rolePanelsHtml = roles.length ? roles.map(r => {
+                const color = roleColorMap[r.role_id] || '#64748b';
+                const roleName = roleNameMap[r.role_id] || 'Unknown';
+                return `
+                    <div class="bqc-col-role">
+                        <div class="bqc-panel-label" style="color:${color}"><i class="bi bi-person-workspace"></i> ${esc(roleName).toUpperCase()}</div>
+                        <div class="bqc-panel bqc-panel-role" style="border-left-color:${color}">
+                            <div class="bqc-item"><span>Status</span><span class="bqc-val"><span class="bqc-dot" style="background:${statusColorMap[r.status_id] || '#94a3b8'}"></span>${esc(statusNameMap[r.status_id] || r.status) || '-'}</span></div>
+                            <div class="bqc-item"><span>Type</span><span class="bqc-val">${esc(r.type) || '-'}</span></div>
+                            <div class="bqc-item"><span>Work</span><span class="bqc-val">${esc(r.work) || '-'}</span></div>
+                            <div class="bqc-item"><span>Assign</span><span class="bqc-val">${esc(r.assign) || '-'}</span></div>
+                            <div class="bqc-item mt-2"><span>Deadline</span><span class="bqc-val fw-bold">${formatDate(r.deadline)}</span></div>
+                        </div>
+                    </div>`;
+            }).join('') : '<div class="bqc-col-role"><div class="bqc-panel-empty">NO ROLE OPEN</div></div>';
+
+            const cardStatusColor = resolveCardStatusColor(roles);
             card.innerHTML = `
-                <div class="bqc-card ${isDone ? 'bqc-status-done' : 'bqc-status-progress'}">
+                <div class="bqc-card" style="border-left-color:${cardStatusColor}">
                     <div class="bqc-header">
                         <div class="bqc-info-zone" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
-                            <div class="bqc-title">${esc(task.task_name) || 'Untitled'}</div>
-                            <div class="bqc-subtitle">${esc(task.account_name)} | ${esc(task.opportunity_name)}</div>
+                            <span class="bqc-id-badge">${esc(task.id)}</span>
+                            <div class="bqc-name-col">
+                                <div class="bqc-title">${esc(task.task_name) || 'Untitled'}</div>
+                                <div class="bqc-subtitle">${esc(task.account_name)} | ${esc(task.opportunity_name)}</div>
+                            </div>
                         </div>
 
-                        <div class="bqc-dl-grid" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
-                            <div class="bqc-dl-col">
-                                ${hasD ? `<span class="bqc-dl-label ${task.designer_status === 'Done' ? 'bqc-dl-label-done' : 'bqc-dl-label-des'}">Designer</span><span class="bqc-tag ${task.designer_status === 'Done' ? 'bqc-tag-done' : 'bqc-tag-des'}">${formatDate(task.designer_deadline)}</span>` : ''}
-                            </div>
-                            <div class="bqc-dl-col">
-                                ${hasC ? `<span class="bqc-dl-label ${task.creative_status === 'Done' ? 'bqc-dl-label-done' : 'bqc-dl-label-cre'}">Creative</span><span class="bqc-tag ${task.creative_status === 'Done' ? 'bqc-tag-done' : 'bqc-tag-cre'}">${formatDate(task.creative_deadline)}</span>` : ''}
-                            </div>
+                        <div class="bqc-badge-row" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
+                            ${badgeHtml}
+                        </div>
+
+                        <div class="bqc-meta-zone" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
+                            <div class="bqc-meta-line"><i class="bi bi-person-fill"></i><span class="val">${esc(task.owner) || '-'}</span></div>
+                            <div class="bqc-meta-line"><i class="bi bi-clock"></i><span class="val">${formatDate(task.last_update)}</span></div>
                         </div>
 
                         <div class="bqc-actions">
-                            ${canEdit ? `<button class="btn btn-outline-dark btn-sm rounded-pill px-3 bqc-btn-edit" onclick="openTaskModal('${task.id}', dataList)"><i class="bi bi-pencil me-1"></i>Edit</button>` : ''}
-                            ${canNew ? `<button class="btn btn-outline-dark btn-sm rounded-pill px-3 bqc-btn-edit" onclick="openDuplicateModal('${task.id}', dataList)"><i class="bi bi-copy"></i></button>` : ''}
-                            ${canDel ? `
+                            <button class="bqc-btn-view" onclick="handleViewTask('${task.id}')" title="View"><i class="bi bi-eye"></i></button>
                             <div class="dropdown">
                                 <button class="bqc-btn-more" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
                                 <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg" style="border-radius: 15px;">
-                                    <li> <a class="dropdown-item py-2 text-danger" href="javascript:void(0)" onclick="handleDeleteTask('${task.id}')"> <i class="bi bi-trash3 me-2"></i> Delete </a> </li>
+                                    ${canEdit ? `<li> <a class="dropdown-item py-2" href="javascript:void(0)" onclick="openTaskModal('${task.id}', dataList)"> <i class="bi bi-pencil me-2"></i> Edit </a> </li>` : ''}
+                                    ${canDuplicate ? `<li> <a class="dropdown-item py-2" href="javascript:void(0)" onclick="openDuplicateModal('${task.id}', dataList)"> <i class="bi bi-copy me-2"></i> Duplicate </a> </li>` : ''}
+                                    ${canShare ? `<li> <a class="dropdown-item py-2" href="javascript:void(0)" onclick="handleShareTask('${task.id}')"> <i class="bi bi-share me-2"></i> Share </a> </li>` : ''}
+                                    ${canDel ? `<li> <a class="dropdown-item py-2 text-danger" href="javascript:void(0)" onclick="handleDeleteTask('${task.id}')"> <i class="bi bi-trash3 me-2"></i> Delete </a> </li>` : ''}
                                 </ul>
-                            </div>` : ''}
+                            </div>
                         </div>
                     </div>
 
@@ -429,56 +680,43 @@
                         <div class="bqc-body">
                             <div class="bqc-meta-row">
                                 <div class="d-flex gap-2">
-                                    <div class="bqc-meta-pill"><span class="bqc-meta-label">Owner</span><span class="bqc-meta-val ms-2">${esc(task.owner) || '-'}</span></div>
-                                    <div class="bqc-meta-pill"><span class="bqc-meta-label">Publish</span><span class="bqc-meta-val ms-2">${formatDate(task.publish_date)}</span></div>
+                                    <div class="bqc-meta-pill"><i class="bi bi-calendar3"></i><span class="bqc-meta-label">Publish</span><span class="bqc-meta-val ms-2">${formatDate(task.publish_date)}</span></div>
                                     ${task.link ? `<a href="${safeLink(task.link)}" target="_blank" rel="noopener" class="bqc-btn-link"><i class="bi bi-link-45deg"></i> Link</a>` : ''}
                                 </div>
-                                <div class="bqc-last-update"><i class="bi bi-clock-history"></i> Last Update : ${formatDate(task.last_update)}</div>
                             </div>
 
-                            <div class="bqc-layout-row">
-                                <div class="bqc-col-30">
-                                    <div class="bqc-panel-label bqc-panel-label-des"><i class="bi bi-brush"></i> DESIGNER</div>
-                                    ${hasD ? `
-                                        <div class="bqc-panel bqc-panel-des">
-                                            <div class="bqc-item"><span>Status</span><span class="bqc-val"><span class="bqc-dot ${task.designer_status === 'Done' ? 'bqc-dot-done' : 'bqc-dot-progress'}"></span>${esc(task.designer_status)}</span></div>
-                                            <div class="bqc-item"><span>Type</span><span class="bqc-val">${esc(task.designer_type) || '-'}</span></div>
-                                            <div class="bqc-item"><span>Work</span><span class="bqc-val">${esc(task.designer) || '-'}</span></div>
-                                            <div class="bqc-item"><span>Assign</span><span class="bqc-val">${(task.designer_assign && task.designer_assign !== '-') ? esc(task.designer_assign) : '-'}</span></div>
-                                            <div class="bqc-item mt-2"><span>Deadline</span><span class="bqc-val fw-bold">${formatDate(task.designer_deadline)}</span></div>
+                            <div class="bqc-scroll-wrap">
+                                <div class="bqc-layout-row">
+                                    <div class="bqc-col-detail">
+                                        <div class="bqc-panel-label bqc-panel-label-detail"><i class="bi bi-justify-left"></i> DETAIL</div>
+                                        <div class="bqc-panel" style="overflow-y: auto; overflow-wrap: anywhere; color: #64748b; font-size: 0.85rem; line-height: 1.5;">
+                                            ${task.detail ? task.detail.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') : 'No details provided.'}
                                         </div>
-                                    ` : '<div class="bqc-panel-empty">NO DESIGNER</div>'}
-                                </div>
-
-                                <div class="bqc-col-30">
-                                    <div class="bqc-panel-label bqc-panel-label-cre"><i class="bi bi-rocket"></i> CREATIVE</div>
-                                    ${hasC ? `
-                                        <div class="bqc-panel bqc-panel-cre">
-                                            <div class="bqc-item"><span>Status</span><span class="bqc-val"><span class="bqc-dot ${task.creative_status === 'Done' ? 'bqc-dot-done' : 'bqc-dot-progress'}"></span>${esc(task.creative_status)}</span></div>
-                                            <div class="bqc-item"><span>Type</span><span class="bqc-val">${esc(task.creative_type) || '-'}</span></div>
-                                            <div class="bqc-item"><span>Work</span><span class="bqc-val">${esc(task.creative) || '-'}</span></div>
-                                            <div class="bqc-item"><span>Assign</span><span class="bqc-val">${(task.creative_assign && task.creative_assign !== '-') ? esc(task.creative_assign) : '-'}</span></div>
-                                            <div class="bqc-item mt-2"><span>Deadline</span><span class="bqc-val fw-bold">${formatDate(task.creative_deadline)}</span></div>
-                                        </div>
-                                    ` : '<div class="bqc-panel-empty">NO CREATIVE</div>'}
-                                </div>
-
-                                <div class="bqc-col-40">
-                                    <div class="bqc-panel-label bqc-panel-label-detail"><i class="bi bi-justify-left"></i> DETAIL</div>
-                                    <div class="bqc-panel" style="overflow-y: auto; color: #64748b; font-size: 0.85rem; line-height: 1.5;">
-                                        ${task.detail ? task.detail.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') : 'No details provided.'}
                                     </div>
+                                    ${rolePanelsHtml}
                                 </div>
+                                <i class="bi bi-chevron-right bqc-scroll-chevron"></i>
                             </div>
                         </div>
                     </div>
                 </div>`;
-                
+
             container.appendChild(card);
         });
     }
 
-    function resetAdvanced() {
+    function handleViewTask(id) {
+        notify('', 'View page coming soon', 'info');
+    }
+
+    function resetAllFilters() {
+        document.getElementById('globalSearch').value = '';
+        clearSearchBtn.style.display = 'none';
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = '';
+        document.getElementById('btnToday').classList.remove('active');
+        updateDateHighlight();
+        document.getElementById('filterRole').value = '';
         ['filterWork', 'filterType', 'filterAssign', 'filterOwner'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.value = "";
@@ -491,27 +729,12 @@
         try {
             sessionStorage.removeItem('bx_perms_bquest');
             await initLayout(B_QUEST_CONFIG);
-            applyPermUI();
             await loadMasterData();
-            applyAEOwnerFilter();
+            applyPermUI();
+            positionStatusSlider();
+            document.getElementById('statusSegWrap')?.addEventListener('scroll', updateStatusFade);
             await fetchQuests(true);
         } catch (e) { console.error(e); }
-    }
-
-    function applyAEOwnerFilter() {
-        const p = getBquestPerms();
-        if (!p || p._god || !p.ae) return;
-
-        const user = getBxUser();
-        const codename = user?.codename;
-        if (!codename) return;
-
-        const ownerEl = document.getElementById('filterOwner');
-        const exists = [...ownerEl.options].some(o => o.value === codename);
-        if (exists) {
-            ownerEl.value = codename;
-            updateHighlight('filterOwner');
-        }
     }
 
     function applyPermUI() {
@@ -520,13 +743,14 @@
         const p = getBquestPerms();
         if (!p || p._god) return;
 
-        if (p.ae || (p.designer && p.creative)) {
-            document.getElementById('pill-designer').classList.add('active-role');
-            document.getElementById('pill-creative').classList.add('active-role');
-        } else if (p.designer) {
-            document.getElementById('pill-designer').classList.add('active-role');
-        } else if (p.creative) {
-            document.getElementById('pill-creative').classList.add('active-role');
+        // p.roles is keyed by role NAME (see loadBquestPerms in b-quest.js),
+        // but the filter dropdown's option values are role_id now — bridge
+        // through roleList rather than assuming they're the same string.
+        const allowedRoles = Object.keys(p.roles || {});
+        if (allowedRoles.length === 1) {
+            const match = roleList.find(r => r.name === allowedRoles[0]);
+            const sel = document.getElementById('filterRole');
+            if (sel && match) { sel.value = match.id; updateHighlight('filterRole'); }
         }
     }
 
@@ -536,6 +760,12 @@
         zone.classList.toggle('show');
         btn.classList.toggle('active', zone.classList.contains('show'));
     });
+
+    function updateDateHighlight() {
+        const s = document.getElementById('startDate').value;
+        const e = document.getElementById('endDate').value;
+        document.querySelector('.flt-date-today-wrap').classList.toggle('active-filter', !!(s || e));
+    }
 
     document.getElementById('btnToday').addEventListener('click', () => {
         const today = new Date().toISOString().split('T')[0];
@@ -549,6 +779,7 @@
             s.value = today; e.value = today;
             btn.classList.add('active');
         }
+        updateDateHighlight();
         applyFilters();
     });
 
@@ -560,16 +791,47 @@
                 const s = document.getElementById('startDate').value;
                 const e = document.getElementById('endDate').value;
                 if (s !== today || e !== today) document.getElementById('btnToday').classList.remove('active');
+                updateDateHighlight();
             }
             applyFilters();
         });
     });
 
+    document.getElementById('filterRole')?.addEventListener('change', onRoleFilterChange);
+
     document.getElementById('globalSearch').addEventListener('keypress', e => { if(e.key==='Enter') applyFilters() });
+
+    const searchInput = document.getElementById('globalSearch');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    searchInput.addEventListener('input', () => {
+        clearSearchBtn.style.display = searchInput.value ? 'block' : 'none';
+    });
+    clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        clearSearchBtn.style.display = 'none';
+        searchInput.focus();
+        applyFilters();
+    });
 
     const observer = new IntersectionObserver(entries => {
         if(entries[0].isIntersecting && !isFetching && hasMore) fetchQuests();
     }, { rootMargin: '100px' });
+
+    // Cards render collapsed (Bootstrap sets display:none on .collapse
+    // until first shown), so the role-panel row's scrollWidth reads 0 until
+    // then — can't know if it overflows until the card is actually opened.
+    function updateCardScrollFade(wrap) {
+        const row = wrap?.querySelector('.bqc-layout-row');
+        if (!wrap || !row) return;
+        wrap.classList.toggle('has-scroll', row.scrollWidth - row.scrollLeft - row.clientWidth > 4);
+    }
+    document.getElementById('taskContainer').addEventListener('shown.bs.collapse', e => {
+        updateCardScrollFade(e.target.querySelector('.bqc-scroll-wrap'));
+    });
+    // scroll doesn't bubble, but a capturing listener on an ancestor still sees it
+    document.getElementById('taskContainer').addEventListener('scroll', e => {
+        if (e.target.classList?.contains('bqc-layout-row')) updateCardScrollFade(e.target.closest('.bqc-scroll-wrap'));
+    }, true);
 
     initPage().then(() => observer.observe(document.getElementById('load-more-trigger')));
 </script>

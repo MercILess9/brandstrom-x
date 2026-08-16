@@ -21,6 +21,8 @@
     --c-done: #94a3b8;
     --c-done-bg: #f1f5f9;
     --c-done-border: #e2e8f0;
+    --c-danger: #ef4444;
+    --c-danger-dark: #dc2626;
     --radius-card: 20px;
 }
 
@@ -49,14 +51,44 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 .btn-reset:hover { background: var(--c-bg); color: var(--c-dark); border-color: #cbd5e1; }
 
 /* ── Shared Filter Select Dropdown ── */
-.flt-select-box { background: #fff; border: 1px solid var(--c-border); border-radius: 12px; display: flex; align-items: center; overflow: hidden; height: 38px; transition: 0.2s; }
-.flt-select-box:hover { border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transform: translateY(-1px); }
-.flt-select-tag { background: #f1f5f9; color: var(--c-muted); font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; transition: 0.2s; }
+.flt-select-box { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; display: flex; align-items: center; overflow: hidden; height: 38px; transition: 0.2s; }
+.flt-select-box:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(189,196,50,0.2); transform: translateY(-1px); }
+.flt-select-tag { background: #f1f5f9; color: #64748b; font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; transition: 0.2s; }
 .flt-select-box:hover .flt-select-tag { background: #e8edf2; color: var(--c-slate); }
 .flt-select-input { border: none; font-size: 0.8rem; font-weight: 600; color: var(--c-slate); padding: 0 8px; width: 100%; outline: none; background: transparent; cursor: pointer; font-family: inherit; text-align-last: center; }
 .flt-select-box.active-filter { background: var(--c-accent-light); border-color: var(--c-accent); }
 .flt-select-box.active-filter .flt-select-tag { background: var(--c-accent); color: var(--c-dark); border-right-color: var(--c-accent); }
 .flt-select-box.active-filter:hover { box-shadow: 0 2px 8px rgba(189,196,50,0.2); }
+
+/* ── Shared hover-scale (buttons/swatches that should grow slightly on
+   hover, no color logic — that stays per-button since backgrounds differ) ── */
+.hover-scale { transition: transform 0.15s; }
+.hover-scale:hover { transform: scale(1.06); }
+
+/* ── Shared thin scrollbar (horizontal carousels / long scroll lists) ── */
+.thin-scroll { scrollbar-width: thin; scrollbar-color: #d4dae3 transparent; }
+.thin-scroll::-webkit-scrollbar { height: 6px; }
+.thin-scroll::-webkit-scrollbar-track { background: transparent; }
+.thin-scroll::-webkit-scrollbar-thumb { background: #d4dae3; border-radius: 10px; }
+.thin-scroll::-webkit-scrollbar-thumb:hover { background: #b8c0cc; }
+
+/* ── Shared centered modal dialog (blur backdrop + rounded white panel +
+   translateY entrance) — every "big dialog" on Settings pages uses this
+   same recipe. Pages set only their own modal's width; the overlay/shell/
+   transition mechanics live here once instead of per-modal. ── */
+.modal-overlay-base { position: fixed; inset: 0; background: rgba(15,23,42,0.4); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+.modal-overlay-base.show { opacity: 1; pointer-events: all; }
+.modal-shell-base { background: #fff; border-radius: 24px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.15); transform: translateY(16px); transition: transform 0.25s; overflow: hidden; }
+.modal-overlay-base.show .modal-shell-base { transform: translateY(0); }
+
+/* ── Shared modern checkbox (custom-drawn — native accent-color rendering
+   is inconsistent across browsers and looks dated next to these dialogs) ── */
+.modern-checkbox { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border: 2px solid var(--c-border); border-radius: 6px; background: #fff; cursor: pointer; flex-shrink: 0; position: relative; transition: 0.15s; }
+.modern-checkbox:hover { border-color: var(--c-accent); }
+.modern-checkbox:checked { background: var(--c-accent); border-color: var(--c-accent); }
+.modern-checkbox:checked::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid var(--c-dark); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.modern-checkbox:indeterminate { background: var(--c-accent); border-color: var(--c-accent); }
+.modern-checkbox:indeterminate::after { content: ''; position: absolute; left: 4px; top: 8px; width: 10px; height: 2px; background: var(--c-dark); }
 
 /* ── FAB ── */
 .fab-add { position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px; background: #1e293b; color: #bdc432; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); cursor: pointer; border: none; z-index: 1000; transition: 0.3s; }

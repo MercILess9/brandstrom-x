@@ -166,12 +166,15 @@ async function guardProjectAccess(accessKey) {
 }
 
 async function renderSystemUI(config) {
-    const response = await fetch('/system/header.html?v=' + Date.now());
+    const response = await fetch('/system/header.html');
     const headerHTML = await response.text();
     document.body.insertAdjacentHTML('afterbegin', headerHTML);
 
     if (config.projectName) {
         document.getElementById('project-title').innerText = config.projectName;
+    }
+    if (config.version) {
+        document.getElementById('project-version').innerText = 'v' + config.version;
     }
 
     const menuBar = document.getElementById('sys-nav-inject');
@@ -184,6 +187,35 @@ async function renderSystemUI(config) {
     if (userDisplay) {
         userDisplay.innerText = user?.codename || user?.email || '-';
     }
+    const userFullname = document.getElementById('user-fullname');
+    if (userFullname) {
+        userFullname.innerText = user?.full_name || '';
+    }
+    const userEmail = document.getElementById('user-email');
+    if (userEmail) {
+        userEmail.innerText = user?.email || '';
+        userEmail.href = user?.email ? ('mailto:' + user.email) : '#';
+    }
+    const userDepartment = document.getElementById('user-department');
+    if (userDepartment) {
+        userDepartment.innerText = user?.department || '';
+    }
+
+    const avatarBtn = document.getElementById('profile-avatar-btn');
+    const profileMenu = document.getElementById('profile-menu');
+    if (avatarBtn && profileMenu) {
+        avatarBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileMenu.classList.toggle('open');
+        });
+        document.addEventListener('click', (e) => {
+            if (!profileMenu.contains(e.target) && e.target !== avatarBtn) profileMenu.classList.remove('open');
+        });
+    }
+}
+
+function handleEditProfile() {
+    notify('', 'Edit Profile coming soon', 'info');
 }
 
 async function renderSystemMenu(config) {

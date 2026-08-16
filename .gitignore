@@ -3,3 +3,4 @@
 .DS_Store
 .claude/settings.json
 .claude/projects/
+supabase/.temp/

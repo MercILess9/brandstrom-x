@@ -44,9 +44,12 @@ const B_QUEST_MODAL_HTML = `
     .was-validated .bq-input-modern:invalid { border-color: #dc3545 !important; background-color: #fff8f8; }
     .bq-input-detail { flex-grow: 1; min-height: 100px; text-align: left !important; text-align-last: left !important; resize: none; padding-top: 10px; }
 
-    /* Search button — icon-only, modern */
-    .bq-search-btn { width: 44px; height: 35px; flex-shrink: 0; border: 1px solid #bdc432; border-left: none; border-radius: 0 10px 10px 0; background: #f4f7a1; color: #7a8500; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: 0.2s; }
-    .bq-search-btn:hover { background: #bdc432; color: #fff; border-color: #bdc432; }
+    /* Search button — a soft accent tint so it still reads as "clickable"
+       at a glance (unlike a fully gray/quiet icon button), but restrained
+       rather than the old solid lime-highlighter block — blooms into the
+       full accent color with a soft glow on hover for a bit of polish. */
+    .bq-search-btn { width: 44px; height: 35px; flex-shrink: 0; border: 1px solid var(--c-accent-light); border-left: none; border-radius: 0 10px 10px 0; background: var(--c-accent-light); color: #7a8500; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: 0.2s; }
+    .bq-search-btn:hover { background: var(--c-accent); color: #1e293b; border-color: var(--c-accent); box-shadow: 0 4px 14px rgba(189,196,50,0.35); }
 
     /* ── Role Cards ── */
     .role-card { background: #fff; border-radius: 18px; border: 1.5px solid #eef2f7; margin-bottom: 16px; overflow: hidden; transition: border-color 0.25s, box-shadow 0.25s; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
@@ -125,8 +128,21 @@ const B_QUEST_MODAL_HTML = `
     /* Search overlay */
     .bq-search-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.4); z-index: 10001; display: none; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
     .bq-search-card { background: #fff; width: 480px; max-height: 80vh; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.15); }
-    .uni-item-modern { border: 1px solid #f1f5f9; background: #fff; border-radius: 12px; margin-bottom: 5px; padding: 11px 16px; font-size: 0.85rem; font-weight: 600; text-align: left; cursor: pointer; transition: 0.15s; color: #334155; width: 100%; }
-    .uni-item-modern:hover { background: #f4f7a1; border-color: #bdc432; color: #7a8500; }
+    .bq-search-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--c-border); }
+    .bq-search-title { font-size: 1rem; font-weight: 800; color: var(--c-dark); margin: 0; display: flex; align-items: center; gap: 8px; }
+    .bq-search-title i { color: var(--c-accent); }
+    .bq-uni-search-wrap { position: relative; margin-bottom: 14px; }
+    .bq-uni-search { width: 100%; border-radius: 12px; padding: 9px 34px 9px 14px; font-size: 0.85rem; border: 1px solid var(--c-border); outline: none; font-family: inherit; transition: 0.2s; background: var(--c-bg); box-sizing: border-box; }
+    .bq-uni-search:focus { border-color: var(--c-accent); background: #fff; box-shadow: none; }
+    .bq-uni-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #cbd5e1; cursor: pointer; font-size: 0.85rem; transition: color 0.15s; }
+    .bq-uni-clear:hover { color: #94a3b8; }
+    /* Same row treatment as .bq-am-item below (borderless, subtle hover)
+       instead of the older bordered-box-per-item look — just without the
+       avatar/subtitle, since these rows are plain strings (account/
+       opportunity names) with no person-like metadata to show. */
+    .uni-item-modern { display: flex; align-items: center; border: none; background: none; border-radius: 12px; margin-bottom: 2px; padding: 10px 12px; font-size: 0.85rem; font-weight: 600; text-align: left; cursor: pointer; transition: background 0.15s; color: #334155; width: 100%; font-family: inherit; }
+    .uni-item-modern:hover { background: var(--c-bg); color: var(--c-dark); }
+    #uni-list-container { min-height: 280px; }
 
     /* Assign picker — same visual language as Settings' Add Member list
        (avatar circle, name + subtitle, hover highlight) instead of the
@@ -162,11 +178,14 @@ const B_QUEST_MODAL_HTML = `
         <div class="modal-content">
             <div id="bq-search-overlay" class="bq-search-overlay" onclick="BQuestApp.closeSearchOverlay()">
                 <div class="bq-search-card" onclick="event.stopPropagation()">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-800 m-0">Select Data</h5>
+                    <div class="bq-search-header">
+                        <h5 class="bq-search-title"><i class="bi bi-search" id="uni-search-icon"></i> <span id="uni-search-title">Select Data</span></h5>
                         <button type="button" class="bq-modal-close" onclick="BQuestApp.closeSearchOverlay()"><i class="bi bi-x"></i></button>
                     </div>
-                    <input type="text" class="form-control mb-3" id="uni-search-input" placeholder="Search..." style="border-radius:15px; padding: 12px 15px; border: 1px solid #e2e8f0;">
+                    <div class="bq-uni-search-wrap">
+                        <input type="text" class="bq-uni-search" id="uni-search-input" placeholder="Search...">
+                        <i class="bi bi-x-circle-fill bq-uni-clear" id="uni-search-clear" style="display:none;"></i>
+                    </div>
                     <div id="uni-list-container" style="overflow-y: auto; flex: 1; padding-right:5px;"></div>
                 </div>
             </div>
@@ -684,20 +703,58 @@ const BQuestApp = (() => {
         } catch (e) { console.error(e); }
     }
 
+    // Bumped on every call to openSearchOverlay/openAssignPicker — both
+    // reuse the same #uni-search-* elements, and openSearchOverlay awaits a
+    // DB fetch before wiring them up. If openAssignPicker (synchronous) is
+    // invoked while that fetch is still in flight, the earlier call's
+    // continuation must not overwrite what the newer call already wired —
+    // otherwise the overlay ends up showing "Assign" while actually still
+    // wired to search account/opportunity names (or vice versa).
+    let searchOverlayToken = 0;
+
+    // Shared by openSearchOverlay/openAssignPicker — both reuse the one
+    // #uni-search-input/#uni-search-clear pair in the modal's overlay.
+    function wireSearchClear(searchInput, render) {
+        const clearBtn = el('uni-search-clear');
+        searchInput.oninput = e => {
+            clearBtn.style.display = e.target.value ? 'block' : 'none';
+            render(e.target.value);
+        };
+        clearBtn.onclick = () => {
+            searchInput.value = '';
+            clearBtn.style.display = 'none';
+            searchInput.focus();
+            render('');
+        };
+    }
+
     async function openSearchOverlay(fieldName, targetId) {
+        const myToken = ++searchOverlayToken;
         const container  = el('uni-list-container');
         const searchInput = el('uni-search-input');
+        el('uni-search-icon').className = 'bi bi-search';
+        el('uni-search-title').textContent = fieldName.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
         show('bq-search-overlay', true, 'flex');
         container.innerHTML = '<div class="p-3 text-center text-muted">Loading...</div>';
         searchInput.value = '';
+        el('uni-search-clear').style.display = 'none';
 
         try {
             const { data } = await supabaseClient.from('b-quest-list').select(fieldName);
+            // A newer openSearchOverlay/openAssignPicker call already took
+            // over the shared overlay while this fetch was in flight —
+            // don't clobber whatever it wired up.
+            if (myToken !== searchOverlayToken) return;
             const unique = [...new Set((data || []).map(i => i[fieldName]))].filter(n => n && n !== '-').sort((a,b) => a.localeCompare(b, 'th'));
 
             const render = (filterText = '') => {
                 container.innerHTML = '';
-                unique.filter(i => i.toLowerCase().includes(filterText.toLowerCase())).forEach(val => {
+                const matches = unique.filter(i => i.toLowerCase().includes(filterText.toLowerCase()));
+                if (!matches.length) {
+                    container.innerHTML = `<div class="bq-am-empty">${filterText ? 'No matches' : 'No data yet'}</div>`;
+                    return;
+                }
+                matches.forEach(val => {
                     const btn = document.createElement('button');
                     btn.className = 'uni-item-modern w-100'; btn.innerText = val;
                     btn.onclick = () => { el(targetId).value = val; show('bq-search-overlay', false); };
@@ -705,7 +762,7 @@ const BQuestApp = (() => {
                 });
             };
             render();
-            searchInput.oninput = e => render(e.target.value);
+            wireSearchClear(searchInput, render);
         } catch (e) { console.error(e); }
     }
 
@@ -714,12 +771,16 @@ const BQuestApp = (() => {
         const canAssign = typeof canBquest === 'function' ? canBquest('assign') : false;
         const canEditRole = role && typeof canBquestEditRole === 'function' ? canBquestEditRole(role.name) : true;
         if (!canAssign || !canEditRole) return;
+        searchOverlayToken++; // invalidate any in-flight openSearchOverlay fetch — see comment at its declaration
         const profiles = State.assignProfiles[roleId] || [];
         const container = el('uni-list-container');
         const searchInput = el('uni-search-input');
 
+        el('uni-search-icon').className = 'bi bi-person-check-fill';
+        el('uni-search-title').textContent = 'Assign';
         show('bq-search-overlay', true, 'flex');
         searchInput.value = '';
+        el('uni-search-clear').style.display = 'none';
 
         const render = (filter = '') => {
             container.innerHTML = '';
@@ -737,8 +798,8 @@ const BQuestApp = (() => {
                 (p.full_name || '').toLowerCase().includes(fl) ||
                 (p.department || '').toLowerCase().includes(fl)
             );
-            if (!matches.length && filter) {
-                container.insertAdjacentHTML('beforeend', `<div class="bq-am-empty">No matches</div>`);
+            if (!matches.length) {
+                container.insertAdjacentHTML('beforeend', `<div class="bq-am-empty">${filter ? 'No matches' : 'No candidates for this role'}</div>`);
             }
             matches.forEach(p => {
                 const btn = document.createElement('button');
@@ -755,7 +816,7 @@ const BQuestApp = (() => {
             });
         };
         render();
-        searchInput.oninput = e => render(e.target.value);
+        wireSearchClear(searchInput, render);
     }
 
     el('role-cards-container')?.addEventListener('scroll', updateRoleColFade);
@@ -881,7 +942,14 @@ const BQuestApp = (() => {
 
             const payload = Object.fromEntries(new FormData(form).entries());
             ['publish_date', 'detail', 'link'].forEach(f => { if (payload[f] === '') payload[f] = null; });
-            const isEdit = !!payload.id && payload.id.length > 10;
+            // id used to be a UUID (36 chars), hence the old length check —
+            // it's now the short "BQ-0001" text id (never > 10 chars), so
+            // that check was silently always false, meaning every Edit
+            // secretly created a brand-new duplicate task instead of
+            // updating. Presence alone is the correct signal: it's only
+            // ever set on the form when openModal's edit branch populates
+            // it from an existing task.
+            const isEdit = !!payload.id;
             if (!isEdit) { delete payload.id; payload.owner = getBxUser()?.codename || '-'; }
             payload.last_update = new Date().toISOString();
 

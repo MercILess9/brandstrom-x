@@ -9,240 +9,487 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
+    <script src="/system/save-bar.js"></script>
+    <script src="/system/multi-select.js"></script>
     <script src="b-quest.js"></script>
     <link rel="stylesheet" href="b-quest.css">
 
     <style>
-        .assign-wrapper { max-width: 1300px; margin: 0 auto; padding: 36px 20px 120px; }
+        body { padding-bottom: 120px; }
 
-        .page-header { margin-bottom: 24px; }
+        /* ==========================================================================
+           FILTER ZONE — ported from b-quest-list.html's reusable pattern
+           (search + sliding segmented control + date/today + advance panel +
+           reset). Same mechanic, just fed Role instead of Status here, and
+           Status demoted to a plain dropdown in the advance row instead —
+           this page's primary axis is "which role's queue am I looking
+           at", not status.
+           ========================================================================== */
+        .flt-wrapper { background: #fff; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; border-radius: 16px; border: 1px solid var(--c-border); margin-bottom: 20px; }
+        .flt-inner { max-width: 1300px; margin: 0 auto; }
+        .flt-row { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; }
+        .flt-sort-wrap { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .sort-seg-wrap { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; width: 72px; flex-shrink: 0; padding: 3px; }
+        .sort-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: transform 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
+        .sort-seg-wrap:has(#sortDeadline.active) .sort-seg-slider { transform: translateX(100%); }
+        .sort-seg-btn { position: relative; z-index: 1; flex: 1; height: 100%; border: none; background: transparent; font-size: 0.85rem; color: var(--c-slate); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.2s; }
+        .sort-seg-btn.active { color: #7a8500; }
+        .sort-seg-btn:not(.active):hover { color: var(--c-accent); }
+        .flt-right-group { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+
+        .flt-search-input:hover, .flt-date-group:hover, .flt-btn-adv:hover,
+        .flt-btn-reset:hover {
+            border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(189,196,50,0.2); transform: translateY(-1px);
+        }
+        .flt-btn-adv:hover, .flt-btn-reset:hover { color: var(--c-accent); }
+        .flt-btn-adv.active { background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
+
+        .flt-search { position: relative; flex: 0 1 320px; min-width: 140px; }
+        .flt-search .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--c-text-muted); z-index: 2; pointer-events: none; }
+        .flt-search-input { background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; padding: 8px 34px 8px 40px; font-size: 0.85rem; width: 100%; outline: none; transition: 0.2s; }
+        .clear-search-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #cbd5e1; cursor: pointer; z-index: 2; font-size: 0.85rem; transition: color 0.15s; }
+        .clear-search-btn:hover { color: #94a3b8; }
+
+        .flt-date-today-wrap { display: flex; align-items: center; flex-shrink: 0; }
+        .flt-date-group { display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; padding: 0 14px; height: 38px; flex-shrink: 0; transition: 0.2s; }
+        .flt-date-today-wrap.active-filter .flt-date-group { background: var(--c-accent-light); border-color: var(--c-accent); }
+        .flt-date-input { border: none; background: transparent; font-size: 0.78rem; color: var(--c-slate); outline: none; font-family: inherit; width: 108px; }
+
+        /* Role — same sliding-segment mechanic as Status uses on the List
+           page, single-select ("All" + one button per role). */
+        .role-seg-wrap { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; flex-shrink: 0; width: 400px; overflow: hidden; }
+        .role-seg-label { flex-shrink: 0; background: #f1f5f9; color: #64748b; font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; }
+        .role-seg-scroll-outer { position: relative; flex: 1; min-width: 0; height: 100%; }
+        .role-seg-scroll { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; height: 100%; padding: 3px; overflow-x: auto; scrollbar-width: none; }
+        .role-seg-scroll::-webkit-scrollbar { display: none; }
+        .role-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
+        .role-seg-scroll-outer::before, .role-seg-scroll-outer::after { content: ''; position: absolute; top: 1px; bottom: 1px; width: 32px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s; }
+        .role-seg-scroll-outer::before { left: 0; background: linear-gradient(to right, rgba(30,41,59,0.16), transparent); }
+        .role-seg-scroll-outer::after { right: 0; background: linear-gradient(to left, rgba(30,41,59,0.16), transparent); }
+        .role-seg-scroll-outer.fade-left::before { opacity: 1; }
+        .role-seg-scroll-outer.fade-right::after { opacity: 1; }
+        .role-seg-btn { position: relative; z-index: 1; border: none; background: transparent; padding: 0 14px; height: 100%; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; flex-shrink: 0; display: flex; align-items: center; gap: 5px; }
+        .role-seg-btn.active { color: #7a8500; }
+        .role-seg-btn:not(.active):hover { color: var(--c-accent); }
+
+        .flt-select-box { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; display: flex; align-items: center; overflow: hidden; height: 38px; transition: 0.2s; width: 240px; flex-shrink: 0; }
+        .flt-select-box:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(189,196,50,0.2); transform: translateY(-1px); }
+        .flt-select-tag { background: #f1f5f9; color: #64748b; font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; transition: 0.2s; }
+        .flt-select-box:hover .flt-select-tag { background: #e8edf2; color: var(--c-slate); }
+        .flt-select-input { border: none; font-size: 0.8rem; font-weight: 600; color: var(--c-slate); padding: 0 8px; width: 100%; outline: none; background: transparent; cursor: pointer; font-family: inherit; text-align-last: center; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+        .flt-select-box.active-filter { background: var(--c-accent-light); border-color: var(--c-accent); }
+        .flt-select-box.active-filter .flt-select-tag { background: var(--c-accent); color: var(--c-dark); border-right-color: var(--c-accent); }
+        .flt-select-box.active-filter:hover { box-shadow: 0 2px 8px rgba(189,196,50,0.2); }
+
+        .flt-btn-adv { width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; font-size: 1rem; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .flt-btn-reset { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; visibility: hidden; pointer-events: none; }
+        .flt-btn-reset.has-filters { visibility: visible; pointer-events: auto; }
+
+        .flt-advanced-zone { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out, opacity 0.3s ease; opacity: 0; border-top: 1px dashed transparent; }
+        .flt-advanced-zone.show { max-height: 200px; opacity: 1; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; }
+        .flt-advanced-row { display: flex; align-items: center; gap: 12px; justify-content: center; flex-wrap: nowrap; }
+
+        /* ── Page header ── */
+        .page-header { margin: 0 0 20px; display: flex; align-items: center; gap: 10px; }
         .page-header h1 { font-size: 1.4rem; font-weight: 800; color: var(--c-dark); margin: 0; }
+        .page-header .count-badge { background: var(--c-accent); color: var(--c-dark); border-radius: 20px; padding: 2px 12px; font-size: 0.78rem; font-weight: 800; }
 
-        /* ── Filter Bar ── */
-        .filter-bar {
-            background: #fff; border: 1px solid var(--c-border); border-radius: 16px;
-            padding: 14px 20px; margin-bottom: 20px;
-            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-        }
-        .filter-search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 300px; }
-        .filter-search-wrap i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.82rem; pointer-events: none; }
-        .filter-search { width: 100%; border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 12px 7px 32px; font-size: 0.82rem; color: var(--c-dark); background: var(--c-bg); outline: none; font-family: inherit; transition: 0.2s; box-sizing: border-box; }
-        .filter-search:focus { border-color: var(--c-accent); background: #fff; }
+        .assign-wrapper { max-width: 1300px; margin: 0 auto; padding: 24px 20px 40px; }
 
-        /* Role Pills */
-        .pill-group { display: flex; gap: 6px; }
-        .flt-pill { border: 1.5px solid var(--c-border); background: #fff; border-radius: 20px; padding: 5px 14px; font-size: 0.75rem; font-weight: 700; color: var(--slate); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
-        .flt-pill i { font-size: 0.8rem; }
-        .flt-pill.active-des { background: var(--c-des-bg); color: var(--c-des); border-color: #dbeafe; }
-        .flt-pill.active-cre { background: var(--c-cre-bg); color: var(--c-cre); border-color: #ede9fe; }
+        /* ── Card list — free-floating cards, no wrapping "section" box
+           (a box literally titled "Unassigned" around a page whose only
+           job is showing unassigned items was pointless framing) ── */
+        #list-rows { display: flex; flex-direction: column; gap: 10px; }
 
-        /* Divider */
-        .filter-divider { width: 1px; height: 22px; background: var(--c-border); flex-shrink: 0; }
+        .assign-card { display: flex; align-items: center; gap: 0; background: #fff; overflow: hidden; }
+        .ac-zone { padding: 14px 18px; }
+        .ac-zone + .ac-zone { border-left: 1px solid #f1f5f9; }
 
-        #wrap-filterWork { width: 250px; flex-shrink: 0; }
-        #filterWork { width: 100%; }
+        .ac-left { width: 152px; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; justify-content: center; align-items: center; }
+        /* Role leads this zone now — a full-width bar, not a small pill —
+           since which role a row belongs to matters more at a glance than
+           its own deadline (that's why Role also drives the segmented
+           filter up top, not Status). */
+        .role-badge { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; padding: 6px 10px; border-radius: 10px; width: 100%; box-sizing: border-box; }
+        .quest-id-label { font-size: 0.62rem; font-weight: 700; color: var(--c-muted); letter-spacing: 1px; text-align: center; }
 
-
-        /* ── Card List ── */
-        #list-rows { padding: 14px 16px 20px; display: flex; flex-direction: column; gap: 10px; }
-
-        /* ── Assign Card — CSS Grid ── */
-        .assign-card {
-            display: grid;
-            grid-template-columns: 132px 350px 1fr 168px;
-            background: #fff;
-            border-radius: 14px;
-            border: 1px solid #e8eaf0;
-            border-left: 3px solid;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
-            overflow: hidden;
-            transition: box-shadow 0.2s, transform 0.18s;
-        }
-        .assign-card.card-des { border-left-color: var(--c-des); }
-        .assign-card.card-cre { border-left-color: var(--c-cre); }
-        .assign-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.09); transform: translateY(-1px); }
-
-        /* Zone */
-        .z { padding: 16px 15px; display: flex; flex-direction: column; justify-content: space-between; min-height: 92px; }
-        .z + .z { position: relative; }
-        .z + .z::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 1px; background: #e8ecf2; }
-
-        /* Col 1 — Owner */
-        .z-owner { padding: 14px 12px; align-items: center; text-align: center; justify-content: center; gap: 8px; background: #fafbfc; }
-        .owner-name { font-size: 0.88rem; font-weight: 700; color: #0f172a; line-height: 1.3; }
-        .dl-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
-        .dl-tag.dl-ok      { background: #f1f5f9; color: #b0bac8; }
-        .dl-tag.dl-warning { background: #fef9ec; color: #b88a30; }
-        .dl-tag.dl-urgent  { background: #fff4ed; color: #c06820; }
-        .dl-tag.dl-overdue { background: #fef2f2; color: #c04040; }
-
-        /* Col 2 — Task */
-        .task-name { font-size: 0.93rem; font-weight: 800; color: #0f172a; line-height: 1.35; margin-bottom: 2px; }
-        .task-sub { font-size: 0.74rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .task-tags { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .ac-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+        .task-tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .task-name { min-width: 0; font-size: 0.95rem; font-weight: 800; color: #0f172a; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .task-sub { font-size: 0.78rem; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .meta-chip { background: #f1f5f9; border-radius: 4px; padding: 2px 8px; font-size: 0.67rem; font-weight: 600; color: #64748b; }
-        .pub-date { display: inline-flex; align-items: center; gap: 3px; font-size: 0.67rem; font-weight: 600; color: #94a3b8; }
+        .status-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 4px; padding: 2px 8px; font-size: 0.67rem; font-weight: 700; }
+        .status-chip .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .pub-date { display: inline-flex; align-items: center; gap: 3px; background: #f1f5f9; border-radius: 4px; padding: 2px 8px; font-size: 0.67rem; font-weight: 600; color: #64748b; }
         .task-link { display: inline-flex; align-items: center; gap: 2px; font-size: 0.67rem; font-weight: 600; color: var(--c-accent); text-decoration: none; opacity: 0.85; transition: 0.12s; }
         .task-link:hover { opacity: 1; }
 
-        /* Col 3 — Detail (top-aligned, 3-line scroll) */
-        .z-detail { justify-content: flex-start; font-family: var(--f-sarabun); min-width: 0; }
-        .detail-text { font-size: 0.78rem; color: #64748b; line-height: 1.7; height: calc(0.78rem * 1.7 * 3); overflow-y: auto; scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent; }
-        .detail-text::-webkit-scrollbar { width: 4px; }
-        .detail-text::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+        /* Meta zone — same divider + stacked icon-line pattern as the
+           List page's .bqc-meta-zone/.bqc-meta-line. */
+        .ac-meta { width: 200px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+        .ac-meta-line { font-size: 0.72rem; font-weight: 600; color: #64748b; display: flex; align-items: center; gap: 5px; min-width: 0; }
+        .ac-meta-line i { font-size: 0.8rem; width: 14px; text-align: center; flex-shrink: 0; }
+        .ac-meta-line .val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+        .ac-meta-line.dl-warning { color: #b88a30; }
+        .ac-meta-line.dl-urgent  { color: #c06820; }
+        .ac-meta-line.dl-overdue { color: #c04040; }
 
-        /* Col 4 — Assign */
-        .z-assign { justify-content: space-between; }
-        .role-label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 3px 10px; border-radius: 20px; width: 100%; box-sizing: border-box; }
-        .r-des { color: var(--c-des); background: #dbeafe; }
-        .r-cre { color: var(--c-cre); background: #ede9fe; }
-        .assign-select { width: 100%; border: 1px solid #e2e8f0; border-radius: 10px; padding: 7px 10px; font-size: 0.82rem; font-weight: 600; color: #0f172a; background: #fff; outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; text-align: center; text-align-last: center; font-family: inherit; transition: 0.15s; }
-        .assign-select:hover { border-color: #cbd5e1; }
-        .assign-select:focus { border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 2px rgba(189,196,50,0.15); }
-        .assign-select.is-pending { border-color: var(--c-accent); background: #fefff5; }
+        /* Actions zone — floating, hover-reveal, no boxed/gray background,
+           same mechanic as the List page's .bqc-actions. */
+        /* Fixed width so a longer selected name never reflows ac-mid/ac-meta
+           next to it — without this, picking a name changes this zone's
+           content width, which (being the only non-fixed neighbor) shifts
+           ac-meta's boundary and rows stop lining up with each other. */
+        .ac-actions { width: 240px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 18px; }
+        /* View is purely incidental (hover-only, always). The Assign
+           dropdown gets its own visibility instead — it also stays
+           visible whenever a selection is pending, so the picked name
+           doesn't disappear the moment the mouse leaves the row. */
+        .ac-btn-view { width: 32px; height: 32px; padding: 0; border: none; background: transparent; cursor: pointer; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: 0.15s, opacity 0.2s; flex-shrink: 0; color: var(--c-slate); opacity: 0; }
+        .assign-card-wrap:hover .ac-btn-view { opacity: 1; }
+        .ac-btn-view:hover { background: var(--c-accent); color: #1e293b; }
+        .ac-btn-assign { opacity: 0; max-width: 190px; border: 1px solid transparent; background: var(--c-accent); color: #1e293b; border-radius: 20px; padding: 7px 14px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; transition: filter 0.15s, opacity 0.2s; }
+        .assign-card-wrap:hover .ac-btn-assign,
+        .assign-card-wrap:has(.ac-btn-assign.is-pending) .ac-btn-assign { opacity: 1; }
+        .ac-btn-assign:hover, .ac-btn-assign:focus { filter: brightness(1.06); }
+        .ac-btn-assign .assign-btn-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+        .ac-btn-assign.is-pending { background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
 
-        /* Empty / Skeleton */
-        .empty-state { padding: 60px 24px; text-align: center; color: var(--c-muted); }
+        .ac-detail { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; width: 100%; }
+        .ac-detail.open { max-height: 200px; }
+        .ac-detail-inner { padding: 12px 18px; border-top: 1px solid #f1f5f9; font-size: 0.8rem; color: #64748b; line-height: 1.6; font-family: var(--f-sarabun); max-height: 200px; overflow-y: auto; }
+        .assign-card-wrap { position: relative; z-index: 1; display: flex; flex-direction: column; background: #fff; border-radius: 14px; border: 1px solid #eef2f7; border-left: 3px solid; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.05); overflow: hidden; transition: box-shadow 0.2s, transform 0.15s; }
+        .assign-card-wrap:hover { box-shadow: 0 8px 24px -4px rgba(0,0,0,0.09); }
+
+        /* Assign picker popup — same recipe as the task Modal's own
+           Assign picker (bq-search-overlay/bq-am-item) and Settings'
+           Add Member modal, ported here since this page doesn't load
+           b-quest-modal.js. */
+        .bq-search-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.4); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
+        .bq-search-card { background: #fff; width: 480px; max-height: 80vh; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.15); }
+        .bq-search-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--c-border); }
+        .bq-search-title { font-size: 1rem; font-weight: 800; color: var(--c-dark); margin: 0; display: flex; align-items: center; gap: 8px; }
+        .bq-search-title i { color: var(--c-accent); }
+        .bq-modal-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #94a3b8; transition: 0.2s; flex-shrink: 0; }
+        .bq-modal-close:hover { background: #e2e8f0; color: #1e293b; }
+        .bq-uni-search-wrap { position: relative; margin-bottom: 14px; }
+        .bq-uni-search { width: 100%; border-radius: 12px; padding: 9px 34px 9px 14px; font-size: 0.85rem; border: 1px solid var(--c-border); outline: none; font-family: inherit; transition: 0.2s; background: var(--c-bg); box-sizing: border-box; }
+        .bq-uni-search:focus { border-color: var(--c-accent); background: #fff; box-shadow: none; }
+        .bq-uni-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #cbd5e1; cursor: pointer; font-size: 0.85rem; transition: color 0.15s; }
+        .bq-uni-clear:hover { color: #94a3b8; }
+        .bq-am-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: background 0.15s; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
+        .bq-am-item:hover { background: var(--c-bg); }
+        .bq-am-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--c-accent-light); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: #7a8500; flex-shrink: 0; }
+        .bq-am-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+        .bq-am-nick { font-size: 0.85rem; font-weight: 700; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bq-am-line2 { font-size: 0.72rem; color: var(--c-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bq-am-dept { flex-shrink: 0; font-size: 0.65rem; font-weight: 700; color: var(--c-slate); background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
+        .bq-am-empty { padding: 30px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
+        .bq-am-clear .bq-am-avatar { background: #f1f5f9; color: #94a3b8; }
+        #assign-list-container { min-height: 280px; }
+
+        .empty-state { padding: 60px 24px; text-align: center; color: var(--c-muted); background: #fff; border-radius: 14px; border: 1px dashed var(--c-border); }
         .empty-state i { font-size: 2.2rem; opacity: 0.3; display: block; margin-bottom: 12px; }
         .empty-state p { font-size: 0.85rem; font-weight: 600; margin: 0; }
         .skel { background: #e8eaee; border-radius: 4px; animation: shimmer 1.4s infinite; }
         @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.45} }
 
-        /* ── Floating Save Bar ── */
-        .save-bar {
-            position: fixed; bottom: -120px; left: 50%; transform: translateX(-50%);
-            width: calc(100% - 48px); max-width: 600px;
-            background: #1e293b; border-radius: 16px;
-            padding: 14px 22px;
-            display: flex; align-items: center; justify-content: space-between; gap: 16px;
-            box-shadow: 0 8px 40px rgba(0,0,0,0.25);
-            transition: bottom 0.4s cubic-bezier(0.34,1.56,0.64,1);
-            z-index: 999;
-        }
-        .save-bar.visible { bottom: 24px; }
-        .save-bar-left { display: flex; align-items: center; gap: 12px; color: #fff; }
-        .save-bar-left i { font-size: 1.3rem; color: var(--c-accent); }
-        .save-bar-label { font-size: 0.78rem; font-weight: 800; color: #fff; letter-spacing: 0.3px; }
-        .save-bar-sub { font-size: 0.72rem; color: rgba(255,255,255,0.5); margin-top: 2px; font-weight: 600; }
-        .save-bar-right { display: flex; align-items: center; }
-        .btn-save-main { background: var(--c-accent); color: var(--c-dark); border: none; border-radius: 10px; padding: 9px 26px; cursor: pointer; font-size: 0.84rem; font-weight: 800; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; transition: 0.15s; }
-        .btn-save-main:hover { filter: brightness(1.08); }
-        .btn-save-main:disabled { opacity: 0.55; cursor: not-allowed; }
+        /* Floating Save Bar itself is the shared /system/save-bar.js
+           component now (Cancel + Undo + nav guard built in) — no
+           page-local markup/CSS needed. */
     </style>
 </head>
 <body>
+
+<section id="filter-zone" class="flt-wrapper">
+    <div class="flt-inner">
+        <div class="flt-row">
+            <div class="flt-sort-wrap">
+                <div class="sort-seg-wrap">
+                    <div class="sort-seg-slider" id="sortSegSlider"></div>
+                    <button class="sort-seg-btn active" id="sortLastUpdate" title="Sort by Last Update"><i class="bi bi-clock-history"></i></button>
+                    <button class="sort-seg-btn" id="sortDeadline" title="Sort by Deadline"><i class="bi bi-calendar3"></i></button>
+                </div>
+            </div>
+            <div class="flt-search">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" class="flt-search-input" id="filterSearch" placeholder="Search...">
+                <i class="bi bi-x-circle-fill clear-search-btn" id="clearSearchBtn" style="display:none;"></i>
+            </div>
+            <div class="flt-right-group">
+                <div class="role-seg-wrap">
+                    <span class="role-seg-label">Role</span>
+                    <div class="role-seg-scroll-outer" id="roleSegOuter">
+                        <div class="role-seg-scroll" id="roleSegWrap">
+                            <div class="role-seg-slider" id="roleSegSlider"></div>
+                            <!-- Buttons rendered by renderRoleSeg() from b-quest-role, same
+                                 sliding-segment mechanic as Status uses on the List page. -->
+                        </div>
+                    </div>
+                </div>
+                <div class="flt-date-today-wrap">
+                    <div class="flt-date-group">
+                        <input type="date" class="flt-date-input" id="startDate">
+                        <span style="color:#cbd5e1; padding: 0 2px;">-</span>
+                        <input type="date" class="flt-date-input" id="endDate">
+                    </div>
+                </div>
+                <button class="flt-btn-adv" id="toggleFilters" title="Advance Filters"><i class="bi bi-sliders"></i></button>
+                <button class="flt-btn-reset" id="clearAllBtn" onclick="resetAllFilters()" title="Clear all filters"><i class="bi bi-arrow-counterclockwise"></i></button>
+            </div>
+        </div>
+
+        <div class="flt-advanced-zone" id="advancedFilterZone">
+            <div class="flt-advanced-row">
+                <div class="flt-select-box" id="wrap-filterStatus"></div>
+                <div class="flt-select-box" id="wrap-filterType"></div>
+                <div class="flt-select-box" id="wrap-filterWork"></div>
+                <div class="flt-select-box" id="wrap-filterOwner"></div>
+            </div>
+        </div>
+    </div>
+</section>
 
 <div class="assign-wrapper">
 
     <div class="page-header">
         <h1><i class="bi bi-person-lines-fill me-2" style="color:var(--c-accent)"></i>B-QUEST Assignment</h1>
+        <span class="count-badge" id="badge-count">0</span>
     </div>
 
-    <div class="filter-bar">
-        <div class="filter-search-wrap">
-            <i class="bi bi-search"></i>
-            <input type="text" class="filter-search" id="filterSearch" placeholder="Search task, account...">
-        </div>
-
-        <div class="pill-group">
-            <button id="pill-des" class="flt-pill active-des" onclick="togglePill('des')"><i class="bi bi-brush"></i> Designer</button>
-            <button id="pill-cre" class="flt-pill active-cre" onclick="togglePill('cre')"><i class="bi bi-rocket"></i> Creative</button>
-        </div>
-
-        <div class="flt-select-box" id="wrap-filterOwner">
-            <span class="flt-select-tag">Owner</span>
-            <select class="flt-select-input" id="filterOwner" onchange="onSelectChange('filterOwner')"><option value="">All</option></select>
-        </div>
-        <div class="flt-select-box" id="wrap-filterType">
-            <span class="flt-select-tag">Type</span>
-            <select class="flt-select-input" id="filterType" onchange="onSelectChange('filterType')"><option value="">All</option></select>
-        </div>
-        <div class="flt-select-box" id="wrap-filterWork">
-            <span class="flt-select-tag">Work</span>
-            <select class="flt-select-input" id="filterWork" onchange="onSelectChange('filterWork')"><option value="">All</option></select>
-        </div>
-        <button class="btn-reset" onclick="resetFilters()">RESET</button>
-    </div>
-
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title">
-                <i class="bi bi-hourglass-split" style="color:#f59e0b"></i>
-                Unassigned
-                <span class="section-badge" id="badge-count">0</span>
-            </div>
-        </div>
-        <div id="list-rows"></div>
-        <div id="assign-load-more-trigger" style="height:50px;"></div>
-    </div>
-
-    <div id="save-bar" class="save-bar">
-        <div class="save-bar-left">
-            <i class="bi bi-check2-circle"></i>
-            <div>
-                <div class="save-bar-label">Assignment</div>
-                <div class="save-bar-sub" id="save-bar-sub">0 item</div>
-            </div>
-        </div>
-        <div class="save-bar-right">
-            <button class="btn-save-main" id="save-btn" onclick="saveAll()">
-                <i class="bi bi-floppy2-fill"></i> Save
-            </button>
-        </div>
-    </div>
+    <div id="list-rows"></div>
+    <div id="assign-load-more-trigger" style="height:50px;"></div>
 
 </div>
 
+<div id="assign-search-overlay" class="bq-search-overlay" onclick="closeAssignOverlay()">
+    <div class="bq-search-card" onclick="event.stopPropagation()">
+        <div class="bq-search-header">
+            <h5 class="bq-search-title"><i class="bi bi-person-check-fill"></i> Assign</h5>
+            <button type="button" class="bq-modal-close" onclick="closeAssignOverlay()"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="bq-uni-search-wrap">
+            <input type="text" class="bq-uni-search" id="assign-search-input" placeholder="Search...">
+            <i class="bi bi-x-circle-fill bq-uni-clear" id="assign-search-clear" style="display:none;"></i>
+        </div>
+        <div id="assign-list-container" style="overflow-y: auto; flex: 1; padding-right:5px;"></div>
+    </div>
+</div>
+
 <script>
-    let allRows  = [];
-    let designers = [];
-    let creatives = [];
-    let workList  = [];
+    // ── State ──
+    let roleList = [];          // [{id, name, color, icon}] — roles this user can Assign on
+    let roleNameMap = {};       // role_id -> name
+    let roleColorMap = {};      // role_id -> color
+    let statusList = [];        // [{id, name, color}] — active statuses, for the Status dropdown
+    let statusNameMap = {};     // status_id -> name
+    let statusColorMap = {};    // status_id -> color
+    let assignCandidates = {};  // role_id -> [{codename, full_name, department}] (accept=true members)
+    let workList  = [];         // [{work, role_id}]
+    let typeList  = [];         // [{name}] — active types, for the Type multi-select
     let ownerList = [];
-    let pendingAssign = {};
+    // createMultiSelect() instances — all initialized once in loadPage()
+    let statusFilter, typeFilter, workFilter, ownerFilter;
+    let allRows  = [];          // task-role rows, each with an embedded .quest (b-quest-list fields)
+    let openDetailIds = new Set();
+    let pendingAssign = {};     // taskRoleId -> { taskRoleId, questId, value }
     let assignPage = 0;
     let assignHasMore = true;
     let assignFetching = false;
+    let sortBy = 'last_update'; // 'deadline' | 'last_update'
+    let saveBar;
 
     // ── Init ──
     async function loadPage() {
+        saveBar = createSaveBar({ label: 'B-Quest Assignment', onSave: saveAll, onCancel: cancelAllChanges });
+        setupMultiSelects();
         sessionStorage.removeItem('bx_perms_bquest');
         await initLayout(B_QUEST_CONFIG);
         guardBquestPage('assign');
-        await Promise.all([loadProfiles(), loadWorkList()]);
-        setupRolePills();
-        populateFilterWork();
-        populateFilterType();
-        await loadQuests(true);
+        await Promise.all([loadRoles(), loadAssignCandidates(), loadWorkList(), loadStatusList(), loadTypeList(), loadOwnerList()]);
+        renderRoleSeg();
+        await loadRows(true);
         setupSearch();
         setupInfiniteScroll();
+        setupDateToday();
+        setupSort();
     }
 
-    function setupRolePills() {
-        const p = getBquestPerms();
-        const canDes = p?._god || !!p?.roles?.['Designer'];
-        const canCre = p?._god || !!p?.roles?.['Creative'];
-        const desPill = document.getElementById('pill-des');
-        const crePill = document.getElementById('pill-cre');
-        if (!canDes) { desPill.style.display = 'none'; desPill.classList.remove('active-des'); }
-        if (!canCre) { crePill.style.display = 'none'; crePill.classList.remove('active-cre'); }
+    function setupMultiSelects() {
+        statusFilter = createMultiSelect({
+            trigger: document.getElementById('wrap-filterStatus'),
+            label: 'Status',
+            getOptions: () => statusList.map(s => ({ value: s.id, label: s.name })),
+            onChange: () => applyFilters()
+        });
+        typeFilter = createMultiSelect({
+            trigger: document.getElementById('wrap-filterType'),
+            label: 'Type',
+            getOptions: () => typeList.map(t => ({ value: t.name, label: t.name })),
+            onChange: () => applyFilters()
+        });
+        workFilter = createMultiSelect({
+            trigger: document.getElementById('wrap-filterWork'),
+            label: 'Work',
+            getOptions: workOptions,
+            onChange: () => applyFilters(),
+            width: 340
+        });
+        ownerFilter = createMultiSelect({
+            trigger: document.getElementById('wrap-filterOwner'),
+            label: 'Owner',
+            getOptions: () => ownerList.map(o => ({ value: o, label: o })),
+            onChange: () => applyFilters()
+        });
     }
 
-    async function loadProfiles() {
-        const { data } = await supabaseClient
-            .from('b-quest-member-role')
-            .select('codename, role:"b-quest-role"(name)');
-        if (!data) return;
-        designers = data.filter(r => r.role?.name === 'Designer').map(r => r.codename);
-        creatives = data.filter(r => r.role?.name === 'Creative').map(r => r.codename);
+    // Only roles this user can actually Assign on ever get a tab — no
+    // point showing a queue for a role they can never act on.
+    // (Future: Settings will let the default selected tab be configured
+    // per-member instead of always starting on "All".)
+    async function loadRoles() {
+        const { data } = await supabaseClient.from('b-quest-role').select('id, name, color, icon').eq('active', true).order('sort_order');
+        const all = data || [];
+        roleList = all.filter(r => typeof canBquestEditRole !== 'function' || canBquestEditRole(r.name, 'assign'));
+        roleNameMap = Object.fromEntries(all.map(r => [r.id, r.name]));
+        roleColorMap = Object.fromEntries(all.map(r => [r.id, r.color || '#64748b']));
+    }
+
+    // Candidates to assign TO — only members who can Accept work in that
+    // role (same rule as the Modal's Assign picker), not everyone who
+    // merely has some permission on it.
+    async function loadAssignCandidates() {
+        const { data: memberRoles } = await supabaseClient.from('b-quest-member-role').select('codename, role_id').eq('accept', true);
+        const codenames = [...new Set((memberRoles || []).map(r => r.codename))];
+        const { data: profiles } = codenames.length
+            ? await supabaseClient.from('profiles').select('codename, full_name, department').in('codename', codenames)
+            : { data: [] };
+        const profileMap = Object.fromEntries((profiles || []).map(p => [p.codename, p]));
+        assignCandidates = {};
+        (memberRoles || []).forEach(r => {
+            if (!r.role_id) return;
+            (assignCandidates[r.role_id] ||= []).push(profileMap[r.codename] || { codename: r.codename });
+        });
     }
 
     async function loadWorkList() {
-        const { data } = await supabaseClient.from('b-quest-work').select('work, role').order('work');
+        const { data } = await supabaseClient.from('b-quest-work').select('work, role_id').order('work');
         workList = data || [];
     }
 
-    async function loadQuests(isFirst = false) {
+    async function loadStatusList() {
+        const { data } = await supabaseClient.from('b-quest-status').select('id, name, color').eq('active', true).order('sort_order');
+        statusList = data || [];
+        statusNameMap = Object.fromEntries(statusList.map(s => [s.id, s.name]));
+        statusColorMap = Object.fromEntries(statusList.map(s => [s.id, s.color || '#94a3b8']));
+        // Drop any selected status that no longer exists (renamed/deactivated
+        // in Settings) instead of leaving the filter silently stuck on it.
+        if (statusFilter) statusFilter.setValues(statusFilter.getValues().filter(v => statusList.some(s => s.id === v)));
+    }
+
+    async function loadTypeList() {
+        const { data } = await supabaseClient.from('b-quest-type').select('name').eq('active', true).order('sort_order');
+        typeList = data || [];
+        if (typeFilter) typeFilter.setValues(typeFilter.getValues().filter(v => typeList.some(t => t.name === v)));
+    }
+
+    // ── Role segmented control (single-select, "All" + one per role) ──
+    function renderRoleSeg() {
+        const wrap = document.getElementById('roleSegWrap');
+        if (!wrap) return;
+        const prevValue = getRoleFilter();
+        const buttons = [{ label: 'All', value: '', icon: '' }, ...roleList.map(r => ({ label: r.name, value: r.id, icon: r.icon || 'bi-person-workspace' }))];
+        const activeValue = buttons.some(b => b.value === prevValue) ? prevValue : '';
+
+        wrap.querySelectorAll('.role-seg-btn').forEach(b => b.remove());
+        buttons.forEach(b => {
+            const btn = document.createElement('button');
+            btn.className = 'role-seg-btn' + (b.value === activeValue ? ' active' : '');
+            btn.dataset.role = b.value;
+            btn.innerHTML = b.icon ? `<i class="bi ${b.icon}"></i> ${esc(b.label)}` : esc(b.label);
+            btn.onclick = () => setRoleFilter(b.value);
+            wrap.appendChild(btn);
+        });
+        positionRoleSlider();
+    }
+
+    function setRoleFilter(value) {
+        document.querySelectorAll('.role-seg-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.role === value));
+        positionRoleSlider();
+        if (workFilter) workFilter.setValues(workFilter.getValues().filter(v => workOptions().some(o => o.value === v)));
+        applyFilters();
+    }
+
+    function getRoleFilter() {
+        return document.querySelector('.role-seg-btn.active')?.dataset.role || '';
+    }
+
+    function positionRoleSlider() {
+        const active = document.querySelector('.role-seg-btn.active');
+        const slider = document.getElementById('roleSegSlider');
+        if (!active || !slider) return;
+        slider.style.left = active.offsetLeft + 'px';
+        slider.style.width = active.offsetWidth + 'px';
+
+        // "All" keeps the default accent color (cleared inline styles fall
+        // back to the CSS default); a specific role tints the slider/label
+        // with that role's own color instead.
+        const color = active.dataset.role ? (roleColorMap[active.dataset.role] || '#64748b') : '';
+        document.querySelectorAll('.role-seg-btn').forEach(b => { b.style.color = ''; });
+        if (color) {
+            slider.style.background = hexToRgba(color, 0.15);
+            slider.style.borderColor = color;
+            active.style.color = color;
+        } else {
+            slider.style.background = '';
+            slider.style.borderColor = '';
+        }
+
+        active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        updateRoleSegFade();
+    }
+
+    function updateRoleSegFade() {
+        const scroll = document.getElementById('roleSegWrap');
+        const outer = document.getElementById('roleSegOuter');
+        if (!scroll || !outer) return;
+        outer.classList.toggle('fade-left', scroll.scrollLeft > 2);
+        outer.classList.toggle('fade-right', scroll.scrollLeft + scroll.clientWidth < scroll.scrollWidth - 2);
+    }
+
+    function hexToRgba(hex, alpha) {
+        const h = (hex || '#64748b').replace('#', '');
+        const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+        const n = parseInt(full, 16);
+        return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+    }
+
+    // ── Data ──
+    // Search/Owner live on the parent b-quest-list row, not on
+    // b-quest-task-role itself — same two-step approach List.html uses
+    // (getMatchingQuestIds): find matching quest ids first, then filter
+    // task-role by quest_id. Returns null when neither filter is active
+    // (= no restriction from this step).
+    async function getMatchingQuestIds() {
+        const owners = ownerFilter?.getValues() || [];
+        const qInput = document.getElementById('filterSearch').value.trim();
+        if (!owners.length && !qInput) return null;
+
+        let q = supabaseClient.from('b-quest-list').select('id');
+        if (owners.length) q = q.in('owner', owners);
+        if (qInput) q = q.or(['task_name', 'account_name', 'opportunity_name'].map(col => `${col}.ilike.%${qInput}%`).join(','));
+        const { data } = await q;
+        return (data || []).map(r => r.id);
+    }
+
+    // All filters (role/status/type/work/owner/search/date) are applied
+    // server-side in this query — everything here used to be re-filtered
+    // client-side over whatever had already been paginated into allRows,
+    // which meant Search/filters could only ever "find" something already
+    // scrolled into view and silently missed anything further down the
+    // real dataset. { count: 'exact' } drives the header badge off the
+    // true total, not just what's loaded so far.
+    async function loadRows(isFirst = false) {
         if (assignFetching || (!assignHasMore && !isFirst)) return;
         assignFetching = true;
 
@@ -252,104 +499,179 @@
 
         if (isFirst) document.getElementById('list-rows').innerHTML = skeletonHTML();
 
-        let query = supabaseClient
-            .from('b-quest-list')
-            .select('id, task_name, account_name, opportunity_name, detail, link, publish_date, owner, designer, creative, designer_type, creative_type, designer_deadline, creative_deadline, designer_assign, creative_assign')
-            .or('and(designer.neq.-,designer.not.is.null,designer_assign.is.null),and(designer.neq.-,designer.not.is.null,designer_assign.eq.-),and(creative.neq.-,creative.not.is.null,creative_assign.is.null),and(creative.neq.-,creative.not.is.null,creative_assign.eq.-)')
-            .order('last_update', { ascending: false })
-            .range(from, to);
-
-        const { data, error } = await query;
-        if (error) { console.error(error); assignFetching = false; return; }
-
-        if (data.length < limit) assignHasMore = false;
-
-        const newRows = [];
-        (data || []).forEach(q => {
-            const hasD = q.designer && q.designer !== '-' && q.designer !== '';
-            const hasC = q.creative  && q.creative  !== '-' && q.creative  !== '';
-            if (hasD && (!q.designer_assign || q.designer_assign === '-')) newRows.push({ role: 'Designer', quest: q });
-            if (hasC && (!q.creative_assign  || q.creative_assign  === '-')) newRows.push({ role: 'Creative', quest: q });
-        });
-
-        if (isFirst) {
-            allRows = newRows;
-            ownerList = [...new Set(allRows.map(r => r.quest.owner).filter(o => o && o !== '-'))].sort();
-            populateFilterOwner();
-        } else {
-            allRows = allRows.concat(newRows);
-            const newOwners = newRows.map(r => r.quest.owner).filter(o => o && o !== '-' && !ownerList.includes(o));
-            if (newOwners.length) { ownerList = [...new Set([...ownerList, ...newOwners])].sort(); populateFilterOwner(); }
+        const matchIds = await getMatchingQuestIds();
+        if (matchIds !== null && matchIds.length === 0) {
+            if (isFirst) { allRows = []; renderRows([]); document.getElementById('badge-count').textContent = 0; }
+            assignHasMore = false; assignFetching = false;
+            return;
         }
 
+        let query = supabaseClient
+            .from('b-quest-task-role')
+            .select('id, quest_id, role_id, work, type, deadline, status_id, weight, assign, quest:"b-quest-list"(id, task_name, account_name, opportunity_name, detail, link, publish_date, owner, last_update)', { count: 'exact' })
+            .or('assign.is.null,assign.eq.-')
+            .not('quest_id', 'is', null);
+
+        if (matchIds !== null) query = query.in('quest_id', matchIds);
+
+        // roleList is already scoped to "roles this user can Assign on" —
+        // enforced here even with no specific tab selected ("All"),
+        // otherwise "All" would leak rows for roles the user has no
+        // assign permission on at all.
+        const roleInput = getRoleFilter();
+        query = roleInput ? query.eq('role_id', roleInput) : query.in('role_id', roleList.length ? roleList.map(r => r.id) : ['00000000-0000-0000-0000-000000000000']);
+
+        const statusInputs = statusFilter?.getValues() || [];
+        if (statusInputs.length) query = query.in('status_id', statusInputs);
+        const typeInputs = typeFilter?.getValues() || [];
+        if (typeInputs.length) query = query.in('type', typeInputs);
+        const workInputs = workFilter?.getValues() || [];
+        if (workInputs.length) query = query.in('work', workInputs);
+        const startDate = document.getElementById('startDate').value;
+        if (startDate) query = query.gte('deadline', startDate);
+        const endDate = document.getElementById('endDate').value;
+        if (endDate) query = query.lte('deadline', endDate);
+
+        query = sortBy === 'last_update'
+            ? query.order('last_update', { foreignTable: 'quest', ascending: false, nullsFirst: false })
+            : query.order('deadline', { ascending: true, nullsFirst: false });
+        query = query.range(from, to);
+
+        const { data, error, count } = await query;
+        if (error) { console.error(error); assignFetching = false; return; }
+
+        const newRows = (data || []).filter(r => r.quest); // drop any row whose parent task vanished
+        if (data.length < limit) assignHasMore = false;
+
+        allRows = isFirst ? newRows : allRows.concat(newRows);
         assignPage++;
         assignFetching = false;
-        applyFilters();
+
+        document.getElementById('badge-count').textContent = count ?? allRows.length;
+        renderRows(allRows);
+        updateClearAllVisibility();
     }
 
     function resetAndReload() {
-        assignPage = 0;
-        assignHasMore = true;
-        assignFetching = false;
+        assignPage = 0; assignHasMore = true; assignFetching = false;
         allRows = [];
-        ownerList = [];
-        loadQuests(true);
+        loadRows(true);
+    }
+
+    // Owner options come from a dedicated query (independent of
+    // pagination) so the dropdown always reflects every possible owner,
+    // not just whatever happened to already be loaded.
+    async function loadOwnerList() {
+        const { data } = await supabaseClient.from('b-quest-list').select('owner').not('owner', 'is', null).neq('owner', '-');
+        ownerList = [...new Set((data || []).map(r => r.owner).filter(Boolean))].sort();
+        populateFilterOwner();
     }
 
     function setupInfiniteScroll() {
         const trigger = document.getElementById('assign-load-more-trigger');
         if (!trigger) return;
         const observer = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting && !assignFetching && assignHasMore) loadQuests();
+            if (entries[0].isIntersecting && !assignFetching && assignHasMore) loadRows();
         }, { rootMargin: '100px' });
         observer.observe(trigger);
     }
 
-    // ── Populate filters ──
-    function populateFilterWork() { rebuildWorkFilter(); }
-    function rebuildWorkFilter() {
-        const sel = document.getElementById('filterWork'); const prev = sel.value; sel.innerHTML = '<option value="">All</option>';
-        const desActive = document.getElementById('pill-des').classList.contains('active-des');
-        const creActive = document.getElementById('pill-cre').classList.contains('active-cre');
-        const desWorks = workList.filter(w => w.role === 'Designer'); const creWorks = workList.filter(w => w.role === 'Creative');
-        if (desActive && desWorks.length) { const g = document.createElement('optgroup'); g.label = '── Designer ──'; desWorks.forEach(w => g.appendChild(new Option(w.work, w.work))); sel.appendChild(g); }
-        if (creActive && creWorks.length) { const g = document.createElement('optgroup'); g.label = '── Creative ──'; creWorks.forEach(w => g.appendChild(new Option(w.work, w.work))); sel.appendChild(g); }
-        if ([...sel.options].some(o => o.value === prev)) sel.value = prev; updateSelectHighlight('filterWork');
-    }
-    function populateFilterType() { const sel = document.getElementById('filterType'); sel.innerHTML = '<option value="">All</option>'; B_QUEST_CONFIG.listTypes.forEach(t => sel.appendChild(new Option(t, t))); }
-    function populateFilterOwner() { const sel = document.getElementById('filterOwner'); const prev = sel.value; sel.innerHTML = '<option value="">All</option>'; ownerList.forEach(o => sel.appendChild(new Option(o, o))); if ([...sel.options].some(op => op.value === prev)) sel.value = prev; updateSelectHighlight('filterOwner'); }
-
-    // ── Filter logic ──
-    function togglePill(role) { const btn = document.getElementById('pill-' + role); btn.classList.toggle(role === 'des' ? 'active-des' : 'active-cre'); rebuildWorkFilter(); applyFilters(); }
-    function onSelectChange(id) { updateSelectHighlight(id); applyFilters(); }
-    function updateSelectHighlight(id) { const wrap = document.getElementById('wrap-' + id); wrap.classList.toggle('active-filter', !!document.getElementById(id).value); }
-    function setupSearch() { let timer; document.getElementById('filterSearch').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(applyFilters, 250); }); }
-
-    function applyFilters() {
-        const p = getBquestPerms();
-        const canDes = p?._god || !!p?.roles?.['Designer'];
-        const canCre = p?._god || !!p?.roles?.['Creative'];
-
-        const qInput = document.getElementById('filterSearch').value.trim().toLowerCase();
-        const workInput = document.getElementById('filterWork').value;
-        const typeInput = document.getElementById('filterType').value;
-        const ownerInput = document.getElementById('filterOwner').value;
-        const desOn = document.getElementById('pill-des').classList.contains('active-des');
-        const creOn = document.getElementById('pill-cre').classList.contains('active-cre');
-
-        const rows = allRows.filter(r => {
-            if (r.role === 'Designer' && (!canDes || !desOn)) return false;
-            if (r.role === 'Creative'  && (!canCre || !creOn)) return false;
-            const rWork = r.role === 'Designer' ? r.quest.designer : r.quest.creative;
-            const rType = r.role === 'Designer' ? r.quest.designer_type : r.quest.creative_type;
-            if (workInput && rWork !== workInput) return false;
-            if (typeInput && rType !== typeInput) return false;
-            if (ownerInput && r.quest.owner !== ownerInput) return false;
-            if (qInput) { const hay = [r.quest.task_name, r.quest.account_name, r.quest.opportunity_name, rWork, rType, r.quest.owner].join(' ').toLowerCase(); if (!hay.includes(qInput)) return false; }
-            return true;
+    // ── Filters ──
+    // Live-computed (called fresh each time the Work popover opens), scoped
+    // to whichever role is currently active in the carousel — no separate
+    // "rebuild on role change" step needed, but a role change can still
+    // strand a previously-picked Work value outside the new scope, so
+    // setRoleFilter() prunes against this after switching roles.
+    function workOptions() {
+        const activeRole = getRoleFilter();
+        const opts = [];
+        roleList.filter(r => !activeRole || r.id === activeRole).forEach(r => {
+            workList.filter(w => w.role_id === r.id).forEach(w => {
+                opts.push({ value: w.work, label: w.work, group: r.name });
+            });
         });
-        document.getElementById('badge-count').textContent = rows.length;
-        renderRows(rows);
+        return opts;
+    }
+
+    function populateFilterOwner() {
+        // Drop any selected owner that no longer exists in the fresh list
+        // instead of leaving the filter silently stuck on a name nothing
+        // can match anymore.
+        if (ownerFilter) {
+            const kept = ownerFilter.getValues().filter(v => ownerList.includes(v));
+            ownerFilter.setValues(kept);
+        }
+    }
+
+    function updateDateHighlight() {
+        const s = document.getElementById('startDate').value;
+        const e = document.getElementById('endDate').value;
+        document.querySelector('.flt-date-today-wrap').classList.toggle('active-filter', !!(s || e));
+    }
+    function setupSearch() {
+        let timer;
+        const input = document.getElementById('filterSearch');
+        input.addEventListener('input', () => {
+            document.getElementById('clearSearchBtn').style.display = input.value ? 'block' : 'none';
+            clearTimeout(timer); timer = setTimeout(applyFilters, 250);
+        });
+        document.getElementById('clearSearchBtn').addEventListener('click', () => {
+            input.value = ''; document.getElementById('clearSearchBtn').style.display = 'none';
+            input.focus(); applyFilters();
+        });
+    }
+    function setupDateToday() {
+        document.getElementById('toggleFilters').addEventListener('click', () => {
+            const zone = document.getElementById('advancedFilterZone');
+            const btn = document.getElementById('toggleFilters');
+            zone.classList.toggle('show');
+            btn.classList.toggle('active', zone.classList.contains('show'));
+        });
+        ['startDate', 'endDate'].forEach(id => {
+            document.getElementById(id)?.addEventListener('change', () => {
+                updateDateHighlight();
+                applyFilters();
+            });
+        });
+        document.getElementById('roleSegWrap')?.addEventListener('scroll', updateRoleSegFade);
+    }
+
+    function setupSort() {
+        document.getElementById('sortDeadline').addEventListener('click', () => setSortBy('deadline'));
+        document.getElementById('sortLastUpdate').addEventListener('click', () => setSortBy('last_update'));
+    }
+    function setSortBy(value) {
+        if (sortBy === value) return;
+        sortBy = value;
+        document.getElementById('sortDeadline').classList.toggle('active', value === 'deadline');
+        document.getElementById('sortLastUpdate').classList.toggle('active', value === 'last_update');
+        resetAndReload();
+    }
+
+    // Every filter now drives the server-side query directly (see
+    // loadRows/getMatchingQuestIds) — this just restarts pagination with
+    // the new filter state instead of re-filtering an in-memory page.
+    function applyFilters() {
+        updateClearAllVisibility();
+        resetAndReload();
+    }
+
+    function updateClearAllVisibility() {
+        const val = id => document.getElementById(id)?.value || '';
+        const anyActive = val('filterSearch') || val('startDate') || val('endDate') || getRoleFilter() ||
+            statusFilter?.getValues().length || typeFilter?.getValues().length || workFilter?.getValues().length || ownerFilter?.getValues().length;
+        document.getElementById('clearAllBtn')?.classList.toggle('has-filters', !!anyActive);
+    }
+
+    function resetAllFilters() {
+        document.getElementById('filterSearch').value = ''; document.getElementById('clearSearchBtn').style.display = 'none';
+        document.getElementById('startDate').value = ''; document.getElementById('endDate').value = '';
+        updateDateHighlight();
+        statusFilter?.clear();
+        typeFilter?.clear();
+        workFilter?.clear();
+        ownerFilter?.clear();
+        setRoleFilter('');
     }
 
     // ── Render ──
@@ -359,89 +681,90 @@
 
         container.innerHTML = rows.map(r => {
             const q = r.quest;
-            const isDes = r.role === 'Designer';
-            const rWork = isDes ? q.designer : q.creative;
-            const rType = isDes ? q.designer_type : q.creative_type;
-            const rDL   = isDes ? q.designer_deadline : q.creative_deadline;
-            const options = isDes ? designers : creatives;
-            const key  = `${q.id}__${r.role}`;
-            const pending = pendingAssign[key];
-            const opts = [`<option value="">— Unassigned —</option>`]
-                .concat(options.map(n => `<option value="${n}" ${pending?.value === n ? 'selected' : ''}>${n}</option>`))
-                .join('');
+            const roleName = roleNameMap[r.role_id] || 'Unknown';
+            const color = roleColorMap[r.role_id] || '#64748b';
+            const candidates = assignCandidates[r.role_id] || [];
+            const pending = pendingAssign[r.id];
+            const isOpen = openDetailIds.has(r.id);
+            const toggleAttr = q.detail ? `onclick="toggleDetail('${r.id}')" style="cursor:pointer"` : '';
 
             return `
-            <div class="assign-card ${isDes ? 'card-des' : 'card-cre'}" id="row-${q.id}__${r.role}">
+            <div class="assign-card-wrap" style="border-left-color:${color}" id="row-${r.id}">
+                <div class="assign-card">
+                    <div class="ac-zone ac-left" ${toggleAttr}>
+                        <span class="quest-id-label">${esc(r.quest_id)}</span>
+                        <div class="role-badge" style="background:${hexToRgba(color,0.15)};color:${color}"><i class="bi ${roleIconFor(r.role_id)}"></i> ${esc(roleName)}</div>
+                    </div>
 
-                <div class="z z-owner">
-                    <div class="owner-name">${esc(q.owner) || '—'}</div>
-                    ${rDL ? `<div class="dl-tag ${dlUrgency(rDL)}"><i class="bi bi-calendar3"></i> ${formatDate(rDL, true)}</div>` : ''}
-                </div>
-
-                <div class="z z-task">
-                    <div>
+                    <div class="ac-zone ac-mid" ${toggleAttr}>
                         <div class="task-name">${esc(q.task_name) || 'Untitled'}</div>
-                        ${(q.account_name || q.opportunity_name) ? `<div class="task-sub">${[esc(q.account_name), esc(q.opportunity_name)].filter(Boolean).join(' · ')}</div>` : ''}
+                        ${(q.account_name || q.opportunity_name) ? `<div class="task-sub">${[esc(q.account_name), esc(q.opportunity_name)].filter(Boolean).join(' | ')}</div>` : ''}
+                        <div class="task-tags">
+                            ${statusNameMap[r.status_id] ? `<span class="status-chip" style="background:${hexToRgba(statusColorMap[r.status_id],0.12)};color:${statusColorMap[r.status_id]}"><span class="dot" style="background:${statusColorMap[r.status_id]}"></span>${esc(statusNameMap[r.status_id])}</span>` : ''}
+                            ${r.type ? `<span class="meta-chip">${esc(r.type)}</span>` : ''}
+                            ${r.work ? `<span class="meta-chip">${esc(r.work)}</span>` : ''}
+                            ${q.publish_date ? `<span class="pub-date"><i class="bi bi-send"></i> ${formatDate(q.publish_date)}</span>` : ''}
+                            ${q.link ? `<a class="task-link" href="${safeLink(q.link)}" target="_blank" rel="noopener"><i class="bi bi-link-45deg"></i> Link</a>` : ''}
+                        </div>
                     </div>
-                    <div class="task-tags">
-                        ${rWork ? `<span class="meta-chip">${esc(rWork)}</span>` : ''}
-                        ${rType ? `<span class="meta-chip">${esc(rType)}</span>` : ''}
-                        ${q.publish_date ? `<span class="pub-date"><i class="bi bi-send"></i> ${formatDate(q.publish_date, true)}</span>` : ''}
-                        ${q.link ? `<a class="task-link" href="${esc(q.link)}" target="_blank" rel="noopener"><i class="bi bi-link-45deg"></i> Link</a>` : ''}
+
+                    <div class="ac-zone ac-meta" ${toggleAttr}>
+                        <div class="ac-meta-line ${dlUrgency(r.deadline)}"><i class="bi bi-calendar3"></i><span class="val">${r.deadline ? formatDate(r.deadline) : '-'}</span></div>
+                        <div class="ac-meta-line"><i class="bi bi-person-fill"></i><span class="val">${esc(q.owner) || '-'}</span></div>
+                    </div>
+
+                    <div class="ac-actions">
+                        <button class="ac-btn-view" onclick="handleViewAssignTask('${r.quest_id}')" title="View"><i class="bi bi-eye"></i></button>
+                        <button class="ac-btn-assign ${pending ? 'is-pending' : ''}" type="button" onclick="openAssignPicker('${r.id}','${r.quest_id}','${r.role_id}')">
+                            <i class="bi ${pending ? 'bi-person-check' : 'bi-person-plus'}"></i><span class="assign-btn-label">${pending ? esc(pending.value) : 'Assign'}</span>
+                        </button>
                     </div>
                 </div>
-
-                <div class="z z-detail">
-                    ${q.detail ? `<div class="detail-text">${esc(q.detail)}</div>` : ''}
-                </div>
-
-                <div class="z z-assign">
-                    <div class="role-label ${isDes ? 'r-des' : 'r-cre'}">
-                        <i class="bi bi-${isDes ? 'brush' : 'rocket'}"></i> ${r.role}
-                    </div>
-                    <select class="assign-select ${pending ? 'is-pending' : ''}"
-                        data-quest-id="${q.id}"
-                        data-role="${r.role}"
-                        onchange="onAssignChange(this)">
-                        ${opts}
-                    </select>
-                </div>
-
+                ${q.detail ? `<div class="ac-detail ${isOpen ? 'open' : ''}" id="detail-${r.id}"><div class="ac-detail-inner">${esc(q.detail).replace(/\n/g, '<br>')}</div></div>` : ''}
             </div>`;
         }).join('');
     }
 
+    function roleIconFor(roleId) {
+        const r = roleList.find(x => x.id === roleId);
+        return (r && r.icon) || 'bi-person-workspace';
+    }
+
+    function toggleDetail(taskRoleId) {
+        if (openDetailIds.has(taskRoleId)) openDetailIds.delete(taskRoleId); else openDetailIds.add(taskRoleId);
+        const panel = document.getElementById(`detail-${taskRoleId}`);
+        if (panel) panel.classList.toggle('open');
+    }
+
     function skeletonHTML() {
-        const row = (accent) => `
-        <div class="assign-card ${accent}" style="pointer-events:none">
-            <div class="z z-owner">
-                <div class="skel" style="height:13px;width:72px;border-radius:3px"></div>
-                <div class="skel" style="height:18px;width:68px;border-radius:20px;margin-top:2px"></div>
-            </div>
-            <div class="z z-task">
-                <div>
-                    <div class="skel" style="height:14px;width:70%;border-radius:3px;margin-bottom:6px"></div>
-                    <div class="skel" style="height:10px;width:44%;border-radius:3px"></div>
+        const row = () => `
+        <div class="assign-card-wrap" style="pointer-events:none;border-left-color:#e2e8f0">
+            <div class="assign-card">
+                <div class="ac-zone ac-left">
+                    <div class="skel" style="height:10px;width:50px;border-radius:3px"></div>
+                    <div class="skel" style="height:18px;width:88px;border-radius:20px"></div>
                 </div>
-                <div style="display:flex;gap:5px">
-                    <div class="skel" style="height:17px;width:54px;border-radius:4px"></div>
-                    <div class="skel" style="height:17px;width:42px;border-radius:4px"></div>
+                <div class="ac-zone ac-mid">
+                    <div class="skel" style="height:14px;width:55%;border-radius:3px;margin-bottom:6px"></div>
+                    <div class="skel" style="height:10px;width:38%;border-radius:3px;margin-bottom:8px"></div>
+                    <div style="display:flex;gap:5px"><div class="skel" style="height:17px;width:54px;border-radius:4px"></div><div class="skel" style="height:17px;width:42px;border-radius:4px"></div></div>
                 </div>
-            </div>
-            <div class="z z-detail">
-                <div style="display:flex;flex-direction:column;gap:5px">
-                    <div class="skel" style="height:10px;width:100%;border-radius:3px"></div>
-                    <div class="skel" style="height:10px;width:85%;border-radius:3px"></div>
-                    <div class="skel" style="height:10px;width:68%;border-radius:3px"></div>
+                <div class="ac-zone ac-meta">
+                    <div class="skel" style="height:12px;width:70px;border-radius:3px"></div>
+                    <div class="skel" style="height:12px;width:60px;border-radius:3px"></div>
                 </div>
-            </div>
-            <div class="z z-assign">
-                <div class="skel" style="height:10px;width:58px;border-radius:3px"></div>
-                <div class="skel" style="height:32px;width:100%;border-radius:8px"></div>
             </div>
         </div>`;
-        return row('card-des') + row('card-cre') + row('card-des') + row('card-cre');
+        return row() + row() + row() + row();
     }
+
+    // Placeholder — same "coming soon" pattern as the List page's own View
+    // button (handleViewTask in b-quest.js) until there's an actual detail
+    // page to link to.
+    function handleViewAssignTask(questId) {
+        notify('', 'View page coming soon', 'info');
+    }
+
     function dlUrgency(dateStr) {
         if (!dateStr) return '';
         const d = new Date(dateStr);
@@ -453,71 +776,114 @@
         return 'dl-ok';
     }
 
-    // ── Reset ──
-    function resetFilters() {
-        document.getElementById('filterSearch').value = ''; document.getElementById('filterWork').value = ''; document.getElementById('filterType').value = ''; document.getElementById('filterOwner').value = '';
-        updateSelectHighlight('filterWork'); updateSelectHighlight('filterType'); updateSelectHighlight('filterOwner');
-        const desPill = document.getElementById('pill-des'); const crePill = document.getElementById('pill-cre');
-        if (!desPill.classList.contains('active-des')) desPill.classList.add('active-des'); if (!crePill.classList.contains('active-cre')) crePill.classList.add('active-cre');
-        rebuildWorkFilter(); resetAndReload();
-    }
-
     // ── Pending Assign ──
-    function onAssignChange(sel) {
-        const questId = sel.dataset.questId;
-        const role    = sel.dataset.role;
-        const newVal  = sel.value;
-        const key     = `${questId}__${role}`;
+    function selectAssignee(taskRoleId, questId, newVal) {
+        const btn = document.querySelector(`#row-${taskRoleId} .ac-btn-assign`);
 
         if (!newVal) {
-            delete pendingAssign[key];
-            sel.classList.remove('is-pending');
+            delete pendingAssign[taskRoleId];
+            if (btn) { btn.classList.remove('is-pending'); btn.innerHTML = '<i class="bi bi-person-plus"></i><span class="assign-btn-label">Assign</span>'; }
         } else {
-            pendingAssign[key] = { questId, role, value: newVal, sel };
-            sel.classList.add('is-pending');
+            pendingAssign[taskRoleId] = { taskRoleId, questId, value: newVal };
+            if (btn) { btn.classList.add('is-pending'); btn.innerHTML = `<i class="bi bi-person-check"></i><span class="assign-btn-label">${esc(newVal)}</span>`; }
         }
         updateSaveBar();
+    }
+
+    // ── Assign picker popup — same recipe as the task Modal's own
+    // openAssignPicker (avatar + name + department, click to pick) ──
+    function openAssignPicker(taskRoleId, questId, roleId) {
+        const candidates = assignCandidates[roleId] || [];
+        const overlay = document.getElementById('assign-search-overlay');
+        const container = document.getElementById('assign-list-container');
+        const searchInput = document.getElementById('assign-search-input');
+
+        const clearIcon = document.getElementById('assign-search-clear');
+        overlay.style.display = 'flex';
+        searchInput.value = '';
+        clearIcon.style.display = 'none';
+
+        const render = (filter = '') => {
+            container.innerHTML = '';
+            const clearBtn = document.createElement('button');
+            clearBtn.className = 'bq-am-item bq-am-clear w-100';
+            clearBtn.innerHTML = `
+                <div class="bq-am-avatar"><i class="bi bi-x-circle"></i></div>
+                <div class="bq-am-info"><span class="bq-am-nick">Unassigned</span></div>`;
+            clearBtn.onclick = () => { selectAssignee(taskRoleId, questId, ''); closeAssignOverlay(); };
+            container.appendChild(clearBtn);
+
+            const fl = filter.toLowerCase();
+            const matches = candidates.filter(c =>
+                c.codename.toLowerCase().includes(fl) ||
+                (c.full_name || '').toLowerCase().includes(fl) ||
+                (c.department || '').toLowerCase().includes(fl)
+            );
+            if (!matches.length) {
+                container.insertAdjacentHTML('beforeend', `<div class="bq-am-empty">${filter ? 'No matches' : 'No candidates for this role'}</div>`);
+            }
+            matches.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = 'bq-am-item w-100';
+                btn.innerHTML = `
+                    <div class="bq-am-avatar"><i class="bi bi-person-fill"></i></div>
+                    <div class="bq-am-info">
+                        <span class="bq-am-nick">${esc(c.codename)}</span>
+                        ${c.full_name ? `<span class="bq-am-line2">${esc(c.full_name)}</span>` : ''}
+                    </div>
+                    ${c.department ? `<span class="bq-am-dept">${esc(c.department)}</span>` : ''}`;
+                btn.onclick = () => { selectAssignee(taskRoleId, questId, c.codename); closeAssignOverlay(); };
+                container.appendChild(btn);
+            });
+        };
+        render();
+        searchInput.oninput = e => {
+            clearIcon.style.display = e.target.value ? 'block' : 'none';
+            render(e.target.value);
+        };
+        clearIcon.onclick = () => {
+            searchInput.value = '';
+            clearIcon.style.display = 'none';
+            searchInput.focus();
+            render('');
+        };
+    }
+
+    function closeAssignOverlay() {
+        document.getElementById('assign-search-overlay').style.display = 'none';
     }
 
     function updateSaveBar() {
-        const count = Object.keys(pendingAssign).length;
-        const bar   = document.getElementById('save-bar');
-        if (!count) { bar.classList.remove('visible'); return; }
-        bar.classList.add('visible');
-        document.getElementById('save-bar-sub').textContent = `${count} item`;
-    }
-
-    function cancelAll() {
-        Object.values(pendingAssign).forEach(p => { p.sel.value = ''; p.sel.classList.remove('is-pending'); });
-        pendingAssign = {};
-        updateSaveBar();
+        saveBar.setCount(Object.keys(pendingAssign).length);
     }
 
     async function saveAll() {
-        const btn = document.getElementById('save-btn');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
-
         const entries = Object.entries(pendingAssign);
         let saved = 0, failed = 0;
 
-        for (const [key, { questId, role, value }] of entries) {
-            const field = role === 'Designer' ? 'designer_assign' : 'creative_assign';
-            const { error } = await supabaseClient.from('b-quest-list')
-                .update({ [field]: value, last_update: new Date().toISOString() })
-                .eq('id', questId);
-            if (error) { failed++; }
-            else { allRows = allRows.filter(r => !(String(r.quest.id) === String(questId) && r.role === role)); delete pendingAssign[key]; saved++; }
+        for (const [taskRoleId, { questId, value }] of entries) {
+            const { error } = await supabaseClient.from('b-quest-task-role').update({ assign: value }).eq('id', taskRoleId);
+            if (error) { failed++; continue; }
+            await supabaseClient.from('b-quest-list').update({ last_update: new Date().toISOString() }).eq('id', questId);
+            delete pendingAssign[taskRoleId];
+            saved++;
         }
 
         if (failed) Swal.fire({ icon: 'error', title: `บันทึกไม่สำเร็จ ${failed} รายการ`, timer: 3000, showConfirmButton: false });
-        if (saved)  notify('Assigned', `บันทึกสำเร็จ ${saved} รายการ`, 'success');
+        if (saved) notify('Assigned', `บันทึกสำเร็จ ${saved} รายการ`, 'success');
 
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-floppy2-fill"></i> Save';
-        updateSaveBar();
-        applyFilters();
+        saveBar.setCount(Object.keys(pendingAssign).length);
+        applyFilters(); // re-fetch fresh from the server — the rows just saved are gone from the queue for real now
     }
+
+    // Cancel on the shared save bar — nothing was written to the server
+    // yet, so reverting is just dropping the local pending state and
+    // re-rendering the already-loaded rows (no refetch needed).
+    function cancelAllChanges() {
+        pendingAssign = {};
+        renderRows(allRows);
+    }
+
     loadPage();
 </script>
 </body>

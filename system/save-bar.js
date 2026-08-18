@@ -94,11 +94,16 @@
         const cancelBtn = document.getElementById('bxSaveBarCancel');
         const undoBtn = document.getElementById('bxSaveBarUndo');
 
+        // Pages that don't wire up onUndo (no step-by-step undo stack to
+        // offer) don't get the button at all — a permanently-disabled
+        // control just reads as broken, not "not applicable here".
+        undoBtn.style.display = onUndo ? '' : 'none';
+
         function render() {
             labelEl.textContent = label;
             subEl.textContent = count > 0 ? `${count} change${count > 1 ? 's' : ''} pending` : 'Unsaved changes';
             bar.classList.toggle('visible', count > 0);
-            undoBtn.disabled = busy || !undoAvailable;
+            if (onUndo) undoBtn.disabled = busy || !undoAvailable;
         }
 
         saveBtn.onclick = async () => {

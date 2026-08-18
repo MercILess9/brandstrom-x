@@ -10,6 +10,7 @@
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="/system/save-bar.js"></script>
+    <script src="/system/multi-select.js"></script>
     <script src="b-quest.js"></script>
     <link rel="stylesheet" href="b-quest.css">
 
@@ -18,6 +19,65 @@
 
         .page-header { margin-bottom: 28px; }
         .page-header h1 { font-size: 1.4rem; font-weight: 800; color: var(--c-dark); margin: 0; }
+
+        /* Setting/Members are two separate pages (Members alone is ~75% of
+           what used to be one giant settings file) styled to read as tabs of
+           one admin area, not two unrelated menu items — see [[bquest-settings-roadmap]]. */
+        .settings-tabnav { display: flex; gap: 8px; margin-bottom: 20px; }
+        .settings-tab { display: flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; color: var(--c-slate); text-decoration: none; border: 1px solid var(--c-border); background: #fff; transition: 0.15s; }
+        .settings-tab:hover { border-color: var(--c-accent); color: var(--c-dark); }
+        .settings-tab.active { background: var(--c-dark); color: var(--c-accent); border-color: var(--c-dark); }
+
+        /* Admin Access row — avatar+name left, Setting/Member toggles right,
+           trash last (not first — this row is destructive, shouldn't sit
+           where the eye lands first). */
+        .aa-list { display: flex; flex-direction: column; }
+        .aa-row { display: flex; align-items: center; gap: 14px; padding: 10px 4px; border-bottom: 1px solid #f1f5f9; }
+        .aa-row:last-child { border-bottom: none; }
+        .aa-name { flex: 1; min-width: 0; }
+        .aa-nick { font-size: 0.85rem; font-weight: 700; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .aa-toggle-item { display: flex; align-items: center; gap: 8px; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); flex-shrink: 0; }
+        .btn-remove { background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 6px; border-radius: 7px; transition: 0.2s; display: flex; align-items: center; font-size: 0.95rem; flex-shrink: 0; }
+        .btn-remove:hover { color: var(--c-danger); }
+
+        /* ── Add Admin Access Modal — same recipe as Members' own Add Member
+           Modal (.am-* class names reused verbatim, this is a separate file
+           now so there's no collision risk). ── */
+        .am-modal { width: 640px; }
+        .am-header { padding: 24px 28px 18px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .am-title { font-size: 1rem; font-weight: 800; color: var(--c-dark); display: flex; align-items: center; gap: 8px; }
+        .am-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--c-muted); transition: 0.2s; }
+        .am-close:hover { background: var(--c-border); color: var(--c-dark); }
+        .am-search-wrap { padding: 14px 24px; border-bottom: 1px solid var(--c-border); flex-shrink: 0; position: relative; }
+        .am-search { width: 100%; border: 1px solid var(--c-border); border-radius: 12px; padding: 9px 14px 9px 38px; font-size: 0.85rem; outline: none; font-family: inherit; transition: 0.2s; background: var(--c-bg); }
+        .am-search:focus { border-color: var(--c-accent); background: #fff; }
+        .am-search-icon { position: absolute; left: 36px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.85rem; pointer-events: none; }
+        .am-list { overflow-y: auto; flex: 1; padding: 8px 14px; }
+        .am-item { display: flex; align-items: center; gap: 14px; padding: 11px 12px; border-radius: 14px; cursor: pointer; transition: background 0.15s; }
+        .am-item:hover { background: var(--c-bg); }
+        .am-item:has(.modern-checkbox:checked) { background: var(--c-accent-light); }
+        .am-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--c-accent-light); border: 1px solid transparent; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; color: #7a8500; flex-shrink: 0; }
+        .am-item:has(.modern-checkbox:checked) .am-avatar { background: var(--c-accent); }
+        .am-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .am-nick { font-size: 0.88rem; font-weight: 700; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .am-line2 { font-size: 0.76rem; color: var(--c-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .am-dept-side { flex-shrink: 0; width: 220px; font-size: 0.76rem; font-weight: 600; color: var(--c-slate); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 16px; border-left: 1px solid var(--c-border); }
+        .am-select-all { border-bottom: 1px solid var(--c-border); margin-bottom: 6px; padding-bottom: 15px; }
+        .am-info-flat { display: flex; flex-direction: row; align-items: baseline; gap: 10px; }
+        .am-select-all .am-nick { font-weight: 800; }
+        .am-select-count { font-size: 0.76rem; color: var(--c-muted); font-weight: 600; }
+        .am-empty { padding: 40px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
+        .am-footer { padding: 16px 24px; border-top: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: #fff; }
+        .am-footer-info { font-size: 0.78rem; color: var(--c-muted); font-weight: 600; }
+        .am-footer-actions { display: flex; gap: 8px; }
+        .btn-am-cancel, .btn-am-confirm { width: 120px; border: none; border-radius: 10px; padding: 10px 0; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; }
+        .btn-am-cancel { background: #f1f5f9; color: var(--c-slate); }
+        .btn-am-cancel:hover { background: var(--c-border); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.08); }
+        .btn-am-cancel:active { transform: translateY(0); box-shadow: none; }
+        .btn-am-confirm { background: var(--c-dark); color: var(--c-accent); }
+        .btn-am-confirm:hover:not(:disabled) { background: #0f172a; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .btn-am-confirm:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+        .btn-am-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
 
         .section { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; margin-bottom: 20px; overflow: hidden; }
         .section-header { display: flex; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--c-border); }
@@ -226,14 +286,77 @@
 
         .work-empty { padding: 24px; text-align: center; color: var(--c-muted); font-size: 0.8rem; font-weight: 600; }
 
-        /* ── Daily Capacity + Notifications, side by side ── */
+        /* ── Daily Capacity + List View Defaults (Visibility, Filter
+           Defaults), three equal columns — Notifications moved to its own
+           full-width row below since it wants more room than a 3-way split
+           can give it (4 rows x 2 channels of badges). */
         .cfg-half-row { display: flex; gap: 20px; margin-bottom: 20px; }
-        /* Daily Capacity keeps a fixed, compact width (7 rows never need
-           more) — Notifications gets whatever's left, since 4 rows x 2
-           channels of badges need more breathing room. */
-        .section-calendar-col { flex: 0 0 420px; margin-bottom: 0; }
-        .section-notify-col { flex: 1 1 auto; min-width: 380px; margin-bottom: 0; }
-        @media (max-width: 900px) { .section-calendar-col, .section-notify-col { flex-basis: 100%; } }
+        .section-calendar-col, .section-third-col { flex: 1 1 0; min-width: 0; margin-bottom: 0; }
+        @media (max-width: 1100px) { .cfg-half-row { flex-wrap: wrap; } .section-calendar-col, .section-third-col { flex-basis: 100%; } }
+
+        /* ── Data Visibility (Own/All) ── */
+        .vis-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+        .vis-row:last-of-type { border-bottom: none; }
+        .vis-label { font-size: 0.82rem; font-weight: 700; color: var(--c-dark); }
+        .vis-seg { position: relative; display: inline-flex; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 999px; padding: 3px; width: 132px; height: 32px; flex-shrink: 0; }
+        .vis-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 999px; transition: transform 0.22s cubic-bezier(.4,0,.2,1); z-index: 0; }
+        .vis-seg.state-own .vis-seg-slider { transform: translateX(100%); }
+        .vis-seg button { position: relative; z-index: 1; flex: 1; border: none; background: transparent; font-family: inherit; font-size: 0.72rem; font-weight: 800; color: var(--c-muted); cursor: pointer; border-radius: 999px; }
+        .vis-seg button.on { color: #7a8500; }
+
+        /* ── Filter Defaults ── */
+        .fd-group { padding: 12px 0; border-bottom: 1px solid var(--c-border); }
+        .fd-group:first-child { padding-top: 0; }
+        .fd-group:last-child { border-bottom: none; padding-bottom: 0; }
+        .fd-label { display: block; font-size: 0.68rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+
+        /* Role/Status/Type rows — same two-block layout as the Visibility
+           section's Own/All rows above (label left, compact control right,
+           row divider), reusing .vis-row's exact spacing/border but its own
+           class so the two sections stay independently tweakable. */
+        .fd-hrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+        .fd-hrow:first-child { padding-top: 0; }
+        .fd-hrow .fd-label { display: inline; margin-bottom: 0; font-size: 0.82rem; font-weight: 700; color: var(--c-dark); text-transform: none; letter-spacing: normal; }
+        .fd-hrow .flt-select-box { width: 220px; flex-shrink: 0; }
+
+        /* Role default — ported straight from the List/Assignment page's own
+           Role filter (.role-seg-*): a scrollable row of icon+name tabs with
+           a sliding pill indicator that tints itself to the selected role's
+           own color, plus the same edge-fade shadow hinting more tabs sit
+           off-screen. No internal tag — .fd-hrow's own label covers that. */
+        .fd-role-seg-wrap { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; height: 38px; width: 220px; flex-shrink: 0; overflow: hidden; }
+        .fd-role-seg-scroll-outer { position: relative; flex: 1; min-width: 0; height: 100%; }
+        .fd-role-seg-scroll { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; height: 100%; padding: 3px; overflow-x: auto; scrollbar-width: none; }
+        .fd-role-seg-scroll::-webkit-scrollbar { display: none; }
+        .fd-role-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
+        .fd-role-seg-scroll-outer::before, .fd-role-seg-scroll-outer::after { content: ''; position: absolute; top: 1px; bottom: 1px; width: 28px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s; }
+        .fd-role-seg-scroll-outer::before { left: 0; background: linear-gradient(to right, rgba(30,41,59,0.16), transparent); }
+        .fd-role-seg-scroll-outer::after { right: 0; background: linear-gradient(to left, rgba(30,41,59,0.16), transparent); }
+        .fd-role-seg-scroll-outer.fade-left::before { opacity: 1; }
+        .fd-role-seg-scroll-outer.fade-right::after { opacity: 1; }
+        .fd-role-seg-btn { position: relative; z-index: 1; border: none; background: transparent; padding: 0 12px; height: 100%; font-size: 0.72rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; flex-shrink: 0; display: flex; align-items: center; gap: 5px; }
+        .fd-role-seg-btn.active { color: #7a8500; }
+        .fd-role-seg-btn:not(.active):hover { color: var(--c-accent); }
+        .fd-daterange { display: flex; flex-direction: column; gap: 10px; }
+        .fd-bound { display: flex; align-items: center; gap: 8px; }
+        .fd-bound > span { font-size: 0.76rem; font-weight: 700; color: var(--c-slate); width: 58px; flex-shrink: 0; }
+        .fd-bound input[type="number"] { width: 56px; border: 1px solid var(--c-border); border-radius: 8px; padding: 6px 8px; font-size: 0.78rem; font-family: inherit; text-align: center; outline: none; }
+        .fd-bound input[type="number"]:focus { border-color: var(--c-accent); }
+
+        /* Deadline bound mode — No limit/Day/Month as a sliding segmented
+           toggle instead of a <select>, same JS-measured slider mechanic as
+           .fd-role-seg-slider (generalizes to any button count/width). */
+        .fd-mode-seg { position: relative; display: inline-flex; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 999px; padding: 3px; height: 30px; }
+        .fd-mode-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 999px; transition: left 0.2s cubic-bezier(.4,0,.2,1), width 0.2s cubic-bezier(.4,0,.2,1); z-index: 0; }
+        .fd-mode-seg button { position: relative; z-index: 1; border: none; background: transparent; font-family: inherit; font-size: 0.7rem; font-weight: 800; color: var(--c-muted); cursor: pointer; padding: 0 10px; border-radius: 999px; white-space: nowrap; }
+        .fd-mode-seg button.on { color: #7a8500; }
+        .fd-preview-row { margin-top: 6px; display: flex; align-items: center; gap: 10px; }
+        .fd-preview { width: fit-content; flex-shrink: 0; display: flex; align-items: center; gap: 8px; font-size: 0.65rem; color: var(--c-muted); background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 999px; padding: 8px 14px; }
+        .fd-preview .bi-calendar-range { color: var(--c-accent); font-size: 0.82rem; }
+        .fd-preview .bi-arrow-right { color: #cbd5e1; font-size: 0.68rem; }
+        .fd-preview-chip { font-weight: 800; color: var(--c-dark); font-variant-numeric: tabular-nums; }
+        .fd-preview-chip.is-unset { font-weight: 700; color: var(--c-muted); }
+        .fd-preview-summary { font-size: 0.65rem; font-weight: 600; color: var(--c-slate); }
         .wc-merge-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; font-weight: 700; color: var(--c-slate); }
         .wc-day-list { display: flex; flex-direction: column; gap: 10px; }
         .wc-day-row { display: flex; align-items: center; gap: 14px; padding: 4px; border-radius: 10px; transition: opacity 0.15s; }
@@ -284,243 +407,6 @@
         .np-list-item { display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-size: 0.8rem; font-weight: 600; color: var(--c-dark); cursor: pointer; border-radius: 7px; }
         .np-list-item:hover { background: var(--c-bg); }
 
-        /* ── Members ── */
-        .section-header .table-search-wrap { max-width: 340px; }
-        /* Auto margins on both sides center this within the header's
-           leftover space (between the title and the right-hand group)
-           without needing to know either sibling's width. */
-        .mem-search-centered { margin-left: auto; margin-right: auto; }
-        .mem-header-right-group { display: flex; align-items: center; gap: 16px; }
-        .mem-advmode-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; font-weight: 700; color: var(--c-slate); }
-        /* Advanced Mode is a whole-section state (bulk column/row toggles
-           become clickable) — off by default since it changes what clicking
-           a normally-inert header label does, so the section gets an
-           unmistakable amber cue whenever it's on. */
-        .section.adv-mode-active { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.15); }
-        .section.adv-mode-active > .section-header { background: #fffbeb; }
-        .mem-col-adv { cursor: pointer; transition: background 0.15s, color 0.15s; }
-        .mem-col-adv:hover { background: #fffbeb; color: #b45309; }
-        .mem-bulk-row-btn { background: #f59e0b; border: none; color: #fff; border-radius: 7px; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.76rem; transition: 0.15s; box-shadow: 0 2px 6px rgba(245,158,11,0.35); }
-        .mem-bulk-row-btn:hover { background: #d97706; transform: scale(1.1); }
-        /* Column is narrow (44px) and this is an icon-only button — the
-           generic 16px cell padding left no room to center it, so it hugged
-           one edge instead. */
-        .mem-matrix td.mem-col-bulk-row, .mem-matrix th.mem-col-bulk-row { padding: 6px 4px; text-align: center; }
-
-        .table-search-wrap { position: relative; flex: 1; max-width: 260px; }
-        .table-search-input { width: 100%; border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 12px 7px 32px; font-size: 0.82rem; color: var(--c-dark); background: var(--c-bg); outline: none; font-family: inherit; transition: 0.2s; }
-        .table-search-input:focus { border-color: var(--c-accent); background: #fff; }
-        .table-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.8rem; pointer-events: none; }
-
-        /* Member x Role permission matrix — fully flat, no modal, no popover,
-           no master toggle either: each of the 4 actions (New/Edit/Delete/
-           Assign) is its own independent toggle, grouped visually under a
-           2-row header (role name spanning its 4 action sub-columns). What
-           you see IS the stored booleans, one-to-one. */
-        .mem-matrix-wrap { overflow: auto; max-height: 560px; border-radius: 12px; }
-        /* table-layout: fixed is load-bearing here — under the default
-           "auto" layout, a column's content (e.g. "DELETE"/"ASSIGN" being
-           longer than "NEW"/"EDIT") can always force it wider than any
-           width/padding hint, so equal-width action columns were never
-           reliably achievable there no matter how the padding was tuned.
-           Fixed layout makes width purely geometric: every first-row column
-           needs an explicit width below, and text that doesn't fit truncates
-           (ellipsis) instead of expanding its column. */
-        .mem-matrix { border-collapse: collapse; width: 100%; font-size: 0.8rem; table-layout: fixed; }
-        .mem-matrix thead th { position: sticky; top: 0; background: #fff; z-index: 2; text-align: center; font-size: 0.62rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 8px; border-bottom: 1px solid var(--c-border); white-space: nowrap; box-sizing: border-box; }
-        /* Only the role-group headers (colspan, no rowspan) get a fixed
-           height — Member/Settings/trailing cells span both header rows via
-           rowspan and should size naturally to match that combined height. */
-        .mem-matrix th.mem-role-group-head { height: 34px; font-size: 0.68rem; text-transform: none; letter-spacing: normal; border-left: 1px solid var(--c-border); }
-        .mem-matrix thead tr:last-child th { top: 34px; height: 26px; padding: 0 6px; font-size: 0.6rem; border-top: 1px solid var(--c-bg); overflow: hidden; text-overflow: ellipsis; }
-        .mem-matrix th.mem-role-group-head i { margin-right: 4px; }
-        /* Trash column (40px, fixed so its width is known) and Member both
-           stay pinned while scrolling sideways through the role columns —
-           trash at the very left edge, Member right after it. */
-        .mem-matrix th.mem-col-trash, .mem-matrix td.mem-col-trash { position: sticky; left: 0; z-index: 1; background: #fff; width: 40px; }
-        .mem-matrix th.mem-col-trash { z-index: 3; }
-        .mem-matrix th.mem-col-name, .mem-matrix td.mem-col-name { position: sticky; left: 40px; z-index: 1; background: #fff; text-align: left; width: 200px; }
-        .mem-matrix th.mem-col-name { z-index: 3; }
-        .mem-matrix td { padding: 11px 16px; text-align: center; border-bottom: 1px solid var(--c-bg); vertical-align: middle; }
-        .mem-matrix td.mem-col-name { white-space: nowrap; padding: 10px 16px; }
-        .mem-nick, .mem-fullname, .mem-matrix td.mem-col-code, .mem-matrix td.mem-col-dept { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .mem-nick { font-size: 0.82rem; font-weight: 700; color: var(--c-dark); }
-        .mem-fullname { font-size: 0.68rem; font-weight: 600; color: var(--c-muted); margin-top: 1px; }
-        .mem-matrix th.mem-col-code, .mem-matrix td.mem-col-code { width: 80px; }
-        .mem-matrix th.mem-col-dept, .mem-matrix td.mem-col-dept { width: 190px; }
-        .mem-matrix th.mem-col-settings, .mem-matrix td.mem-col-settings { width: 90px; }
-        .mem-matrix th.mem-col-dashboard, .mem-matrix td.mem-col-dashboard { width: 90px; }
-        .mem-matrix th.mem-col-duplicate, .mem-matrix td.mem-col-duplicate { width: 90px; }
-        .mem-matrix th.mem-col-share, .mem-matrix td.mem-col-share { width: 90px; }
-        /* Marks the boundary between "who this member is" (Member/Code/
-           Department) and "what they can access" (Dashboard/Settings/role
-           grid) — same divider treatment as .mem-group-start uses per role. */
-        .mem-matrix .mem-zone-divider { border-left: 1px solid var(--c-border); }
-        /* Actual column width for these 4 comes from the <colgroup> (see
-           renderMembers) — this width is just a matching documentation
-           value, not load-bearing. A label longer than fits here (should
-           stay rare — keep new permission names short) truncates to an
-           ellipsis rather than breaking layout; the title attribute on
-           the header still shows the full word on hover. */
-        .mem-matrix th.mem-col-action, .mem-matrix td.mem-col-action { width: 75px; }
-        .mem-matrix th.mem-col-action { padding: 0 6px; }
-        .mem-matrix .mem-header-filterable { cursor: pointer; user-select: none; transition: color 0.15s; }
-        .mem-matrix .mem-header-filterable:hover { color: var(--c-dark); }
-        .mem-sort-icon { font-size: 0.7rem; margin-left: 2px; opacity: 0.35; }
-        .mem-filter-icon { font-size: 0.62rem; margin-left: 3px; opacity: 0.35; }
-        .mem-filter-icon.active { opacity: 1; color: var(--c-accent-dark, #7a8500); }
-        .mem-bulk-col-icon { font-size: 0.6rem; margin-left: 3px; color: #f59e0b; opacity: 0.7; }
-        .mem-col-adv:hover .mem-bulk-col-icon { opacity: 1; }
-        /* Excel-style column header filter (Member/Code/Department) — a
-           centered modal, same "modern" recipe as the Add Member modal
-           (blur backdrop, 24px radius, soft shadow, translateY entrance)
-           for visual consistency across every dialog on this page. */
-        .mem-filter-modal { width: 420px; }
-        .mem-filter-modal-header { padding: 22px 26px 18px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-        .mem-filter-modal-title { font-size: 1rem; font-weight: 800; color: var(--c-dark); display: flex; align-items: center; gap: 8px; }
-        .mem-filter-header-actions { display: flex; align-items: center; gap: 8px; }
-        /* Quiet by default (nothing to reset most of the time) — only turns
-           into a real, colored button once this field actually has a filter
-           applied, so it reads as "there's something to undo here" instead
-           of competing with Close for attention on every open. */
-        .mem-filter-reset-link { background: none; border: 1px solid transparent; color: var(--c-muted); font-size: 0.7rem; font-weight: 700; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 7px; transition: 0.15s; opacity: 0.5; }
-        .mem-filter-reset-link:hover { background: var(--c-bg); color: var(--c-dark); opacity: 1; }
-        .mem-filter-reset-link.active { opacity: 1; background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
-        .mem-filter-reset-link.active:hover { background: var(--c-accent); color: var(--c-dark); }
-        .mem-filter-modal-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--c-muted); transition: 0.2s; }
-        .mem-filter-modal-close:hover { background: var(--c-border); color: var(--c-dark); }
-        .mem-filter-modal-body { padding: 20px 26px 24px; overflow-y: auto; }
-        /* Sort buttons reuse .cfg-btn-sort (same icon-only square button as
-           the Role/Status/Type headers) sitting beside the search bar
-           instead of their own full-width row — one less row of chrome
-           before the list that actually matters. */
-        .mem-filter-search-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .mem-filter-search-row .mem-filter-search-wrap { flex: 1; margin-bottom: 0; }
-        .mem-filter-search-row .cfg-btn-sort { margin-left: 0; }
-        .mem-filter-search-wrap { position: relative; }
-        .mem-filter-search-input { width: 100%; border: 1px solid var(--c-border); border-radius: 12px; padding: 9px 34px 9px 36px; font-size: 0.85rem; outline: none; font-family: inherit; transition: 0.2s; background: var(--c-bg); box-sizing: border-box; }
-        .mem-filter-search-input:focus { border-color: var(--c-accent); background: #fff; }
-        .mem-filter-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.85rem; pointer-events: none; }
-        .mem-filter-search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--c-muted); font-size: 1rem; cursor: pointer; padding: 3px; display: flex; align-items: center; transition: 0.15s; }
-        .mem-filter-search-clear:hover { color: var(--c-dark); }
-        /* Only shown once the field actually has a filter narrowing it
-           below "everything" — matches the Reset button's own logic of
-           staying quiet until there's something to report. */
-        .mem-filter-count { font-size: 0.72rem; font-weight: 700; color: var(--c-muted); margin-left: 2px; }
-        .mem-filter-list { max-height: 260px; overflow-y: auto; border-top: 1px solid var(--c-border); padding-top: 4px; }
-        /* "Select All" lives as the first row of the list itself (like
-           Excel/Sheets) rather than a separate button — this way it always
-           acts on whatever the search has currently narrowed the list to,
-           instead of silently ignoring the search like a standalone button
-           would have to. */
-        .mem-filter-select-all { font-weight: 800; border-bottom: 1px solid var(--c-border); margin-bottom: 4px; padding-bottom: 12px; }
-        .mem-filter-item { display: flex; align-items: center; gap: 12px; padding: 9px 10px; font-size: 0.82rem; font-weight: 600; color: var(--c-dark); cursor: pointer; border-radius: 12px; transition: background 0.15s, opacity 0.15s; }
-        .mem-filter-item:hover { background: var(--c-bg); }
-        /* Everything starts checked (no filter = show all), so highlighting
-           the checked state would just paint the whole list green — dimming
-           the unchecked (excluded) rows instead is the signal that matters. */
-        .mem-filter-item:has(.modern-checkbox:not(:checked)) { opacity: 0.5; }
-        .mem-filter-item.mem-filter-select-all { opacity: 1; }
-        .mem-sort-icon.active { opacity: 1; color: var(--c-accent-dark, #7a8500); }
-        /* Single-dot toggle for the dense action grid — a plain switch
-           (track + thumb) reads as visual noise once there are 4 per role
-           times several roles; one circle that fills solid with the role's
-           own color on click scans much faster. Kept distinct from
-           .bq-toggle (used everywhere else on this page) since this
-           density problem is specific to this grid. */
-        .bq-dot { position: relative; display: inline-flex; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; }
-        .bq-dot input { opacity: 0; width: 0; height: 0; position: absolute; }
-        .bq-dot-circle { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--c-border); background: #fff; transition: 0.15s; box-sizing: border-box; }
-        .bq-dot:hover .bq-dot-circle { transform: scale(1.15); border-color: var(--dot-color, var(--c-accent)); }
-        .bq-dot input:checked + .bq-dot-circle { background: var(--dot-color, var(--c-accent)); border-color: var(--dot-color, var(--c-accent)); }
-        .mem-action-cell { display: flex; align-items: center; justify-content: center; gap: 4px; }
-        /* Own/All click-to-flip badge next to Edit/Delete's dot — only two
-           values, so a whole popover (like the color/icon pickers) would be
-           overkill. All is amber, same "elevated privilege" color as the
-           Bulk mode toggle elsewhere on this page — scanning the table for
-           who has broad access shouldn't require reading every cell. */
-        .mem-scope-badge { border: 1px solid var(--c-border); background: #fff; color: var(--c-muted); font-size: 0.56rem; font-weight: 800; font-family: inherit; text-transform: uppercase; letter-spacing: 0.3px; border-radius: 5px; padding: 2px 5px; cursor: pointer; transition: 0.15s; line-height: 1.2; }
-        .mem-scope-badge:hover { border-color: var(--c-slate); color: var(--c-dark); }
-        .mem-scope-badge.all { background: #fffbeb; border-color: #fde68a; color: #b45309; }
-        .mem-scope-badge.all:hover { background: #fef3c7; border-color: #f59e0b; }
-        .mem-matrix tbody tr:last-child td { border-bottom: none; }
-        .mem-matrix tbody tr.is-new td { background: #f0fdf4; }
-        .mem-matrix tbody tr.is-deleted td { opacity: 0.75; background: #fef2f2; text-decoration: line-through; text-decoration-color: var(--c-danger); text-decoration-thickness: 1.5px; pointer-events: none; }
-        .mem-matrix tbody tr.is-deleted td:first-child { pointer-events: auto; text-decoration: none; }
-        /* Thin rule at the start of each role's 4-action group, running down
-           both header rows and every body row, so groups read at a glance. */
-        .mem-matrix .mem-group-start { border-left: 1px solid var(--c-border); }
-        .btn-remove { background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 6px; border-radius: 7px; transition: 0.2s; display: flex; align-items: center; font-size: 0.95rem; }
-        .btn-remove:hover { color: var(--c-danger); }
-
-        .perm-empty { padding: 40px; text-align: center; color: var(--c-muted); }
-        .perm-empty i { font-size: 2rem; margin-bottom: 10px; display: block; opacity: 0.4; }
-        .perm-empty p { font-size: 0.82rem; font-weight: 600; margin: 0; }
-        /* Empty state that stays INSIDE the table body — the header (and
-           its filter controls) must never disappear just because a filter
-           currently matches nobody, or there'd be no way to click back in
-           and undo it. */
-        .mem-empty-row { padding: 32px !important; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
-        .mem-empty-row i { margin-right: 6px; opacity: 0.5; }
-
-        .skeleton-row { display: flex; align-items: center; gap: 14px; padding: 12px 4px; border-bottom: 1px solid var(--c-bg); }
-        .skeleton-block { background: #f1f5f9; border-radius: 8px; animation: shimmer 1.4s infinite; }
-        @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.5} }
-
-        /* ── Add Member Modal (reused) ── */
-        .am-modal { width: 640px; }
-        .am-header { padding: 24px 28px 18px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-        .am-title { font-size: 1rem; font-weight: 800; color: var(--c-dark); display: flex; align-items: center; gap: 8px; }
-        .am-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--c-muted); transition: 0.2s; }
-        .am-close:hover { background: var(--c-border); color: var(--c-dark); }
-        .am-search-wrap { padding: 14px 24px; border-bottom: 1px solid var(--c-border); flex-shrink: 0; position: relative; }
-        .am-search { width: 100%; border: 1px solid var(--c-border); border-radius: 12px; padding: 9px 14px 9px 38px; font-size: 0.85rem; outline: none; font-family: inherit; transition: 0.2s; background: var(--c-bg); }
-        .am-search:focus { border-color: var(--c-accent); background: #fff; }
-        .am-search-icon { position: absolute; left: 36px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.85rem; pointer-events: none; }
-        .am-list { overflow-y: auto; flex: 1; padding: 8px 14px; }
-        .am-item { display: flex; align-items: center; gap: 14px; padding: 11px 12px; border-radius: 14px; cursor: pointer; transition: background 0.15s; }
-        .am-item:hover { background: var(--c-bg); }
-        .am-item:has(.modern-checkbox:checked) { background: var(--c-accent-light); }
-        /* Green placeholder (same tint as Select All's avatar) standing in
-           for real profile photos later — once those exist, the avatar
-           itself carries the color/visual-interest job, which is also why
-           the code badge below was dropped in favor of plain text: a
-           colored pill next to a real photo would just compete with it. */
-        .am-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--c-accent-light); border: 1px solid transparent; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; color: #7a8500; flex-shrink: 0; }
-        .am-item:has(.modern-checkbox:checked) .am-avatar { background: var(--c-accent); }
-        /* flex:1 claims the leftover width every row, so .am-dept-side (a
-           plain sibling, not a grid column) lands at the same edge on every
-           row. A per-row CSS grid "auto" column sized off each row's own
-           text and drifted — flex against a fixed row width doesn't. */
-        .am-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-        /* codename is already stored as "Nickname (EmployeeID)" (see
-           auth/signup.html) — the standard format used everywhere else in
-           the app, so this just displays that field directly rather than
-           reassembling nick_name/employee_id in some other order. */
-        .am-nick { font-size: 0.88rem; font-weight: 700; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .am-line2 { font-size: 0.76rem; color: var(--c-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        /* Fixed width, not auto — an auto-width right-aligned zone starts at
-           a different x per row depending on that row's own text length. */
-        .am-dept-side { flex-shrink: 0; width: 220px; font-size: 0.76rem; font-weight: 600; color: var(--c-slate); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 16px; border-left: 1px solid var(--c-border); }
-        .am-select-all { border-bottom: 1px solid var(--c-border); margin-bottom: 6px; padding-bottom: 15px; }
-        /* One line, not the usual two — it doesn't carry as much info as a
-           real row, so it shouldn't take up as much height either. */
-        .am-info-flat { display: flex; flex-direction: row; align-items: baseline; gap: 10px; }
-        .am-select-all .am-nick { font-weight: 800; }
-        .am-select-count { font-size: 0.76rem; color: var(--c-muted); font-weight: 600; }
-        .am-empty { padding: 40px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
-        .am-footer { padding: 16px 24px; border-top: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: #fff; }
-        .am-footer-info { font-size: 0.78rem; color: var(--c-muted); font-weight: 600; }
-        .am-footer-actions { display: flex; gap: 8px; }
-        .btn-am-cancel, .btn-am-confirm { width: 120px; border: none; border-radius: 10px; padding: 10px 0; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; }
-        .btn-am-cancel { background: #f1f5f9; color: var(--c-slate); }
-        .btn-am-cancel:hover { background: var(--c-border); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.08); }
-        .btn-am-cancel:active { transform: translateY(0); box-shadow: none; }
-        .btn-am-confirm { background: var(--c-dark); color: var(--c-accent); }
-        .btn-am-confirm:hover:not(:disabled) { background: #0f172a; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        .btn-am-confirm:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
-        .btn-am-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
-
         /* ── Toggle switch (shared) ── */
         .bq-toggle { position: relative; display: inline-block; width: 34px; height: 19px; flex-shrink: 0; }
         .bq-toggle input { opacity: 0; width: 0; height: 0; }
@@ -542,6 +428,11 @@
 
     <div class="page-header">
         <h1><i class="bi bi-gear-fill me-2" style="color:var(--c-accent)"></i>B-QUEST Settings</h1>
+    </div>
+
+    <div class="settings-tabnav">
+        <a href="b-quest-settings.html" class="settings-tab active"><i class="bi bi-gear-fill"></i> Setting</a>
+        <a href="b-quest-members.html" class="settings-tab"><i class="bi bi-people-fill"></i> Members</a>
     </div>
 
     <!-- Section 1: Roles / Statuses / Types — 3 separate boxes, side by side -->
@@ -622,12 +513,13 @@
         </div>
     </div>
 
-    <!-- Section: Daily Capacity + Notifications, side by side. -->
+    <!-- Section: Daily Capacity + List View Defaults, three equal columns. -->
     <div class="cfg-half-row">
         <div class="section section-calendar-col" id="section-calendar">
             <div class="section-header">
                 <div class="section-title">
                     <i class="bi bi-calendar-week"></i> Daily Capacity
+                    <button class="cfg-btn-info" onclick="openCapacityInfoPopup(event)" title="What do these percentages mean?"><i class="bi bi-info-circle"></i></button>
                     <span class="dirty-dot"></span>
                 </div>
                 <div class="wc-merge-toggle" title="Once the company holiday list exists, turning this on skips holidays entirely instead of counting them at their weekday percentage">
@@ -643,53 +535,126 @@
             </div>
         </div>
 
-        <div class="section section-notify-col" id="section-notify">
+        <div class="section section-third-col" id="section-visibility">
             <div class="section-header">
                 <div class="section-title">
-                    <i class="bi bi-bell-fill"></i> Notifications & Email
+                    <i class="bi bi-eye-fill"></i> Data Visibility
+                    <button class="cfg-btn-info" onclick="openVisibilityInfoPopup(event)" title="What do Own / All mean?"><i class="bi bi-info-circle"></i></button>
                     <span class="dirty-dot"></span>
                 </div>
             </div>
             <div class="section-body">
-                <div class="np-tabs" id="notify-tabs">
-                    <button type="button" class="np-tab active" data-channel="notify" onclick="toggleNotifyChannel('notify')">Notification</button>
-                    <button type="button" class="np-tab" data-channel="email" onclick="toggleNotifyChannel('email')">Email</button>
+                <div class="vis-row">
+                    <span class="vis-label">Role</span>
+                    <div class="vis-seg" data-axis="role" onclick="onVisibilitySegClick(event, 'role')">
+                        <div class="vis-seg-slider"></div>
+                        <button type="button" data-val="all">All</button>
+                        <button type="button" data-val="own">Own</button>
+                    </div>
                 </div>
-                <div class="np-rows" id="notify-rows"></div>
+                <div class="vis-row">
+                    <span class="vis-label">Owner</span>
+                    <div class="vis-seg" data-axis="owner" onclick="onVisibilitySegClick(event, 'owner')">
+                        <div class="vis-seg-slider"></div>
+                        <button type="button" data-val="all">All</button>
+                        <button type="button" data-val="own">Own</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section section-third-col" id="section-filterdefaults">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-funnel-fill"></i> Default Filters
+                    <button class="cfg-btn-info" onclick="openFilterDefaultsInfoPopup(event)" title="How does Deadline Date work?"><i class="bi bi-info-circle"></i></button>
+                    <span class="dirty-dot"></span>
+                </div>
+            </div>
+            <div class="section-body">
+                <div class="fd-hrow">
+                    <label class="fd-label">Role</label>
+                    <div class="fd-role-seg-wrap">
+                        <div class="fd-role-seg-scroll-outer" id="fdRoleSegOuter">
+                            <div class="fd-role-seg-scroll" id="fdRoleSegWrap">
+                                <div class="fd-role-seg-slider" id="fdRoleSegSlider"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="fd-hrow">
+                    <label class="fd-label">Status</label>
+                    <div class="flt-select-box" id="wrap-fdStatus"></div>
+                </div>
+                <div class="fd-hrow">
+                    <label class="fd-label">Type</label>
+                    <div class="flt-select-box" id="wrap-fdType"></div>
+                </div>
+                <div class="fd-group">
+                    <label class="fd-label">Deadline Date</label>
+                    <div class="fd-daterange">
+                        <div class="fd-bound">
+                            <span>Lower</span>
+                            <div class="fd-mode-seg" id="fdLowerModeSeg">
+                                <div class="fd-mode-seg-slider"></div>
+                                <button type="button" data-mode="none" onclick="onDeadlineModeClick('lower','none')">No limit</button>
+                                <button type="button" data-mode="day" onclick="onDeadlineModeClick('lower','day')">Day</button>
+                                <button type="button" data-mode="month" onclick="onDeadlineModeClick('lower','month')">Month</button>
+                            </div>
+                            <input type="number" id="fdLowerValue" min="0" value="0" style="display:none" oninput="onDeadlineBoundChange('lower')">
+                        </div>
+                        <div class="fd-bound">
+                            <span>Upper</span>
+                            <div class="fd-mode-seg" id="fdUpperModeSeg">
+                                <div class="fd-mode-seg-slider"></div>
+                                <button type="button" data-mode="none" onclick="onDeadlineModeClick('upper','none')">No limit</button>
+                                <button type="button" data-mode="day" onclick="onDeadlineModeClick('upper','day')">Day</button>
+                                <button type="button" data-mode="month" onclick="onDeadlineModeClick('upper','month')">Month</button>
+                            </div>
+                            <input type="number" id="fdUpperValue" min="0" value="0" style="display:none" oninput="onDeadlineBoundChange('upper')">
+                        </div>
+                    </div>
+                    <div class="fd-preview-row">
+                        <div class="fd-preview" id="fdDeadlinePreview"></div>
+                        <span class="fd-preview-summary" id="fdDeadlineSummary"></span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Section 4: Members -->
-    <div class="section" id="section-members">
+    <!-- Section: Notifications & Email — now full width for more breathing room. -->
+    <div class="section" id="section-notify">
         <div class="section-header">
             <div class="section-title">
-                <i class="bi bi-people-fill"></i> Members & Permissions
-                <button class="cfg-btn-info" onclick="openMemberPermInfoPopup(event)" title="What do New / Edit / Delete / Accept / Assign mean?"><i class="bi bi-info-circle"></i></button>
-                <span class="cfg-count-badge" id="table-count"></span>
+                <i class="bi bi-bell-fill"></i> Notifications & Email
                 <span class="dirty-dot"></span>
-            </div>
-            <div class="table-search-wrap mem-search-centered">
-                <i class="bi bi-search table-search-icon"></i>
-                <input type="text" id="table-search" class="table-search-input" placeholder="Search...">
-            </div>
-            <div class="mem-header-right-group">
-                <div class="mem-advmode-toggle" title="Bulk-toggle whole columns/rows at once — off by default, meant for initial project setup">
-                    <span><i class="bi bi-lightning-charge-fill" style="color:#f59e0b"></i> Bulk</span>
-                    <label class="bq-toggle small">
-                        <input type="checkbox" onchange="toggleAdvancedMode(this.checked)">
-                        <span class="bq-slider"></span>
-                    </label>
-                </div>
-                <button class="cfg-btn-add hover-scale" onclick="openAddModal()">
-                    <i class="bi bi-person-plus-fill"></i> Add
-                </button>
             </div>
         </div>
         <div class="section-body">
-            <div class="cfg-carousel-wrap" id="memCarouselWrap">
-                <div class="mem-matrix-wrap" id="mem-list"></div>
+            <div class="np-tabs" id="notify-tabs">
+                <button type="button" class="np-tab active" data-channel="notify" onclick="toggleNotifyChannel('notify')">Notification</button>
+                <button type="button" class="np-tab" data-channel="email" onclick="toggleNotifyChannel('email')">Email</button>
             </div>
+            <div class="np-rows" id="notify-rows"></div>
+        </div>
+    </div>
+
+    <!-- Section: Admin Access — who can reach Setting/Member, not the
+         per-project role/task permissions (those live on the Members page). -->
+    <div class="section" id="section-adminaccess">
+        <div class="section-header">
+            <div class="section-title">
+                <i class="bi bi-shield-lock-fill"></i> Admin Access
+                <button class="cfg-btn-info" onclick="openAdminAccessInfoPopup(event)" title="What do Setting / Member mean?"><i class="bi bi-info-circle"></i></button>
+                <span class="dirty-dot"></span>
+            </div>
+            <button class="cfg-btn-add hover-scale" onclick="openAdminAddModal()">
+                <i class="bi bi-person-plus-fill"></i> Add
+            </button>
+        </div>
+        <div class="section-body">
+            <div class="aa-list" id="aa-list"></div>
         </div>
     </div>
 
@@ -700,59 +665,29 @@
     <div class="cfg-picker" id="picker-panel" onclick="event.stopPropagation()"></div>
 </div>
 
-
-<!-- Add Member Modal -->
-<div class="am-overlay modal-overlay-base" id="am-overlay" onclick="closeAddModal(event)">
+<!-- Add Admin Access Modal -->
+<div class="am-overlay modal-overlay-base" id="aa-add-overlay" onclick="closeAdminAddModal(event)">
     <div class="am-modal modal-shell-base" onclick="event.stopPropagation()">
         <div class="am-header">
             <div class="am-title">
-                <i class="bi bi-person-plus-fill" style="color:var(--c-accent)"></i>
-                Add Members
+                <i class="bi bi-shield-lock-fill" style="color:var(--c-accent)"></i>
+                Add Admin Access
             </div>
-            <button class="am-close" onclick="closeAddModal()"><i class="bi bi-x"></i></button>
+            <button class="am-close" onclick="closeAdminAddModal()"><i class="bi bi-x"></i></button>
         </div>
         <div class="am-search-wrap">
             <i class="bi bi-search am-search-icon"></i>
-            <input type="text" class="am-search" id="am-search" placeholder="Search..." autocomplete="off">
+            <input type="text" class="am-search" id="aa-add-search" placeholder="Search..." autocomplete="off">
         </div>
-        <div class="am-list" id="am-list"></div>
+        <div class="am-list" id="aa-add-list"></div>
         <div class="am-footer">
-            <span class="am-footer-info" id="am-footer-info">0 selected</span>
+            <span class="am-footer-info" id="aa-add-footer-info">0 selected</span>
             <div class="am-footer-actions">
-                <button class="btn-am-cancel" onclick="closeAddModal()">Cancel</button>
-                <button class="btn-am-confirm" id="btn-am-confirm" onclick="confirmAddMembers()" disabled>
+                <button class="btn-am-cancel" onclick="closeAdminAddModal()">Cancel</button>
+                <button class="btn-am-confirm" id="btn-aa-add-confirm" onclick="confirmAddAdminAccess()" disabled>
                     <i class="bi bi-check-lg me-1"></i> Add
                 </button>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- Column Filter Modal (Member/Code/Department headers) -->
-<div class="mem-filter-overlay modal-overlay-base" id="mem-filter-overlay" onclick="closeColumnFilterPopup(event)">
-    <div class="mem-filter-modal modal-shell-base" onclick="event.stopPropagation()">
-        <div class="mem-filter-modal-header">
-            <div class="mem-filter-modal-title">
-                <i class="bi bi-funnel-fill" style="color:var(--c-accent)"></i>
-                <span id="mem-filter-title"></span>
-                <span class="mem-filter-count" id="mem-filter-count"></span>
-            </div>
-            <div class="mem-filter-header-actions">
-                <button class="mem-filter-reset-link" id="mem-filter-reset-btn" onclick="resetColumnFilter()"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
-                <button class="mem-filter-modal-close" onclick="closeColumnFilterPopup()"><i class="bi bi-x"></i></button>
-            </div>
-        </div>
-        <div class="mem-filter-modal-body">
-            <div class="mem-filter-search-row">
-                <div class="mem-filter-search-wrap">
-                    <i class="bi bi-search mem-filter-search-icon"></i>
-                    <input type="text" id="mem-filter-search" class="mem-filter-search-input" placeholder="Search..." autocomplete="off" oninput="renderColumnFilterList(this.value); toggleSearchClearBtn(this.value);">
-                    <button class="mem-filter-search-clear" id="mem-filter-search-clear" onclick="clearColumnFilterSearch()" title="Clear search" style="display:none;"><i class="bi bi-x-circle-fill"></i></button>
-                </div>
-                <button class="cfg-btn-sort" onclick="setMemberSortDirect(filterPopupField, 'asc')" title="Sort A → Z"><i class="bi bi-sort-alpha-down"></i></button>
-                <button class="cfg-btn-sort" onclick="setMemberSortDirect(filterPopupField, 'desc')" title="Sort Z → A"><i class="bi bi-sort-alpha-up"></i></button>
-            </div>
-            <div class="mem-filter-list" id="mem-filter-list"></div>
         </div>
     </div>
 </div>
@@ -837,6 +772,15 @@
     // Work List's (same reasoning as calendarChanges above).
     let statusConfigChanges = {};
     const statusConfigDeletes = new Set(); // never populated, same story as configDeletes
+    // List page Data Visibility (Role/Owner Own-vs-All) and Filter Defaults
+    // (Status/Type/Role pre-selected + Deadline range) — two more flat
+    // b-quest-config buckets, own dirty-dots per the same reasoning as
+    // calendarChanges/statusConfigChanges above.
+    let visibilityChanges = {};
+    const visibilityDeletes = new Set(); // never populated, same story as configDeletes
+    let filterDefaultsChanges = {};
+    const filterDefaultsDeletes = new Set(); // never populated, same story as configDeletes
+    let fdStatusFilter, fdTypeFilter; // createMultiSelect() instances for the Default Filters box
     // Notifications/Email — settings only (who SHOULD be notified). Actually
     // sending anything (resolving rules into a deduped recipient list,
     // fetching emails, handling the same person matching multiple rules)
@@ -847,20 +791,16 @@
     const notifyDeletes = new Set(); // never populated, same story as configDeletes
     let roleIdSeq = -1; // negative temp ids for unsaved new rows
     let saveBar = null;
+    let allProfiles = []; // used by Notify's recipient pickers and the Admin Access add-picker
 
-    let originalMembers = [];      // [{codename, permissions}], as loaded from b-quest-member
-    let originalMemberRoles = [];  // [{id, codename, role_id, new, edit, delete, accept, assign, edit_scope, delete_scope}], as loaded from b-quest-member-role
-    let memberChanges = {};        // codename -> {permissions:[...]} — also how a staged NEW member is represented (codename not present in originalMembers yet)
-    let memberDeletes = new Set(); // codenames staged for removal
-    let memberRoleChanges = {};    // id (real uuid, or 'new-N' temp id for a freshly-granted role) -> {...fields...}
-    let memberRoleDeletes = new Set();
-    let allProfiles = [];
-    let memberSort = { field: 'nick_name', dir: 'asc' }; // field: 'nick_name' | 'employee_id' | 'department'
-    // Excel-style column filter — null means "no filter, everything shown";
-    // once the user unchecks anything it becomes a real Set of allowed values.
-    let memberColumnFilters = { nick_name: null, employee_id: null, department: null };
-    let filterPopupField = null; // which column's popup is currently open
-    let advancedMode = false; // bulk column/row toggles for initial project setup — off by default
+    // Admin Access — who can reach the Setting/Member pages. Reads/writes the
+    // same b-quest-member.permissions array Members' own dashboard/duplicate/
+    // share toggles use, just a different pair of flags ('setting'/'member')
+    // — see [[bquest-settings-roadmap]] for why these two moved off the
+    // per-project Members matrix and onto this page instead.
+    let originalAdminMembers = []; // [{codename, permissions}], as loaded from b-quest-member
+    let adminAccessChanges = {};   // codename -> {permissions:[...]}
+    const adminAccessDeletes = new Set(); // never populated — "removing" someone here just clears both flags, doesn't delete their b-quest-member row (they may still hold dashboard/duplicate/share/role grants)
 
     // ── Init ──
     async function loadPage() {
@@ -868,13 +808,14 @@
         await initLayout(B_QUEST_CONFIG);
         guardPermission();
         saveBar = createSaveBar({ label: 'B-Quest Settings', onSave: saveAll, onCancel: cancelAllChanges, onUndo: undoLastChange });
-        await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadAllProfiles(), loadConfig(), loadDepartments()]);
-        await Promise.all([loadWork(), loadMembers()]);
-        setupAddSearch();
-        setupTableSearch();
+        setupFilterDefaultMultiSelects();
+        setupAdminAddSearch();
+        document.getElementById('fdRoleSegWrap')?.addEventListener('scroll', updateFdRoleFade);
+        await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadAllProfiles(), loadConfig(), loadDepartments(), loadAdminAccess()]);
+        renderFilterDefaultsSection(); // needs originalRoles/Statuses/Types + originalConfig, all settled by the Promise.all above
+        await loadWork();
         setupCarouselFade('cfgCarousel', 'cfgCarouselWrap');
         setupCarouselFade('work-cols', 'workCarouselWrap');
-        setupCarouselFade('mem-list', 'memCarouselWrap');
     }
 
     // Generic left/right scroll-fade hint — shared by the Role/Status/Type
@@ -920,9 +861,10 @@
         fn('section-worklist', configChanges, configDeletes); // shares the Work List box's dirty-dot — same id called twice on purpose
         fn('section-statuses', statusConfigChanges, statusConfigDeletes); // shares the Status box's dirty-dot — same id called twice on purpose
         fn('section-calendar', calendarChanges, calendarDeletes);
+        fn('section-visibility', visibilityChanges, visibilityDeletes);
+        fn('section-filterdefaults', filterDefaultsChanges, filterDefaultsDeletes);
         fn('section-notify', notifyChanges, notifyDeletes);
-        fn('section-members', memberChanges, memberDeletes);
-        fn('section-members', memberRoleChanges, memberRoleDeletes); // shares the Members box's dirty-dot too
+        fn('section-adminaccess', adminAccessChanges, adminAccessDeletes);
     }
 
     function markDirty(sectionId) {
@@ -963,15 +905,14 @@
             configChanges: JSON.parse(JSON.stringify(configChanges)),
             statusConfigChanges: JSON.parse(JSON.stringify(statusConfigChanges)),
             calendarChanges: JSON.parse(JSON.stringify(calendarChanges)),
+            visibilityChanges: JSON.parse(JSON.stringify(visibilityChanges)),
+            filterDefaultsChanges: JSON.parse(JSON.stringify(filterDefaultsChanges)),
             notifyChanges: JSON.parse(JSON.stringify(notifyChanges)),
-            memberChanges: JSON.parse(JSON.stringify(memberChanges)),
-            memberRoleChanges: JSON.parse(JSON.stringify(memberRoleChanges)),
+            adminAccessChanges: JSON.parse(JSON.stringify(adminAccessChanges)),
             roleDeletes: [...roleDeletes],
             statusDeletes: [...statusDeletes],
             typeDeletes: [...typeDeletes],
-            workDeletes: [...workDeletes],
-            memberDeletes: [...memberDeletes],
-            memberRoleDeletes: [...memberRoleDeletes]
+            workDeletes: [...workDeletes]
         };
     }
 
@@ -983,15 +924,14 @@
         configChanges = snap.configChanges;
         statusConfigChanges = snap.statusConfigChanges;
         calendarChanges = snap.calendarChanges;
+        visibilityChanges = snap.visibilityChanges;
+        filterDefaultsChanges = snap.filterDefaultsChanges;
         notifyChanges = snap.notifyChanges;
-        memberChanges = snap.memberChanges;
-        memberRoleChanges = snap.memberRoleChanges;
+        adminAccessChanges = snap.adminAccessChanges;
         roleDeletes = new Set(snap.roleDeletes);
         statusDeletes = new Set(snap.statusDeletes);
         typeDeletes = new Set(snap.typeDeletes);
         workDeletes = new Set(snap.workDeletes);
-        memberDeletes = new Set(snap.memberDeletes);
-        memberRoleDeletes = new Set(snap.memberRoleDeletes);
     }
 
     function pushUndoSnapshot() {
@@ -1021,21 +961,21 @@
             if (countPending(changes, deletes) > 0) document.getElementById(id).classList.add('is-dirty');
         });
 
-        renderRoles(); renderStatuses(); renderTypes(); renderWork(); renderWorkConfigToggles(); renderWorkCalendar(); renderNotifySection(); renderMembers(currentMemberFilter());
+        renderRoles(); renderStatuses(); renderTypes(); renderWork(); renderWorkConfigToggles(); renderWorkCalendar(); renderVisibilitySection(); renderFilterDefaultsSection(); renderNotifySection(); renderAdminAccess();
         recomputeSaveBarCount();
         saveBar.setUndoAvailable(undoStack.length > 0);
     }
 
     function snapshotOfEmptyState() {
         return {
-            roleChanges: {}, statusChanges: {}, typeChanges: {}, workChanges: {}, configChanges: {}, statusConfigChanges: {}, calendarChanges: {}, notifyChanges: {}, memberChanges: {}, memberRoleChanges: {},
-            roleDeletes: [], statusDeletes: [], typeDeletes: [], workDeletes: [], memberDeletes: [], memberRoleDeletes: []
+            roleChanges: {}, statusChanges: {}, typeChanges: {}, workChanges: {}, configChanges: {}, statusConfigChanges: {}, calendarChanges: {}, visibilityChanges: {}, filterDefaultsChanges: {}, notifyChanges: {}, adminAccessChanges: {},
+            roleDeletes: [], statusDeletes: [], typeDeletes: [], workDeletes: []
         };
     }
 
     function resetSectionState() {
-        roleChanges = {}; statusChanges = {}; typeChanges = {}; workChanges = {}; configChanges = {}; statusConfigChanges = {}; calendarChanges = {}; notifyChanges = {}; memberChanges = {}; memberRoleChanges = {};
-        roleDeletes = new Set(); statusDeletes = new Set(); typeDeletes = new Set(); workDeletes = new Set(); memberDeletes = new Set(); memberRoleDeletes = new Set();
+        roleChanges = {}; statusChanges = {}; typeChanges = {}; workChanges = {}; configChanges = {}; statusConfigChanges = {}; calendarChanges = {}; visibilityChanges = {}; filterDefaultsChanges = {}; notifyChanges = {}; adminAccessChanges = {};
+        roleDeletes = new Set(); statusDeletes = new Set(); typeDeletes = new Set(); workDeletes = new Set();
         undoStack = [];
         saveBar?.setUndoAvailable(false);
         eachSection(id => document.getElementById(id).classList.remove('is-dirty'));
@@ -1056,12 +996,10 @@
         renderWork();
         renderWorkConfigToggles();
         renderWorkCalendar();
+        renderVisibilitySection();
+        renderFilterDefaultsSection();
         renderNotifySection();
-        renderMembers(currentMemberFilter());
-    }
-
-    function currentMemberFilter() {
-        return document.getElementById('table-search')?.value.trim() || '';
+        renderAdminAccess();
     }
 
     function esc(s) { return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -1441,6 +1379,12 @@
 
     function positionPicker(evt) {
         const panel = document.getElementById('picker-panel');
+        // Backdrop must be shown before we measure the panel — its width is
+        // otherwise 0 (display:none ancestor), which used to make the
+        // horizontal-overflow check below a no-op. Safe to show first:
+        // top/left/bottom all get set synchronously right after, in the
+        // same tick, before the browser paints anything.
+        document.getElementById('picker-backdrop').classList.add('show');
         const rect = evt.currentTarget.getBoundingClientRect();
         // .cfg-picker is absolutely positioned inside the fixed backdrop, so its
         // containing block is the viewport itself — use viewport-relative
@@ -1461,8 +1405,38 @@
             panel.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
             panel.style.maxHeight = Math.max(150, spaceAbove - 6) + 'px';
         }
-        panel.style.left = rect.left + 'px';
-        document.getElementById('picker-backdrop').classList.add('show');
+        // Flip to the trigger's right edge (clamped to the viewport) instead
+        // of always opening from its left edge, when opening left-aligned
+        // would run the panel off the right side of the screen — e.g. the
+        // Default Filters info button sits far enough right that its
+        // .medium (330px) panel used to overflow with no way to read the
+        // clipped text.
+        const panelWidth = panel.offsetWidth;
+        let left = rect.left;
+        if (left + panelWidth > window.innerWidth - margin) {
+            left = Math.max(margin, rect.right - panelWidth);
+        }
+        panel.style.left = left + 'px';
+    }
+
+    function openCapacityInfoPopup(evt) {
+        const panel = document.getElementById('picker-panel');
+        panel.classList.remove('wide');
+        panel.classList.add('medium');
+        panel.innerHTML = `
+            <div class="cfg-info-item divided">
+                <div class="cfg-info-title"><i class="bi bi-calendar-week"></i> Day %</div>
+                <p>How much of everyone's daily capacity actually counts on that weekday, company-wide.</p>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge">100%</span><span class="info-txt">Full day counts normally.</span></div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge">1–99%</span><span class="info-txt">Partial day, e.g. a half-day Friday.</span></div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge">0%</span><span class="info-txt">Day doesn't count at all, e.g. a weekend or day off.</span></div>
+            </div>
+            <div class="cfg-info-item">
+                <div class="cfg-info-title"><i class="bi bi-toggle-on"></i> Skip Holidays</div>
+                <p>Once a company holiday list exists, turning this on skips holidays entirely instead of counting them at their weekday %.</p>
+            </div>
+        `;
+        positionPicker(evt);
     }
 
     // Reuses the same popover backdrop/positioning as the color/icon pickers
@@ -1480,33 +1454,43 @@
         positionPicker(evt);
     }
 
-    function openMemberPermInfoPopup(evt) {
+    function openVisibilityInfoPopup(evt) {
         const panel = document.getElementById('picker-panel');
         panel.classList.remove('wide');
         panel.classList.add('medium');
         panel.innerHTML = `
             <div class="cfg-info-item divided">
-                <div class="cfg-info-title"><i class="bi bi-plus-circle-fill"></i> New</div>
-                <p>Create new tasks.</p>
+                <div class="cfg-info-title"><i class="bi bi-person-workspace"></i> Role</div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge own">Own</span><span class="info-txt">Card only shows if it has at least one Role you personally have.</span></div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge all">All</span><span class="info-txt">No restriction from Role — every Role's cards can show.</span></div>
             </div>
             <div class="cfg-info-item divided">
-                <div class="cfg-info-title"><i class="bi bi-pencil-fill"></i> Edit</div>
-                <div class="cfg-info-scope-row"><span class="mem-scope-badge own">Own</span><span class="info-txt">Only roles assigned to you — other roles on the same task stay locked.</span></div>
-                <div class="cfg-info-scope-row"><span class="mem-scope-badge all">All</span><span class="info-txt">Edit any task with your role, even ones assigned to someone else.</span></div>
-            </div>
-            <div class="cfg-info-item divided">
-                <div class="cfg-info-title"><i class="bi bi-trash3-fill"></i> Delete</div>
-                <div class="cfg-info-scope-row"><span class="mem-scope-badge own">Own</span><span class="info-txt">Only if you're assigned to every role on the task.</span></div>
-                <div class="cfg-info-scope-row"><span class="mem-scope-badge all">All</span><span class="info-txt">Any task with your role.</span></div>
-                <div class="cfg-info-warning"><i class="bi bi-exclamation-triangle-fill"></i> A task with more than 1 role can't be fully deleted unless you're assigned to all of them — but you can still Edit to remove just your own role from it.</div>
-            </div>
-            <div class="cfg-info-item divided">
-                <div class="cfg-info-title"><i class="bi bi-hand-thumbs-up-fill"></i> Accept</div>
-                <p>Eligible to receive assigned work.</p>
+                <div class="cfg-info-title"><i class="bi bi-person-fill"></i> Owner</div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge own">Own</span><span class="info-txt">Card only shows if you're the Owner of it.</span></div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge all">All</span><span class="info-txt">No restriction from Owner — any owner's cards can show.</span></div>
             </div>
             <div class="cfg-info-item">
-                <div class="cfg-info-title"><i class="bi bi-person-plus-fill"></i> Assign</div>
-                <p>Assign tasks to other members.</p>
+                <p><b>Both Own?</b> Either match is enough (OR, not AND) — and Assigned work always shows no matter what.</p>
+            </div>
+        `;
+        positionPicker(evt);
+    }
+
+    function openFilterDefaultsInfoPopup(evt) {
+        const panel = document.getElementById('picker-panel');
+        panel.classList.remove('wide');
+        panel.classList.add('medium');
+        panel.innerHTML = `
+            <div class="cfg-info-item divided">
+                <div class="cfg-info-title"><i class="bi bi-funnel-fill"></i> Role / Status / Type</div>
+                <p>Whichever value is set is pre-selected automatically when a member opens the List page — they can still change it, this is only the starting point.</p>
+            </div>
+            <div class="cfg-info-item">
+                <div class="cfg-info-title"><i class="bi bi-calendar-range"></i> Deadline Date</div>
+                <p>Lower and Upper each pick a mode; the number next to it is an offset from today, counted separately per bound:</p>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge">0</span><span class="info-txt">Today (Day mode) or this month (Month mode) — same for Lower and Upper.</span></div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge">Day N</span><span class="info-txt">N days before today on Lower, N days after today on Upper. e.g. Lower Day 1 = yesterday.</span></div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge">Month N</span><span class="info-txt">N months before this month, on both Lower and Upper. e.g. Month 1 = last month.</span></div>
             </div>
         `;
         positionPicker(evt);
@@ -1617,12 +1601,270 @@
         (data || []).forEach(row => { originalConfig[row.rule] = row.value; });
         renderWorkConfigToggles();
         renderWorkCalendar();
+        renderVisibilitySection();
+        // renderFilterDefaultsSection() is NOT called here — it needs
+        // originalRoles/originalStatuses/originalTypes, which load
+        // concurrently with this in the same Promise.all in loadPage() and
+        // aren't guaranteed to be ready yet. Called from loadPage() instead,
+        // after that Promise.all resolves.
         renderNotifySection();
     }
 
     async function loadDepartments() {
         const { data } = await supabaseClient.from('departments').select('name').order('name');
         originalDepartments = (data || []).map(d => d.name);
+    }
+
+    // ═══════════════════════════════════════════
+    // List page — Data Visibility (Role/Owner Own-vs-All)
+    // ═══════════════════════════════════════════
+    function visibilityBuffer() {
+        return { role: 'all', owner: 'all', ...originalConfig.list_visibility, ...visibilityChanges.list_visibility };
+    }
+
+    function renderVisibilitySection() {
+        const v = visibilityBuffer();
+        ['role', 'owner'].forEach(axis => {
+            const seg = document.querySelector(`.vis-seg[data-axis="${axis}"]`);
+            if (!seg) return;
+            const val = v[axis] === 'all' ? 'all' : 'own';
+            seg.classList.toggle('state-own', val === 'own');
+            seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.val === val));
+        });
+    }
+
+    function onVisibilitySegClick(e, axis) {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const v = visibilityBuffer();
+        visibilityChanges.list_visibility = { ...v, [axis]: btn.dataset.val };
+        markDirty('section-visibility');
+        renderVisibilitySection();
+    }
+
+    // ═══════════════════════════════════════════
+    // List page — Filter Defaults (Role/Status/Type pre-selected + Deadline
+    // range). Two separate b-quest-config rules (list_filter_defaults,
+    // list_deadline_default) staged in the same filterDefaultsChanges
+    // bucket, so both share one dirty-dot/section.
+    // ═══════════════════════════════════════════
+    function filterDefaultsBuffer() {
+        return { status: [], type: [], role: '', ...originalConfig.list_filter_defaults, ...filterDefaultsChanges.list_filter_defaults };
+    }
+
+    function deadlineDefaultBuffer() {
+        return {
+            lower: { mode: 'none', value: 0 }, upper: { mode: 'none', value: 0 },
+            ...originalConfig.list_deadline_default, ...filterDefaultsChanges.list_deadline_default
+        };
+    }
+
+    function renderFilterDefaultsSection() {
+        const fd = filterDefaultsBuffer();
+
+        renderFdRoleSeg();
+
+        // Status/Type reuse the same createMultiSelect popover the List
+        // page's own filter bar uses — setValues() just syncs the trigger's
+        // displayed label ("All" / "N selected") to the current buffer, it
+        // doesn't fire onChange (see multi-select.js), so this can't loop
+        // back into re-staging a change on every render.
+        if (fdStatusFilter) fdStatusFilter.setValues(fd.status || []);
+        if (fdTypeFilter) fdTypeFilter.setValues(fd.type || []);
+
+        renderDeadlineDefaultFields();
+    }
+
+    // Role default — ported from the List page's renderRoleSeg()/
+    // positionRoleSlider()/updateRoleFade() (b-quest-list.html), just wired
+    // to stage into filterDefaultsChanges instead of calling setRoleFilter.
+    // Rebuilds every render so a role added/renamed/recolored earlier in
+    // this same Settings session shows up immediately.
+    function renderFdRoleSeg() {
+        const wrap = document.getElementById('fdRoleSegWrap');
+        if (!wrap) return;
+        const fd = filterDefaultsBuffer();
+        const roles = roleBuffer().filter(r => !r._deleted);
+        const buttons = [{ label: 'All', value: '', icon: '', color: '' }, ...roles.map(r => ({ label: r.name, value: r.id, icon: r.icon || 'bi-person-workspace', color: r.color || '#64748b' }))];
+
+        wrap.querySelectorAll('.fd-role-seg-btn').forEach(b => b.remove());
+        buttons.forEach(b => {
+            const btn = document.createElement('button');
+            btn.className = 'fd-role-seg-btn' + (b.value === (fd.role || '') ? ' active' : '');
+            btn.dataset.role = b.value;
+            btn.dataset.color = b.color;
+            btn.innerHTML = b.icon ? `<i class="bi ${b.icon}"></i> ${esc(b.label)}` : esc(b.label);
+            btn.onclick = () => {
+                filterDefaultsChanges.list_filter_defaults = { ...filterDefaultsBuffer(), role: b.value };
+                markDirty('section-filterdefaults');
+                renderFilterDefaultsSection();
+            };
+            wrap.appendChild(btn);
+        });
+        positionFdRoleSlider();
+    }
+
+    function positionFdRoleSlider() {
+        const active = document.querySelector('#fdRoleSegWrap .fd-role-seg-btn.active');
+        const slider = document.getElementById('fdRoleSegSlider');
+        if (!active || !slider) return;
+        slider.style.left = active.offsetLeft + 'px';
+        slider.style.width = active.offsetWidth + 'px';
+
+        // "All" keeps the default accent color; a specific role tints the
+        // slider/label with that role's own color instead — same rule as
+        // the List page's role-seg slider.
+        const color = active.dataset.role ? active.dataset.color : '';
+        document.querySelectorAll('#fdRoleSegWrap .fd-role-seg-btn').forEach(b => { b.style.color = ''; });
+        if (color) {
+            slider.style.background = color + '26';
+            slider.style.borderColor = color;
+            active.style.color = color;
+        } else {
+            slider.style.background = '';
+            slider.style.borderColor = '';
+        }
+
+        active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        updateFdRoleFade();
+    }
+
+    function updateFdRoleFade() {
+        const scroll = document.getElementById('fdRoleSegWrap');
+        const outer = document.getElementById('fdRoleSegOuter');
+        if (!scroll || !outer) return;
+        outer.classList.toggle('fade-left', scroll.scrollLeft > 2);
+        outer.classList.toggle('fade-right', scroll.scrollLeft + scroll.clientWidth < scroll.scrollWidth - 2);
+    }
+
+    // Status/Type default pickers — initialized once (trigger elements are
+    // static HTML, always present), getOptions() re-reads the live buffer
+    // each time the popover opens so a Status/Type added earlier in this
+    // same Settings session shows up without a page reload.
+    function setupFilterDefaultMultiSelects() {
+        fdStatusFilter = createMultiSelect({
+            trigger: document.getElementById('wrap-fdStatus'),
+            label: 'Status',
+            showTag: false, // .fd-hrow already shows "Status" as its own label
+            getOptions: () => statusBuffer().filter(s => !s._deleted).map(s => ({ value: s.id, label: s.name })),
+            onChange: (values) => {
+                filterDefaultsChanges.list_filter_defaults = { ...filterDefaultsBuffer(), status: values };
+                markDirty('section-filterdefaults');
+            }
+        });
+        fdTypeFilter = createMultiSelect({
+            trigger: document.getElementById('wrap-fdType'),
+            label: 'Type',
+            showTag: false, // .fd-hrow already shows "Type" as its own label
+            getOptions: () => typeBuffer().filter(t => !t._deleted).map(t => ({ value: t.name, label: t.name })),
+            onChange: (values) => {
+                filterDefaultsChanges.list_filter_defaults = { ...filterDefaultsBuffer(), type: values };
+                markDirty('section-filterdefaults');
+            }
+        });
+    }
+
+    function renderDeadlineDefaultFields() {
+        const dd = deadlineDefaultBuffer();
+        const lowerSeg = document.getElementById('fdLowerModeSeg');
+        if (!lowerSeg) return;
+        renderDeadlineModeSeg('lower', dd.lower.mode);
+        renderDeadlineModeSeg('upper', dd.upper.mode);
+        const lowerVal = document.getElementById('fdLowerValue');
+        const upperVal = document.getElementById('fdUpperValue');
+        lowerVal.value = dd.lower.value ?? 0;
+        lowerVal.style.display = dd.lower.mode === 'none' ? 'none' : 'inline-block';
+        upperVal.value = dd.upper.value ?? 0;
+        upperVal.style.display = dd.upper.mode === 'none' ? 'none' : 'inline-block';
+        const preview = computeDeadlinePreview(dd);
+        document.getElementById('fdDeadlinePreview').innerHTML = `
+            <i class="bi bi-calendar-range"></i>
+            <span class="fd-preview-chip ${preview.lo === 'No limit' ? 'is-unset' : ''}">${esc(preview.lo)}</span>
+            <i class="bi bi-arrow-right"></i>
+            <span class="fd-preview-chip ${preview.hi === 'No limit' ? 'is-unset' : ''}">${esc(preview.hi)}</span>
+        `;
+        document.getElementById('fdDeadlineSummary').textContent = deadlineSummaryText(dd);
+    }
+
+    // Positions the sliding pill the same JS-measured way as
+    // .fd-role-seg-slider — offsetLeft/offsetWidth of whichever button is
+    // active, so it works regardless of each label's own width.
+    function renderDeadlineModeSeg(bound, mode) {
+        const seg = document.getElementById(bound === 'lower' ? 'fdLowerModeSeg' : 'fdUpperModeSeg');
+        if (!seg) return;
+        seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+        const active = seg.querySelector('button.on');
+        const slider = seg.querySelector('.fd-mode-seg-slider');
+        if (active && slider) {
+            slider.style.left = active.offsetLeft + 'px';
+            slider.style.width = active.offsetWidth + 'px';
+        }
+    }
+
+    function onDeadlineModeClick(bound, mode) {
+        const dd = deadlineDefaultBuffer();
+        filterDefaultsChanges.list_deadline_default = { ...dd, [bound]: { mode, value: dd[bound].value ?? 0 } };
+        markDirty('section-filterdefaults');
+        renderDeadlineDefaultFields();
+    }
+
+    function onDeadlineBoundChange(bound) {
+        const dd = deadlineDefaultBuffer();
+        const value = Number(document.getElementById(bound === 'lower' ? 'fdLowerValue' : 'fdUpperValue').value || 0);
+        filterDefaultsChanges.list_deadline_default = { ...dd, [bound]: { mode: dd[bound].mode, value } };
+        markDirty('section-filterdefaults');
+        renderDeadlineDefaultFields();
+    }
+
+    // Translates a bound's raw Day/Month offset into plain language next to
+    // its own number input — "0" alone doesn't read as "today"/"this month"
+    // without stopping to think about it. Month is never phrased "ahead":
+    // both Lower and Upper month bounds only ever count backward from the
+    // current month (see computeDeadlinePreview's resolve()), so "ago"/
+    // "this month" covers every case; only Day distinguishes ago vs ahead.
+    function boundHintText(bound, b) {
+        if (b.mode === 'none') return '';
+        const value = b.value ?? 0;
+        if (b.mode === 'day') {
+            if (value === 0) return 'Today';
+            return `${value} day${value === 1 ? '' : 's'} ${bound === 'upper' ? 'ahead' : 'ago'}`;
+        }
+        if (value === 0) return 'This month';
+        return `${value} month${value === 1 ? '' : 's'} ago`;
+    }
+
+    // Plain-language summary shown to the right of the preview pill —
+    // reuses the same per-bound phrasing as boundHintText, collapsed to one
+    // word when both bounds land on the same phrase (e.g. Day 0 / Day 0 →
+    // just "Today" instead of "Today → Today").
+    function deadlineSummaryText(dd) {
+        const lo = boundHintText('lower', dd.lower);
+        const hi = boundHintText('upper', dd.upper);
+        if (!lo && !hi) return 'No limit';
+        if (lo === hi) return lo;
+        return `${lo || 'No limit'} → ${hi || 'No limit'}`;
+    }
+
+    // Mirrors the resolve logic b-quest-list.html itself will use to apply
+    // this default at page load — kept in sync deliberately so the preview
+    // shown here is never misleading about what viewers will actually see.
+    function computeDeadlinePreview(dd) {
+        const today = new Date();
+        const fmt = d => `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+        function resolve(bound, isUpper) {
+            if (bound.mode === 'none') return null;
+            if (bound.mode === 'day') {
+                const d = new Date(today);
+                d.setDate(d.getDate() + (isUpper ? bound.value : -bound.value));
+                return d;
+            }
+            return isUpper
+                ? new Date(today.getFullYear(), today.getMonth() - bound.value + 1, 0)  // last day of that month
+                : new Date(today.getFullYear(), today.getMonth() - bound.value, 1);      // first day of that month
+        }
+        const lo = resolve(dd.lower, false);
+        const hi = resolve(dd.upper, true);
+        return { lo: lo ? fmt(lo) : 'No limit', hi: hi ? fmt(hi) : 'No limit' };
     }
 
     function configBuffer() {
@@ -2030,7 +2272,6 @@
             // save fails (the error path reloads from DB but never clears
             // already-succeeded entries out of the change buffers).
             Object.values(workChanges).forEach(ch => { if (ch.role_id?.startsWith?.('new-')) ch.role_id = roleIdMap[ch.role_id] || ch.role_id; });
-            Object.values(memberRoleChanges).forEach(ch => { if (ch.role_id?.startsWith?.('new-')) ch.role_id = roleIdMap[ch.role_id] || ch.role_id; });
             Object.keys(roleIdMap).forEach(tempId => delete roleChanges[tempId]);
 
             const statusIdMap = await saveTable('b-quest-status', statusChanges, statusDeletes, 'name', errors, 'Status');
@@ -2052,28 +2293,22 @@
                 statusConfigChanges.default_status_id = resolvedStatusDefault;
             }
 
-            for (const [rule, value] of Object.entries({ ...configChanges, ...statusConfigChanges, ...calendarChanges, ...notifyChanges })) {
+            for (const [rule, value] of Object.entries({ ...configChanges, ...statusConfigChanges, ...calendarChanges, ...visibilityChanges, ...filterDefaultsChanges, ...notifyChanges })) {
                 const { error } = await supabaseClient.from('b-quest-config').upsert({ rule, value });
                 if (error) errors.push('Settings update: ' + error.message);
             }
 
-            // Members — keyed by codename (the real PK) rather than a
-            // synthetic id, so this can't reuse the generic saveTable()
-            // insert/'new-' convention; a member is "new" simply if its
-            // codename isn't in originalMembers yet.
-            for (const [codename, ch] of Object.entries(memberChanges)) {
-                if (memberDeletes.has(codename)) continue;
-                const isNewMember = !originalMembers.some(m => m.codename === codename);
-                const { error } = isNewMember
+            // Admin Access — same b-quest-member table Members' own page
+            // writes to (permissions is a flat array covering dashboard/
+            // duplicate/share there and setting/member here), so this is the
+            // same insert-if-new-else-update convention as that page uses.
+            for (const [codename, ch] of Object.entries(adminAccessChanges)) {
+                const isNew = !originalAdminMembers.some(m => m.codename === codename);
+                const { error } = isNew
                     ? await supabaseClient.from('b-quest-member').insert([{ codename, permissions: ch.permissions || [] }])
                     : await supabaseClient.from('b-quest-member').update(ch).eq('codename', codename);
-                if (error) errors.push(`Member "${codename}": ` + error.message);
+                if (error) errors.push(`Admin Access "${codename}": ` + error.message);
             }
-            for (const codename of memberDeletes) {
-                const { error } = await supabaseClient.from('b-quest-member').delete().eq('codename', codename);
-                if (error) errors.push(`Member remove "${codename}": ` + error.message);
-            }
-            await saveTable('b-quest-member-role', memberRoleChanges, memberRoleDeletes, 'codename', errors, 'Member Role');
 
             if (errors.length) {
                 // Something failed partway through — keep everything staged
@@ -2084,43 +2319,21 @@
                 const title = allCannotDelete ? 'Cannot Delete' : 'Some errors occurred';
                 const body = allCannotDelete ? errors.map(e => e.replace('Cannot Delete: ', '')).join('\n') : errors.join('\n');
                 Swal.fire(title, body, 'error');
-                await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadConfig()]);
-                await Promise.all([loadWork(), loadMembers()]);
+                await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadConfig(), loadAdminAccess()]);
+                renderFilterDefaultsSection();
+                await loadWork();
                 return;
             }
 
             Swal.fire({ icon: 'success', title: 'Saved!', showConfirmButton: false, timer: 1200 });
             clearDirty();
-            await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadConfig()]);
-            await Promise.all([loadWork(), loadMembers()]); // roles feed both
+            await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadConfig(), loadAdminAccess()]);
+            renderFilterDefaultsSection();
+            await loadWork(); // roles feed this
 
         } catch (e) {
             Swal.fire('Error', e.message, 'error');
         }
-    }
-
-    // ═══════════════════════════════════════════
-    // Members & Permissions — staged like everything else on this page:
-    // grant/revoke a role is a direct toggle in the matrix (one click,
-    // immediately shown live), and the fine-grained per-role permissions
-    // (new/edit/delete/assign) live behind a small ⚙ popover next to the
-    // toggle rather than a separate modal — nothing hits the DB until Save.
-    // ═══════════════════════════════════════════
-    function showSkeleton() {
-        const row = () => `<div class="skeleton-row"><div class="skeleton-block" style="height:30px;width:130px;"></div><div class="skeleton-block" style="height:24px;width:200px;"></div></div>`;
-        document.getElementById('mem-list').innerHTML = row() + row() + row();
-    }
-
-    async function loadMembers() {
-        showSkeleton();
-        const [{ data: members, error }, { data: memberRoles }] = await Promise.all([
-            supabaseClient.from('b-quest-member').select('codename, permissions').order('codename'),
-            supabaseClient.from('b-quest-member-role').select('id, codename, role_id, new, edit, delete, accept, assign, edit_scope, delete_scope')
-        ]);
-        if (error) { console.error(error); return; }
-        originalMembers = members || [];
-        originalMemberRoles = memberRoles || [];
-        renderMembers();
     }
 
     async function loadAllProfiles() {
@@ -2132,529 +2345,104 @@
         return allProfiles.find(p => p.codename === codename);
     }
 
-    // ── Excel-style column header filter (Member/Code/Department): sort
-    // A-Z/Z-A + a searchable checklist of that column's distinct values.
-    // A centered modal rather than an anchored popover (like the color/icon
-    // pickers) — this one has enough content (sort + search + scrollable
-    // checklist + actions) that it reads better as its own dialog, and it
-    // sidesteps the "not enough room below the trigger" problem entirely.
-    // Scoped to members actually on this project (memberBuffer), not every
-    // profile in the system — a profile can exist without being added here
-    // yet, and the filter checklist shouldn't offer values that can't
-    // actually match any row in the table.
-    function columnValues(field) {
-        return [...new Set(memberBuffer().filter(m => !m._deleted).map(m => profileFor(m.codename)?.[field]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    // ═══════════════════════════════════════════
+    // Admin Access — who can reach the Setting/Member pages (see the state
+    // comment near originalAdminMembers for why this reads/writes the same
+    // b-quest-member.permissions array Members' own page does).
+    // ═══════════════════════════════════════════
+    async function loadAdminAccess() {
+        const { data } = await supabaseClient.from('b-quest-member').select('codename, permissions');
+        originalAdminMembers = data || [];
+        renderAdminAccess();
     }
 
-    function filterIcon(field) {
-        const active = !!memberColumnFilters[field];
-        return `<i class="bi ${active ? 'bi-funnel-fill' : 'bi-funnel'} mem-filter-icon ${active ? 'active' : ''}"></i>`;
+    function adminAccessBuffer() {
+        return originalAdminMembers.map(m => ({ ...m, ...(adminAccessChanges[m.codename] || {}) }))
+            .concat(Object.entries(adminAccessChanges)
+                .filter(([codename]) => !originalAdminMembers.some(m => m.codename === codename))
+                .map(([codename, c]) => ({ codename, permissions: [], ...c })));
     }
 
-    // Small, quiet echo of the row-level ⚡ button so both axes read as the
-    // same "bulk toggle" language — deliberately not a big filled button
-    // here, the action columns are already tight on width (fits "DELETE"/
-    // "ASSIGN" as it is).
-    function bulkColIcon() {
-        return '<i class="bi bi-lightning-charge-fill mem-bulk-col-icon"></i>';
+    // Only shows people who currently (post-staging) hold Setting or Member
+    // — the underlying b-quest-member table has everyone (task-working
+    // members too), but this panel is specifically about admin-page access,
+    // not the whole roster.
+    function visibleAdminRows() {
+        return adminAccessBuffer().filter(m => (m.permissions || []).includes('setting') || (m.permissions || []).includes('member'));
     }
 
-    function openColumnFilterPopup(field, label) {
-        filterPopupField = field;
-        document.getElementById('mem-filter-title').textContent = label;
-        document.getElementById('mem-filter-search').value = '';
-        toggleSearchClearBtn('');
-        renderColumnFilterList('');
-        document.getElementById('mem-filter-overlay').classList.add('show');
-        setTimeout(() => document.getElementById('mem-filter-search').focus(), 100);
+    function renderAdminAccess() {
+        const rows = visibleAdminRows();
+        const list = document.getElementById('aa-list');
+        if (!list) return;
+        if (!rows.length) { list.innerHTML = '<div class="cfg-empty">No one has Setting or Member access yet</div>'; return; }
+        list.innerHTML = rows.map(m => {
+            const p = profileFor(m.codename);
+            const hasSetting = (m.permissions || []).includes('setting');
+            const hasMember = (m.permissions || []).includes('member');
+            return `
+            <div class="aa-row">
+                <div class="am-avatar"><i class="bi bi-person-fill"></i></div>
+                <div class="aa-name"><div class="aa-nick">${esc(p?.nick_name || m.codename)}</div></div>
+                <label class="aa-toggle-item">
+                    <span>Setting</span>
+                    <label class="bq-toggle small">
+                        <input type="checkbox" ${hasSetting ? 'checked' : ''} onchange="setAdminFlag('${esc(m.codename)}','setting',this.checked)">
+                        <span class="bq-slider"></span>
+                    </label>
+                </label>
+                <label class="aa-toggle-item">
+                    <span>Member</span>
+                    <label class="bq-toggle small">
+                        <input type="checkbox" ${hasMember ? 'checked' : ''} onchange="setAdminFlag('${esc(m.codename)}','member',this.checked)">
+                        <span class="bq-slider"></span>
+                    </label>
+                </label>
+                <button class="btn-remove" onclick="removeAdminAccess('${esc(m.codename)}')" title="Revoke all admin access"><i class="bi bi-trash3"></i></button>
+            </div>`;
+        }).join('');
     }
 
-    function closeColumnFilterPopup(e) {
-        if (e && e.target !== document.getElementById('mem-filter-overlay')) return;
-        document.getElementById('mem-filter-overlay').classList.remove('show');
-    }
-
-    function toggleSearchClearBtn(val) {
-        const btn = document.getElementById('mem-filter-search-clear');
-        if (btn) btn.style.display = val ? 'flex' : 'none';
-    }
-
-    function clearColumnFilterSearch() {
-        const input = document.getElementById('mem-filter-search');
-        input.value = '';
-        input.focus();
-        toggleSearchClearBtn('');
-        renderColumnFilterList('');
-    }
-
-    // Only touches #mem-filter-list, never the outer panel/search input —
-    // same reason as renderIconGrid/filterIconGrid: replacing the search
-    // input itself via innerHTML on every keystroke would drop its focus.
-    function renderColumnFilterList(searchQ) {
-        const field = filterPopupField;
-        const all = columnValues(field);
-        const ql = searchQ.trim().toLowerCase();
-        const visible = ql ? all.filter(v => v.toLowerCase().includes(ql)) : all;
-        const selected = memberColumnFilters[field]; // null = everything counts as checked
-        const list = document.getElementById('mem-filter-list');
-
-        // Header info (count + Reset prominence) reflects the field's real
-        // filter state, not the momentary search — computed up front so it
-        // still updates even when the search matches nothing below.
-        const selectedTotal = selected ? selected.size : all.length;
-        document.getElementById('mem-filter-count').textContent = selectedTotal === all.length ? '' : `${selectedTotal}/${all.length} selected`;
-        document.getElementById('mem-filter-reset-btn')?.classList.toggle('active', !!selected);
-
-        if (!visible.length) { list.innerHTML = '<div class="cfg-empty">No matches</div>'; return; }
-        const checkedCount = visible.filter(v => !selected || selected.has(v)).length;
-        list.innerHTML = `
-            <label class="mem-filter-item mem-filter-select-all">
-                <input type="checkbox" class="modern-checkbox" id="mem-filter-select-all-cb" ${checkedCount === visible.length ? 'checked' : ''} onchange="toggleAllVisible(this.checked)">
-                <span>Select All${ql ? ` (${visible.length} matching)` : ''}</span>
-            </label>
-            ${visible.map(v => `
-            <label class="mem-filter-item">
-                <input type="checkbox" class="modern-checkbox" ${!selected || selected.has(v) ? 'checked' : ''} onchange="toggleColumnValue('${esc(v)}', this.checked)">
-                <span>${esc(v)}</span>
-            </label>`).join('')}
-        `;
-        const selectAllCb = document.getElementById('mem-filter-select-all-cb');
-        if (selectAllCb) selectAllCb.indeterminate = checkedCount > 0 && checkedCount < visible.length;
-    }
-
-    function toggleColumnValue(value, checked) {
-        const field = filterPopupField;
-        if (memberColumnFilters[field] === null) memberColumnFilters[field] = new Set(columnValues(field));
-        checked ? memberColumnFilters[field].add(value) : memberColumnFilters[field].delete(value);
-        if (memberColumnFilters[field].size === columnValues(field).length) memberColumnFilters[field] = null; // back to "no filter"
-        renderMembers(currentMemberFilter());
-        renderColumnFilterList(document.getElementById('mem-filter-search')?.value || '');
-    }
-
-    // Scoped to whatever the search currently narrows the list to — checking
-    // it only affects the visible rows; anything hidden by the search keeps
-    // whatever state it already had, same as Excel/Sheets' filter dropdown.
-    function toggleAllVisible(checked) {
-        const field = filterPopupField;
-        const ql = (document.getElementById('mem-filter-search')?.value || '').trim().toLowerCase();
-        const all = columnValues(field);
-        const visible = ql ? all.filter(v => v.toLowerCase().includes(ql)) : all;
-        if (memberColumnFilters[field] === null) memberColumnFilters[field] = new Set(all);
-        visible.forEach(v => checked ? memberColumnFilters[field].add(v) : memberColumnFilters[field].delete(v));
-        if (memberColumnFilters[field].size === all.length) memberColumnFilters[field] = null;
-        renderMembers(currentMemberFilter());
-        renderColumnFilterList(document.getElementById('mem-filter-search')?.value || '');
-    }
-
-    // The one action that ignores the search entirely — a full reset back
-    // to "no filter, everyone shown", distinct from the in-list Select All
-    // which only ever touches the currently-searched subset.
-    function resetColumnFilter() {
-        memberColumnFilters[filterPopupField] = null;
-        document.getElementById('mem-filter-search').value = '';
-        toggleSearchClearBtn('');
-        renderMembers(currentMemberFilter());
-        renderColumnFilterList('');
-    }
-
-    function setMemberSortDirect(field, dir) {
-        memberSort = { field, dir };
-        closeColumnFilterPopup();
-        renderMembers(currentMemberFilter());
-    }
-
-    function memberBuffer() {
-        return originalMembers.map(m => ({ ...m, ...(memberChanges[m.codename] || {}), _deleted: memberDeletes.has(m.codename) }))
-            .concat(Object.entries(memberChanges)
-                .filter(([codename]) => !originalMembers.some(m => m.codename === codename))
-                .map(([codename, c]) => ({ codename, permissions: [], ...c, _new: true })));
-    }
-
-    function memberRoleBuffer() {
-        return originalMemberRoles.map(mr => ({ ...mr, ...(memberRoleChanges[mr.id] || {}), _deleted: memberRoleDeletes.has(mr.id) }))
-            .concat(Object.entries(memberRoleChanges).filter(([id]) => id.startsWith('new-')).map(([id, c]) => ({ id, ...c, _new: true })));
-    }
-
-    // Search text + column-checklist filters combined — the single source of
-    // truth for "which members are on screen right now", used both to render
-    // the table and to scope Advanced Mode's bulk toggles to what's visible.
-    function visibleMemberRows(filter) {
-        let rows = memberBuffer();
-        if (filter) {
-            const fl = filter.toLowerCase();
-            rows = rows.filter(m => {
-                const p = profileFor(m.codename);
-                return m.codename.toLowerCase().includes(fl)
-                    || (p?.nick_name || '').toLowerCase().includes(fl)
-                    || (p?.full_name || '').toLowerCase().includes(fl)
-                    || (p?.employee_id || '').toLowerCase().includes(fl)
-                    || (p?.department || '').toLowerCase().includes(fl);
-            });
-        }
-        for (const field of Object.keys(memberColumnFilters)) {
-            const allowed = memberColumnFilters[field];
-            if (allowed) rows = rows.filter(m => allowed.has(profileFor(m.codename)?.[field]));
-        }
-        return rows;
-    }
-
-    function renderMembers(filter = '') {
-        const container = document.getElementById('mem-list');
-        const roles = roleBuffer().filter(r => r.active !== false && !r._deleted);
-        const allRows = memberBuffer();
-        let rows = visibleMemberRows(filter);
-
-        const liveTotal = allRows.filter(m => !m._deleted).length;
-        updateTableCount(rows.filter(m => !m._deleted).length, liveTotal);
-
-        // Deliberately NOT an early-return-with-different-markup here: that
-        // used to replace the whole table (colgroup+thead included) with a
-        // plain "No members found" div whenever a filter matched nothing —
-        // which also wiped out the column header filter controls themselves,
-        // leaving no way to click back in and clear the filter that caused
-        // the empty result. The header must always render; only the body
-        // rows are conditional.
-        rows = [...rows].sort((a, b) => {
-            const va = (profileFor(a.codename)?.[memberSort.field] || '').toLowerCase();
-            const vb = (profileFor(b.codename)?.[memberSort.field] || '').toLowerCase();
-            const cmp = va.localeCompare(vb);
-            return memberSort.dir === 'asc' ? cmp : -cmp;
-        });
-
-        const grantsBuf = memberRoleBuffer();
-
-        // Under table-layout:fixed, only <colgroup>/<col> reliably drives
-        // column widths when a grouped header (colspan) sits above individual
-        // sub-columns — a width on the th itself is ignored once it's not in
-        // the table's first row (learned the hard way: three rounds of
-        // "widen the th, nothing moves" before landing here). One <col> per
-        // real column, independent of how the header rows group/span them.
-        const ACTION_COL_PX = 75;
-        container.innerHTML = `
-        <table class="mem-matrix">
-            <colgroup>
-                <col style="width:40px">
-                <col style="width:200px">
-                <col style="width:80px">
-                <col style="width:190px">
-                ${advancedMode ? '<col style="width:44px">' : ''}
-                <col style="width:90px">
-                <col style="width:90px">
-                <col style="width:90px">
-                <col style="width:90px">
-                ${roles.map(() => PERM_COLS.map(() => `<col style="width:${ACTION_COL_PX}px">`).join('')).join('')}
-            </colgroup>
-            <thead>
-                <tr>
-                    <th class="mem-col-trash" rowspan="2"></th>
-                    <th class="mem-col-name mem-header-filterable" rowspan="2" onclick="openColumnFilterPopup('nick_name', 'Member')">Member ${sortIcon('nick_name')} ${filterIcon('nick_name')}</th>
-                    <th class="mem-col-code mem-header-filterable" rowspan="2" onclick="openColumnFilterPopup('employee_id', 'Code')">Code ${sortIcon('employee_id')} ${filterIcon('employee_id')}</th>
-                    <th class="mem-col-dept mem-header-filterable" rowspan="2" onclick="openColumnFilterPopup('department', 'Department')">Department ${sortIcon('department')} ${filterIcon('department')}</th>
-                    ${advancedMode ? `<th class="mem-col-bulk-row" rowspan="2" title="Bulk toggle: click a row's icon to enable/disable everything for that member"><i class="bi bi-lightning-charge-fill" style="color:#f59e0b"></i></th>` : ''}
-                    <th class="mem-col-dashboard mem-zone-divider ${advancedMode ? 'mem-col-adv' : ''}" rowspan="2"${advancedMode ? ` onclick="bulkToggleFlag('dashboard')" title="Click to toggle Dashboard access for everyone shown"` : ''}>Dashboard${advancedMode ? bulkColIcon() : ''}</th>
-                    <th class="mem-col-settings ${advancedMode ? 'mem-col-adv' : ''}" rowspan="2"${advancedMode ? ` onclick="bulkToggleFlag('setting')" title="Click to toggle Settings access for everyone shown"` : ''}>Settings${advancedMode ? bulkColIcon() : ''}</th>
-                    <th class="mem-col-duplicate mem-zone-divider ${advancedMode ? 'mem-col-adv' : ''}" rowspan="2"${advancedMode ? ` onclick="bulkToggleFlag('duplicate')" title="Click to toggle Duplicate access for everyone shown"` : ''}>Duplicate${advancedMode ? bulkColIcon() : ''}</th>
-                    <th class="mem-col-share ${advancedMode ? 'mem-col-adv' : ''}" rowspan="2"${advancedMode ? ` onclick="bulkToggleFlag('share')" title="Click to toggle Share access for everyone shown"` : ''}>Share${advancedMode ? bulkColIcon() : ''}</th>
-                    ${roles.map(r => {
-                        const attrs = advancedMode ? ` onclick="bulkToggleRole('${r.id}')" title="Click to toggle all of ${esc(r.name)}'s permissions for everyone shown"` : '';
-                        return `<th class="mem-role-group-head ${advancedMode ? 'mem-col-adv' : ''}" colspan="${PERM_COLS.length}" style="color:${r.color}"${attrs}><i class="bi ${r.icon || 'bi-person-workspace'}"></i>${esc(r.name)}${advancedMode ? bulkColIcon() : ''}</th>`;
-                    }).join('')}
-                </tr>
-                <tr>
-                    ${roles.map(r => PERM_COLS.map((col, i) => {
-                        const label = col.charAt(0).toUpperCase() + col.slice(1);
-                        const cls = `mem-col-action ${i === 0 ? 'mem-group-start' : ''} ${advancedMode ? 'mem-col-adv' : ''}`;
-                        const attrs = advancedMode ? ` onclick="bulkToggleColumn('${r.id}','${col}')" title="Click to toggle ${label} for everyone shown"` : ` title="${label}"`;
-                        return `<th class="${cls}"${attrs}>${label}${advancedMode ? bulkColIcon() : ''}</th>`;
-                    }).join('')).join('')}
-                </tr>
-            </thead>
-            <tbody>
-                ${!rows.length ? `
-                <tr>
-                    <td colspan="${8 + (advancedMode ? 1 : 0) + roles.length * PERM_COLS.length}" class="mem-empty-row">
-                        <i class="bi bi-people"></i> No Member
-                    </td>
-                </tr>` : rows.map(member => {
-                    const hasSetting = (member.permissions || []).includes('setting');
-                    const hasDashboard = (member.permissions || []).includes('dashboard');
-                    const hasDuplicate = (member.permissions || []).includes('duplicate');
-                    const hasShare = (member.permissions || []).includes('share');
-                    const grants = grantsBuf.filter(g => g.codename === member.codename && !g._deleted);
-                    const p = profileFor(member.codename);
-                    return `
-                    <tr class="${member._new ? 'is-new' : ''} ${member._deleted ? 'is-deleted' : ''}" data-codename="${esc(member.codename)}">
-                        <td class="mem-col-trash">
-                            ${member._deleted
-                                ? `<button class="cfg-btn-undo" onclick="undoRemoveMember('${esc(member.codename)}')" title="Undo delete"><i class="bi bi-arrow-counterclockwise"></i></button>`
-                                : `<button class="btn-remove" onclick="removeMember('${esc(member.codename)}')" title="Remove"><i class="bi bi-trash3"></i></button>`}
-                        </td>
-                        <td class="mem-col-name">
-                            <div class="mem-nick">${esc(p?.nick_name || member.codename)}</div>
-                            ${p?.full_name ? `<div class="mem-fullname">${esc(p.full_name)}</div>` : ''}
-                        </td>
-                        <td class="mem-col-code">${esc(p?.employee_id || '-')}</td>
-                        <td class="mem-col-dept">${esc(p?.department || '-')}</td>
-                        ${advancedMode ? `
-                        <td class="mem-col-bulk-row">
-                            <button class="mem-bulk-row-btn" onclick="bulkToggleRow('${esc(member.codename)}')" title="Toggle everything for ${esc(p?.nick_name || member.codename)}"><i class="bi bi-lightning-charge-fill"></i></button>
-                        </td>` : ''}
-                        <td class="mem-col-dashboard mem-zone-divider">
-                            <label class="bq-toggle small">
-                                <input type="checkbox" ${hasDashboard ? 'checked' : ''} onchange="onMemberDashboardToggle('${esc(member.codename)}', this.checked)">
-                                <span class="bq-slider"></span>
-                            </label>
-                        </td>
-                        <td class="mem-col-settings">
-                            <label class="bq-toggle small">
-                                <input type="checkbox" ${hasSetting ? 'checked' : ''} onchange="onMemberSettingToggle('${esc(member.codename)}', this.checked)">
-                                <span class="bq-slider"></span>
-                            </label>
-                        </td>
-                        <td class="mem-col-duplicate mem-zone-divider">
-                            <label class="bq-toggle small">
-                                <input type="checkbox" ${hasDuplicate ? 'checked' : ''} onchange="onMemberDuplicateToggle('${esc(member.codename)}', this.checked)">
-                                <span class="bq-slider"></span>
-                            </label>
-                        </td>
-                        <td class="mem-col-share">
-                            <label class="bq-toggle small">
-                                <input type="checkbox" ${hasShare ? 'checked' : ''} onchange="onMemberShareToggle('${esc(member.codename)}', this.checked)">
-                                <span class="bq-slider"></span>
-                            </label>
-                        </td>
-                        ${roles.map(r => {
-                            const grant = grants.find(g => g.role_id === r.id);
-                            return PERM_COLS.map((col, i) => {
-                                const scopeCol = col === 'edit' ? 'edit_scope' : col === 'delete' ? 'delete_scope' : null;
-                                const scope = scopeCol && grant?.[scopeCol] === 'all' ? 'all' : 'own';
-                                return `
-                            <td class="mem-col-action ${i === 0 ? 'mem-group-start' : ''}">
-                                <div class="mem-action-cell">
-                                    <label class="bq-dot" style="--dot-color:${r.color}">
-                                        <input type="checkbox" ${grant && grant[col] ? 'checked' : ''} onchange="onMemberRoleActionToggle('${esc(member.codename)}', '${r.id}', '${col}', this.checked)">
-                                        <span class="bq-dot-circle"></span>
-                                    </label>
-                                    ${scopeCol && grant && grant[col] ? `<button type="button" class="mem-scope-badge ${scope}" onclick="onMemberRoleScopeToggle('${esc(member.codename)}', '${r.id}', '${scopeCol}')" title="Click to switch to ${scope === 'own' ? 'All' : 'Own'}">${scope === 'own' ? 'Own' : 'All'}</button>` : ''}
-                                </div>
-                            </td>`;
-                            }).join('');
-                        }).join('')}
-                    </tr>`;
-                }).join('')}
-            </tbody>
-        </table>`;
-    }
-
-    // Pure state mutators (no markDirty/render) — shared by the single-cell
-    // toggle handlers below and by Advanced Mode's bulk toggles, so a bulk
-    // action over many rows doesn't re-render the whole table once per row.
-    function setMemberPermFlag(codename, flag, checked) {
-        const member = memberBuffer().find(m => m.codename === codename);
-        const permissions = new Set(member?.permissions || []);
+    function setAdminFlag(codename, flag, checked) {
+        const m = adminAccessBuffer().find(x => x.codename === codename);
+        const permissions = new Set(m?.permissions || []);
         checked ? permissions.add(flag) : permissions.delete(flag);
-        if (!memberChanges[codename]) memberChanges[codename] = {};
-        memberChanges[codename].permissions = [...permissions];
+        if (!adminAccessChanges[codename]) adminAccessChanges[codename] = {};
+        adminAccessChanges[codename].permissions = [...permissions];
+        markDirty('section-adminaccess');
+        renderAdminAccess();
     }
 
-    // Each action toggle is fully independent — no master switch, no
-    // "granted with 0 perms" state. A grant is created the moment any one
-    // action is turned on, and auto-revoked (row removed) the moment the
-    // last remaining one is turned off.
-    function setMemberRoleAction(codename, roleId, col, checked) {
-        const real = originalMemberRoles.find(mr => mr.codename === codename && mr.role_id === roleId);
-        const stagedNewKey = Object.keys(memberRoleChanges).find(id => id.startsWith('new-') && memberRoleChanges[id].codename === codename && memberRoleChanges[id].role_id === roleId);
-
-        if (real) {
-            memberRoleDeletes.delete(real.id); // toggling anything back on undoes a pending revoke, restoring the rest as-is
-            if (!memberRoleChanges[real.id]) memberRoleChanges[real.id] = {};
-            memberRoleChanges[real.id][col] = checked;
-            const merged = { ...real, ...memberRoleChanges[real.id] };
-            if (!PERM_COLS.some(c => merged[c])) memberRoleDeletes.add(real.id);
-        } else if (stagedNewKey) {
-            memberRoleChanges[stagedNewKey][col] = checked;
-            if (!PERM_COLS.some(c => memberRoleChanges[stagedNewKey][c])) delete memberRoleChanges[stagedNewKey];
-        } else if (checked) {
-            const id = `new-${roleIdSeq--}`;
-            const fresh = { codename, role_id: roleId, new: false, edit: false, delete: false, accept: false, assign: false, edit_scope: 'own', delete_scope: 'own' };
-            fresh[col] = true;
-            memberRoleChanges[id] = fresh;
-        }
+    // Doesn't delete the b-quest-member row — just clears both admin flags,
+    // since this person may still hold dashboard/duplicate/share/role
+    // grants managed entirely from the Members page.
+    function removeAdminAccess(codename) {
+        setAdminFlag(codename, 'setting', false);
+        setAdminFlag(codename, 'member', false);
     }
 
-    // Own/All only matters once the matching Edit/Delete grant is already
-    // on, so there's always a real or staged-new row to flip this on — no
-    // "create a grant" branch needed here like setMemberRoleAction has.
-    function setMemberRoleScope(codename, roleId, scopeCol, value) {
-        const real = originalMemberRoles.find(mr => mr.codename === codename && mr.role_id === roleId);
-        const stagedNewKey = Object.keys(memberRoleChanges).find(id => id.startsWith('new-') && memberRoleChanges[id].codename === codename && memberRoleChanges[id].role_id === roleId);
-        if (real) {
-            if (!memberRoleChanges[real.id]) memberRoleChanges[real.id] = {};
-            memberRoleChanges[real.id][scopeCol] = value;
-        } else if (stagedNewKey) {
-            memberRoleChanges[stagedNewKey][scopeCol] = value;
-        }
+    // ── Add Admin Access Modal — same recipe as Members' own Add Member
+    // Modal (avatar rows, search, Select All, footer count), just scoped to
+    // profiles not already holding Setting/Member.
+    let aaModalSelected = new Set();
+
+    function openAdminAddModal() {
+        aaModalSelected.clear();
+        document.getElementById('aa-add-search').value = '';
+        renderAdminAddModalList('');
+        updateAdminModalFooter();
+        document.getElementById('aa-add-overlay').classList.add('show');
+        setTimeout(() => document.getElementById('aa-add-search').focus(), 100);
     }
 
-    function onMemberSettingToggle(codename, checked) {
-        setMemberPermFlag(codename, 'setting', checked);
-        markDirty('section-members');
-        renderMembers(currentMemberFilter());
+    function closeAdminAddModal(e) {
+        if (e && e.target !== document.getElementById('aa-add-overlay')) return;
+        document.getElementById('aa-add-overlay').classList.remove('show');
     }
 
-    function onMemberDashboardToggle(codename, checked) {
-        setMemberPermFlag(codename, 'dashboard', checked);
-        markDirty('section-members');
-        renderMembers(currentMemberFilter());
-    }
-
-    function onMemberDuplicateToggle(codename, checked) {
-        setMemberPermFlag(codename, 'duplicate', checked);
-        markDirty('section-members');
-        renderMembers(currentMemberFilter());
-    }
-
-    function onMemberShareToggle(codename, checked) {
-        setMemberPermFlag(codename, 'share', checked);
-        markDirty('section-members');
-        renderMembers(currentMemberFilter());
-    }
-
-    function onMemberRoleActionToggle(codename, roleId, col, checked) {
-        setMemberRoleAction(codename, roleId, col, checked);
-        markDirty('section-members');
-        renderMembers(currentMemberFilter());
-    }
-
-    // Click-to-flip — only two values, so there's nothing worth a popover
-    // for. scopeCol is 'edit_scope' or 'delete_scope'.
-    function onMemberRoleScopeToggle(codename, roleId, scopeCol) {
-        const grant = memberRoleBuffer().find(g => g.codename === codename && g.role_id === roleId && !g._deleted);
-        const next = (grant?.[scopeCol] || 'own') === 'all' ? 'own' : 'all';
-        setMemberRoleScope(codename, roleId, scopeCol, next);
-        markDirty('section-members');
-        renderMembers(currentMemberFilter());
-    }
-
-    // ── Advanced Mode — bulk column/row toggles for initial project setup.
-    // Off by default; every bulk action is scoped to whatever's currently
-    // visible (respecting search + column filters), never the full roster,
-    // and stages through the same Save Bar as everything else (no separate
-    // confirm dialog — Undo/Cancel already cover "I didn't mean that").
-    function toggleAdvancedMode(checked) {
-        advancedMode = checked;
-        document.getElementById('section-members').classList.toggle('adv-mode-active', advancedMode);
-        renderMembers(currentMemberFilter());
-    }
-
-    function bulkToggleColumn(roleId, col) {
-        const rows = visibleMemberRows(currentMemberFilter());
-        const grantsBuf = memberRoleBuffer();
-        const allOn = rows.every(m => {
-            const grant = grantsBuf.find(g => g.codename === m.codename && g.role_id === roleId && !g._deleted);
-            return grant && grant[col];
-        });
-        rows.forEach(m => setMemberRoleAction(m.codename, roleId, col, !allOn));
-        markDirty('section-members');
-        renderMembers(currentMemberFilter());
-    }
-
-    // Third bulk axis: the role name itself — all 4 actions for that one
-    // role, everyone currently visible. Reuses the exact same per-cell
-    // mutator as the single-column version, just looped over PERM_COLS.
-    function bulkToggleRole(roleId) {
-        const rows = visibleMemberRows(currentMemberFilter());
-        const grantsBuf = memberRoleBuffer();
-        const allOn = rows.every(m => {
-            const grant = grantsBuf.find(g => g.codename === m.codename && g.role_id === roleId && !g._deleted);
-            return grant && PERM_COLS.every(c => grant[c]);
-        });
-        rows.forEach(m => PERM_COLS.forEach(col => setMemberRoleAction(m.codename, roleId, col, !allOn)));
-        markDirty('section-members');
-        renderMembers(currentMemberFilter());
-    }
-
-    function bulkToggleFlag(flag) {
-        const rows = visibleMemberRows(currentMemberFilter());
-        const allOn = rows.every(m => (m.permissions || []).includes(flag));
-        rows.forEach(m => setMemberPermFlag(m.codename, flag, !allOn));
-        markDirty('section-members');
-        renderMembers(currentMemberFilter());
-    }
-
-    function bulkToggleRow(codename) {
-        const roles = roleBuffer().filter(r => r.active !== false && !r._deleted);
-        const grantsBuf = memberRoleBuffer();
-        const member = memberBuffer().find(m => m.codename === codename);
-        const hasSetting = (member?.permissions || []).includes('setting');
-        const hasDashboard = (member?.permissions || []).includes('dashboard');
-        const hasDuplicate = (member?.permissions || []).includes('duplicate');
-        const hasShare = (member?.permissions || []).includes('share');
-        const allOn = hasSetting && hasDashboard && hasDuplicate && hasShare && roles.every(r => {
-            const grant = grantsBuf.find(g => g.codename === codename && g.role_id === r.id && !g._deleted);
-            return grant && PERM_COLS.every(c => grant[c]);
-        });
-        const target = !allOn;
-        roles.forEach(r => PERM_COLS.forEach(col => setMemberRoleAction(codename, r.id, col, target)));
-        setMemberPermFlag(codename, 'dashboard', target);
-        setMemberPermFlag(codename, 'setting', target);
-        setMemberPermFlag(codename, 'duplicate', target);
-        setMemberPermFlag(codename, 'share', target);
-        markDirty('section-members');
-        renderMembers(currentMemberFilter());
-    }
-
-    function removeMember(codename) {
-        if (!originalMembers.some(m => m.codename === codename)) { delete memberChanges[codename]; }
-        else { memberDeletes.add(codename); }
-        markDirty('section-members');
-        renderMembers(currentMemberFilter());
-    }
-
-    function undoRemoveMember(codename) {
-        memberDeletes.delete(codename);
-        markDirty('section-members');
-        renderMembers(currentMemberFilter());
-    }
-
-    function sortIcon(field) {
-        if (memberSort.field !== field) return '<i class="bi bi-chevron-expand mem-sort-icon"></i>';
-        // Down = A→Z (ascending), up = Z→A — matches the usual spreadsheet convention.
-        return memberSort.dir === 'asc'
-            ? '<i class="bi bi-chevron-down mem-sort-icon active"></i>'
-            : '<i class="bi bi-chevron-up mem-sort-icon active"></i>';
-    }
-
-    function updateTableCount(shown, total) {
-        document.getElementById('table-count').textContent = shown === total
-            ? `${total}` : `${shown} / ${total}`;
-    }
-
-    function setupTableSearch() {
-        document.getElementById('table-search').addEventListener('input', e => renderMembers(e.target.value.trim()));
-    }
-
-
-    // ── Add Member Modal ──
-    let modalSelected = new Set();
-
-    function openAddModal() {
-        modalSelected.clear();
-        document.getElementById('am-search').value = '';
-        renderModalList('');
-        updateModalFooter();
-        document.getElementById('am-overlay').classList.add('show');
-        setTimeout(() => document.getElementById('am-search').focus(), 100);
-    }
-
-    function closeAddModal(e) {
-        if (e && e.target !== document.getElementById('am-overlay')) return;
-        document.getElementById('am-overlay').classList.remove('show');
-    }
-
-    function availableProfiles(q = '') {
+    function availableAdminProfiles(q = '') {
         const ql = q.toLowerCase();
-        const existing = new Set(memberBuffer().map(m => m.codename));
+        const existing = new Set(visibleAdminRows().map(m => m.codename));
         return allProfiles.filter(p =>
             !existing.has(p.codename) &&
             (p.codename.toLowerCase().includes(ql) ||
@@ -2665,18 +2453,17 @@
         );
     }
 
-    function renderModalList(q = '') {
-        const available = availableProfiles(q);
-        const list = document.getElementById('am-list');
+    function renderAdminAddModalList(q = '') {
+        const available = availableAdminProfiles(q);
+        const list = document.getElementById('aa-add-list');
         if (!available.length) {
-            list.innerHTML = `<div class="am-empty">No members available</div>`;
+            list.innerHTML = `<div class="am-empty">No one available</div>`;
             return;
         }
-
-        const selectedCount = available.filter(p => modalSelected.has(p.codename)).length;
+        const selectedCount = available.filter(p => aaModalSelected.has(p.codename)).length;
         list.innerHTML = `
             <label class="am-item am-select-all">
-                <input type="checkbox" class="modern-checkbox" id="am-select-all-cb" ${selectedCount === available.length ? 'checked' : ''} onchange="toggleAllModalItems(this.checked)">
+                <input type="checkbox" class="modern-checkbox" id="aa-select-all-cb" ${selectedCount === available.length ? 'checked' : ''} onchange="toggleAllAdminModalItems(this.checked)">
                 <div class="am-avatar"><i class="bi bi-people-fill"></i></div>
                 <div class="am-info am-info-flat">
                     <span class="am-nick">Select All</span>
@@ -2685,51 +2472,76 @@
             </label>
             ${available.map(p => `
                 <label class="am-item">
-                    <input type="checkbox" class="modern-checkbox" ${modalSelected.has(p.codename) ? 'checked' : ''} onchange="toggleModalItem('${esc(p.codename)}', this.checked)">
+                    <input type="checkbox" class="modern-checkbox" ${aaModalSelected.has(p.codename) ? 'checked' : ''} onchange="toggleAdminModalItem('${esc(p.codename)}', this.checked)">
                     <div class="am-avatar"><i class="bi bi-person-fill"></i></div>
                     <div class="am-info">
-                        <span class="am-nick">${esc(p.codename)}</span>
+                        <span class="am-nick">${esc(p.nick_name || p.codename)}</span>
                         ${p.full_name ? `<span class="am-line2">${esc(p.full_name)}</span>` : ''}
                     </div>
                     ${p.department ? `<span class="am-dept-side">${esc(p.department)}</span>` : ''}
                 </label>`).join('')}
         `;
-        const selectAllCb = document.getElementById('am-select-all-cb');
+        const selectAllCb = document.getElementById('aa-select-all-cb');
         if (selectAllCb) selectAllCb.indeterminate = selectedCount > 0 && selectedCount < available.length;
     }
 
-    function toggleModalItem(codename, checked) {
-        checked ? modalSelected.add(codename) : modalSelected.delete(codename);
-        renderModalList(document.getElementById('am-search').value.trim());
-        updateModalFooter();
+    function toggleAdminModalItem(codename, checked) {
+        checked ? aaModalSelected.add(codename) : aaModalSelected.delete(codename);
+        renderAdminAddModalList(document.getElementById('aa-add-search').value.trim());
+        updateAdminModalFooter();
     }
 
-    // Scoped to whatever the search currently narrows the list to — same
-    // rule as the column filter's Select All.
-    function toggleAllModalItems(checked) {
-        const q = document.getElementById('am-search').value.trim();
-        availableProfiles(q).forEach(p => checked ? modalSelected.add(p.codename) : modalSelected.delete(p.codename));
-        renderModalList(q);
-        updateModalFooter();
+    function toggleAllAdminModalItems(checked) {
+        const q = document.getElementById('aa-add-search').value.trim();
+        availableAdminProfiles(q).forEach(p => checked ? aaModalSelected.add(p.codename) : aaModalSelected.delete(p.codename));
+        renderAdminAddModalList(q);
+        updateAdminModalFooter();
     }
 
-    function updateModalFooter() {
-        const n = modalSelected.size;
-        const info = document.getElementById('am-footer-info');
-        const btn  = document.getElementById('btn-am-confirm');
-        info.textContent = n === 0 ? 'No member selected' : `${n} member${n > 1 ? 's' : ''} selected`;
+    function updateAdminModalFooter() {
+        const n = aaModalSelected.size;
+        const info = document.getElementById('aa-add-footer-info');
+        const btn = document.getElementById('btn-aa-add-confirm');
+        info.textContent = n === 0 ? 'No one selected' : `${n} selected`;
         btn.disabled = n === 0;
     }
 
-    function confirmAddMembers() {
-        [...modalSelected].forEach(codename => { memberChanges[codename] = { permissions: [] }; });
-        document.getElementById('am-overlay').classList.remove('show');
-        markDirty('section-members');
-        renderMembers(currentMemberFilter());
+    function confirmAddAdminAccess() {
+        // Merge onto whatever permissions this codename already has (e.g. a
+        // working member's dashboard/duplicate/share) — this modal only
+        // excludes people already Setting/Member, not people who don't
+        // exist as a b-quest-member row yet at all.
+        [...aaModalSelected].forEach(codename => {
+            const existing = adminAccessBuffer().find(m => m.codename === codename);
+            const permissions = new Set(existing?.permissions || []);
+            permissions.add('setting');
+            adminAccessChanges[codename] = { permissions: [...permissions] };
+        });
+        document.getElementById('aa-add-overlay').classList.remove('show');
+        markDirty('section-adminaccess');
+        renderAdminAccess();
     }
 
-    function setupAddSearch() {
-        document.getElementById('am-search').addEventListener('input', e => renderModalList(e.target.value.trim()));
+    function setupAdminAddSearch() {
+        document.getElementById('aa-add-search').addEventListener('input', e => renderAdminAddModalList(e.target.value.trim()));
+    }
+
+    function openAdminAccessInfoPopup(evt) {
+        const panel = document.getElementById('picker-panel');
+        panel.classList.remove('wide');
+        panel.classList.add('medium');
+        panel.innerHTML = `
+            <div class="cfg-info-item divided">
+                <div class="cfg-info-title"><i class="bi bi-gear-fill"></i> Setting</div>
+                <p>Can open this Setting page — Role/Status/Type/Work List/Daily Capacity/Visibility/Default Filters/Notifications, and this Admin Access panel itself.</p>
+            </div>
+            <div class="cfg-info-item">
+                <div class="cfg-info-title"><i class="bi bi-people-fill"></i> Member</div>
+                <p>Can open the Members page and grant/revoke everyone's permissions.</p>
+            </div>
+            <div class="cfg-info-warning"><i class="bi bi-exclamation-triangle-fill"></i> Setting always implies the power to grant Member too — anyone with Setting can turn their own Member toggle on right here.</div>
+        `;
+        positionPicker(evt);
     }
 
     // This page has no <form> anywhere, so pressing Enter in a text/number

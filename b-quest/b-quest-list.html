@@ -9,7 +9,8 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
-    
+    <script src="/system/multi-select.js"></script>
+
     <script src="b-quest.js"></script>
     <script src="b-quest-modal.js?v=9" defer></script>
     <link rel="stylesheet" href="b-quest.css">
@@ -55,25 +56,24 @@
         .flt-date-input { border: none; background: transparent; font-size: 0.78rem; color: var(--c-slate); outline: none; font-family: inherit; width: 108px; }
         .flt-btn-today { border: 1px solid #e2e8f0; background: #fff; border-radius: 0 20px 20px 0; padding: 0 14px; height: 38px; font-size: 0.78rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
 
-        /* --- Status: iOS-style sliding segmented control, scrolls if it grows --- */
-        .status-seg-wrap { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; flex-shrink: 0; width: 300px; overflow: hidden; }
-        .status-seg-label { flex-shrink: 0; background: #f1f5f9; color: #64748b; font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; }
-        .status-seg-scroll-outer { position: relative; flex: 1; min-width: 0; height: 100%; }
-        .status-seg-scroll { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; height: 100%; padding: 3px; overflow-x: auto; scrollbar-width: none; }
-        .status-seg-scroll::-webkit-scrollbar { display: none; }
-        .status-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
-        .status-seg-scroll-outer::before, .status-seg-scroll-outer::after { content: ''; position: absolute; top: 1px; bottom: 1px; width: 32px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s; }
-        .status-seg-scroll-outer::before { left: 0; background: linear-gradient(to right, rgba(30,41,59,0.16), transparent); }
-        .status-seg-scroll-outer::after { right: 0; background: linear-gradient(to left, rgba(30,41,59,0.16), transparent); }
-        .status-seg-scroll-outer.fade-left::before { opacity: 1; }
-        .status-seg-scroll-outer.fade-right::after { opacity: 1; }
-        .status-seg-btn { position: relative; z-index: 1; border: none; background: transparent; padding: 0 14px; height: 100%; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; flex-shrink: 0; }
-        .status-seg-btn.active { color: #7a8500; }
-        .status-seg-btn:not(.active):hover { color: var(--c-accent); }
+        /* --- Role: iOS-style sliding segmented control, scrolls if it grows --- */
+        .role-seg-wrap { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; flex-shrink: 0; width: 380px; overflow: hidden; }
+        .role-seg-label { flex-shrink: 0; background: #f1f5f9; color: #64748b; font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; }
+        .role-seg-scroll-outer { position: relative; flex: 1; min-width: 0; height: 100%; }
+        .role-seg-scroll { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; height: 100%; padding: 3px; overflow-x: auto; scrollbar-width: none; }
+        .role-seg-scroll::-webkit-scrollbar { display: none; }
+        .role-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
+        .role-seg-scroll-outer::before, .role-seg-scroll-outer::after { content: ''; position: absolute; top: 1px; bottom: 1px; width: 32px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s; }
+        .role-seg-scroll-outer::before { left: 0; background: linear-gradient(to right, rgba(30,41,59,0.16), transparent); }
+        .role-seg-scroll-outer::after { right: 0; background: linear-gradient(to left, rgba(30,41,59,0.16), transparent); }
+        .role-seg-scroll-outer.fade-left::before { opacity: 1; }
+        .role-seg-scroll-outer.fade-right::after { opacity: 1; }
+        .role-seg-btn { position: relative; z-index: 1; border: none; background: transparent; padding: 0 14px; height: 100%; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; flex-shrink: 0; display: flex; align-items: center; gap: 5px; }
+        .role-seg-btn.active { color: #7a8500; }
+        .role-seg-btn:not(.active):hover { color: var(--c-accent); }
 
         /* --- Select dropdowns (Owner in main row + Role/Work/Type/Assign in advance panel) --- */
-        .flt-right-group .flt-select-box, .flt-advanced-row .flt-select-box { width: 175px; flex-shrink: 0; }
-        .flt-advanced-row .flt-select-box.flt-select-wide { width: 230px; }
+        .flt-right-group .flt-select-box, .flt-advanced-row .flt-select-box { width: 240px; flex-shrink: 0; }
         .flt-right-group .flt-select-input, .flt-advanced-row .flt-select-input { text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
 
         /* --- Advance toggle + Reset --- */
@@ -221,13 +221,12 @@
                 <i class="bi bi-x-circle-fill clear-search-btn" id="clearSearchBtn" style="display:none;"></i>
             </div>
             <div class="flt-right-group">
-                <div class="status-seg-wrap">
-                    <span class="status-seg-label">Status</span>
-                    <div class="status-seg-scroll-outer" id="statusSegOuter">
-                        <div class="status-seg-scroll" id="statusSegWrap">
-                            <div class="status-seg-slider" id="statusSegSlider"></div>
-                            <!-- Buttons rendered by renderStatusSeg() from b-quest-status — Status
-                                 is admin-configurable, so this can't be a fixed All/Progress/Done set. -->
+                <div class="role-seg-wrap">
+                    <span class="role-seg-label">Role</span>
+                    <div class="role-seg-scroll-outer" id="roleSegOuter">
+                        <div class="role-seg-scroll" id="roleSegWrap">
+                            <div class="role-seg-slider" id="roleSegSlider"></div>
+                            <!-- Buttons rendered by renderRoleSeg() from b-quest-role -->
                         </div>
                     </div>
                 </div>
@@ -239,7 +238,6 @@
                     </div>
                     <button class="flt-btn-today" id="btnToday">Today</button>
                 </div>
-                <div class="flt-select-box"><span class="flt-select-tag">Owner</span><select class="flt-select-input" id="filterOwner"></select></div>
                 <button class="flt-btn-adv" id="toggleFilters" title="Advance Filters"><i class="bi bi-sliders"></i></button>
                 <button class="flt-btn-reset" id="clearAllBtn" onclick="resetAllFilters()" title="Clear all filters"><i class="bi bi-arrow-counterclockwise"></i></button>
             </div>
@@ -247,10 +245,11 @@
 
         <div class="flt-advanced-zone" id="advancedFilterZone">
             <div class="flt-advanced-row">
-                <div class="flt-select-box"><span class="flt-select-tag">Role</span><select class="flt-select-input" id="filterRole"><option value="">All</option></select></div>
-                <div class="flt-select-box flt-select-wide"><span class="flt-select-tag">Work</span><select class="flt-select-input" id="filterWork"></select></div>
-                <div class="flt-select-box"><span class="flt-select-tag">Type</span><select class="flt-select-input" id="filterType"></select></div>
-                <div class="flt-select-box"><span class="flt-select-tag">Assign</span><select class="flt-select-input" id="filterAssign"></select></div>
+                <div class="flt-select-box" id="wrap-filterStatus"></div>
+                <div class="flt-select-box" id="wrap-filterWork"></div>
+                <div class="flt-select-box" id="wrap-filterType"></div>
+                <div class="flt-select-box" id="wrap-filterAssign"></div>
+                <div class="flt-select-box" id="wrap-filterOwner"></div>
             </div>
         </div>
     </div>
@@ -276,35 +275,60 @@
     let statusList = [];     // [{id, name, color}], sort_order-ascending, as configured in Settings — drives the Status segmented filter and card status colors, no fixed set assumed
     let statusColorMap = {}; // status_id -> color (id-keyed, not name — a rename in Settings must not break filtering/display of tasks saved under the old name)
     let statusNameMap = {};  // status_id -> name (current, live — a task-role row's own .status text is frozen at save time)
+    let typeList = [];       // [{name}], active-only — feeds the Type multi-select
+    let taskRoleAssignRows = []; // [{role_id, assign}] snapshot from loadMasterData — feeds the Assign multi-select's grouped option list
+    let ownerList = [];      // distinct owner names, feeds the Owner multi-select
+    // createMultiSelect() instances — all initialized once near the bottom of this script
+    let statusFilter, workFilter, typeFilter, assignFilter, ownerFilter;
+    // Admin-configured, set via Settings ("Data Visibility" / "Filter
+    // เริ่มต้น") — loaded once in loadListConfig(), before loadMasterData()
+    // since it scopes roleList/ownerList.
+    let visibilityConfig = { role: 'all', owner: 'all' };
+    let filterDefaults = { status: [], type: [], role: '' };
+    let deadlineDefault = { lower: { mode: 'none', value: 0 }, upper: { mode: 'none', value: 0 } };
+    // getVisibleQuestIds() result, cached for the session — undefined =
+    // not computed yet, null = unrestricted, Set = restricted to these ids.
+    let visibleQuestIdsCache;
     let currentPage = 0;
     let isFetching = false;
     let hasMore = true;
 
 
     // --- Helpers ---
-    function setupDefaultOptions(el, label) {
-        if (!el) return;
-        el.innerHTML = `<option value="">All ${label}</option>`;
-    }
-
-    function updateHighlight(id) {
-        const el = document.getElementById(id);
-        const box = el.closest('.flt-select-box');
-        if (box) el.value !== "" ? box.classList.add('active-filter') : box.classList.remove('active-filter');
-    }
-
-    function appendRoleGroup(selectEl, label, data, filterKey, filterVal, textKey, valueKey) {
-        const group = document.createElement('optgroup');
-        group.label = `── ${label} ──`;
-        data.filter(item => item[filterKey] === filterVal).forEach(item => {
-            group.appendChild(new Option(item[textKey], item[valueKey]));
-        });
-        selectEl.appendChild(group);
-    }
-
     function activeRoles() {
-        const v = document.getElementById('filterRole')?.value;
+        const v = getRoleFilter();
         return v ? [v] : [];
+    }
+
+    // Work/Assign options are grouped by Role (live-computed, not stored —
+    // called fresh every time the popover opens, so they always reflect
+    // whichever role is currently active in the carousel with no separate
+    // "re-render on role change" step needed).
+    function workOptions() {
+        const active = activeRoles();
+        const showAll = active.length === 0;
+        const opts = [];
+        roleList.forEach(r => {
+            if (!showAll && !active.includes(r.id)) return;
+            dataList.filter(item => item.role_id === r.id).forEach(item => {
+                opts.push({ value: item.work, label: item.work, group: `${r.name} Work` });
+            });
+        });
+        return opts;
+    }
+
+    function assignOptions() {
+        const active = activeRoles();
+        const showAll = active.length === 0;
+        const byRole = {};
+        taskRoleAssignRows.forEach(r => { (byRole[r.role_id] ||= new Set()).add(r.assign); });
+        const opts = [];
+        roleList.forEach(r => {
+            if (!showAll && !active.includes(r.id)) return;
+            const names = [...(byRole[r.id] || [])].sort((a, b) => a.localeCompare(b, 'th'));
+            names.forEach(name => opts.push({ value: name, label: name, group: `${r.name}s` }));
+        });
+        return opts;
     }
 
     // --- Main Logic ---
@@ -312,14 +336,14 @@
         try {
             const [workRes, roleRes, taskRoleRes, typeRes, statusRes] = await Promise.all([
                 supabaseClient.from('b-quest-work').select('work, day, weight, max_per_day, role_id').order('work'),
-                supabaseClient.from('b-quest-role').select('id, name, color, active').order('name'),
+                supabaseClient.from('b-quest-role').select('id, name, color, active, icon').order('name'),
                 supabaseClient.from('b-quest-task-role').select('role_id, assign').not('assign', 'is', null),
                 supabaseClient.from('b-quest-type').select('name').eq('active', true).order('sort_order'),
                 supabaseClient.from('b-quest-status').select('id, name, color, active').order('sort_order')
             ]);
 
             dataList = workRes.data || [];
-            // roleList feeds the Filter dropdown (active-only, same as
+            // roleList feeds the Filter carousel (active-only, same as
             // before — you shouldn't be able to filter by a retired role).
             // roleNameMap/roleColorMap feed card display + permission
             // checks and must cover EVERY role including deactivated ones,
@@ -329,152 +353,130 @@
             // locking Edit/Delete out of tasks that still use it.
             const allRoles = roleRes.data || [];
             roleList = allRoles.filter(r => r.active !== false);
+            // Data Visibility "Role = Own" scopes roleList itself down to
+            // the viewer's own role(s) — this narrows the carousel AND the
+            // Work/Assign filter grouping in one change, since both are
+            // built from roleList. God bypasses this like every other
+            // permission gate in the app.
+            const perms = getBquestPerms();
+            if (perms && !perms._god && visibilityConfig.role === 'own') {
+                const myRoleIds = new Set(Object.values(perms.roles || {}).map(r => r.role_id));
+                roleList = roleList.filter(r => myRoleIds.has(r.id));
+            }
             roleColorMap = Object.fromEntries(allRoles.map(r => [r.id, r.color || '#64748b']));
             roleNameMap = Object.fromEntries(allRoles.map(r => [r.id, r.name]));
             // statusList (active-only, sort_order-ascending — order matters,
-            // see resolveCardStatusColor) drives the filter buttons; the
+            // see resolveCardStatusColor) drives the Status filter; the
             // name/color maps cover EVERY status including deactivated
             // ones, same reasoning as roleNameMap/roleColorMap above.
             const allStatuses = statusRes.data || [];
             statusList = allStatuses.filter(s => s.active !== false);
             statusColorMap = Object.fromEntries(allStatuses.map(s => [s.id, s.color || '#94a3b8']));
             statusNameMap = Object.fromEntries(allStatuses.map(s => [s.id, s.name]));
+            typeList = typeRes.data || [];
+            taskRoleAssignRows = taskRoleRes.data || [];
 
-            renderRoleFilter();
-            renderFilterWork();
-            renderFilterAssign(taskRoleRes.data || []);
-            renderStatusSeg();
+            renderRoleSeg();
 
-            const typeEl = document.getElementById('filterType');
-            setupDefaultOptions(typeEl, "Type");
-            (typeRes.data || []).forEach(t => typeEl.add(new Option(t.name, t.name)));
+            // Drop any selection that no longer exists in the fresh option
+            // set (renamed/deactivated in Settings, or the active role just
+            // narrowed Work/Assign's universe) instead of leaving the
+            // filter silently stuck on a value nothing can match anymore.
+            if (statusFilter) statusFilter.setValues(statusFilter.getValues().filter(v => statusList.some(s => s.id === v)));
+            if (typeFilter) typeFilter.setValues(typeFilter.getValues().filter(v => typeList.some(t => t.name === v)));
+            if (workFilter) workFilter.setValues(workFilter.getValues().filter(v => workOptions().some(o => o.value === v)));
+            if (assignFilter) assignFilter.setValues(assignFilter.getValues().filter(v => assignOptions().some(o => o.value === v)));
 
             await refreshOwnerFilter();
         } catch (e) { console.error(e); }
     }
 
-    function renderRoleFilter() {
-        const sel = document.getElementById('filterRole');
-        if (!sel) return;
-        const prev = sel.value;
-        sel.innerHTML = `<option value="">All</option>` + roleList.map(r =>
-            `<option value="${esc(r.id)}">${esc(r.name)}</option>`
-        ).join('');
-        if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
-    }
-
-    // Buttons come straight from Settings' Status list — "All" plus one
-    // per configured status, filtered by status_id (see
-    // getMatchingQuestIds) — not name, so renaming a Status in Settings
-    // can't break this filter or desync it from already-saved tasks.
-    // No fixed Progress/Done pair assumed.
-    function renderStatusSeg() {
-        const wrap = document.getElementById('statusSegWrap');
+    // Buttons come straight from Settings' Role list — "All" plus one per
+    // active role, filtered by role_id — a rename in Settings can't break
+    // this filter or desync it from already-saved tasks.
+    function renderRoleSeg() {
+        const wrap = document.getElementById('roleSegWrap');
         if (!wrap) return;
-        const prevValue = getStatusFilter();
-        const buttons = [{ label: 'All', value: '' }, ...statusList.map(s => ({ label: s.name, value: s.id }))];
+        const prevValue = getRoleFilter();
+        const buttons = [{ label: 'All', value: '', icon: '' }, ...roleList.map(r => ({ label: r.name, value: r.id, icon: r.icon || 'bi-person-workspace' }))];
         const activeValue = buttons.some(b => b.value === prevValue) ? prevValue : '';
 
-        wrap.querySelectorAll('.status-seg-btn').forEach(b => b.remove());
+        wrap.querySelectorAll('.role-seg-btn').forEach(b => b.remove());
         buttons.forEach(b => {
             const btn = document.createElement('button');
-            btn.className = 'status-seg-btn' + (b.value === activeValue ? ' active' : '');
-            btn.dataset.status = b.value;
-            btn.textContent = b.label;
-            btn.onclick = () => setStatusFilter(b.value);
+            btn.className = 'role-seg-btn' + (b.value === activeValue ? ' active' : '');
+            btn.dataset.role = b.value;
+            btn.innerHTML = b.icon ? `<i class="bi ${b.icon}"></i> ${esc(b.label)}` : esc(b.label);
+            btn.onclick = () => setRoleFilter(b.value);
             wrap.appendChild(btn);
         });
-        positionStatusSlider();
+        positionRoleSlider();
     }
 
     async function refreshOwnerFilter() {
-        const { data } = await supabaseClient.from('b-quest-list').select('owner').neq('owner', null).neq('owner', '-');
-        const ownerEl = document.getElementById('filterOwner');
-        const prev = ownerEl.value;
-        setupDefaultOptions(ownerEl, "Owner");
-        if (data) {
-            const unique = [...new Set(data.map(r => r.owner).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'th'));
-            unique.forEach(name => ownerEl.add(new Option(name, name)));
+        const { data } = await supabaseClient.from('b-quest-list').select('owner').not('owner', 'is', null).neq('owner', '-');
+        ownerList = [...new Set((data || []).map(r => r.owner).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'th'));
+        // Data Visibility "Owner = Own" — can only filter by yourself.
+        const perms = getBquestPerms();
+        if (perms && !perms._god && visibilityConfig.owner === 'own') {
+            const myCodename = getBxUser()?.codename;
+            ownerList = myCodename ? [myCodename] : [];
         }
-        if ([...ownerEl.options].some(o => o.value === prev)) ownerEl.value = prev;
+        // Drop any selected owner that no longer exists in the fresh list
+        // (e.g. their last task got reassigned/deleted) instead of leaving
+        // the filter silently stuck on a name nothing can match anymore.
+        if (ownerFilter) {
+            const kept = ownerFilter.getValues().filter(v => ownerList.includes(v));
+            ownerFilter.setValues(kept);
+        }
     }
 
-    function renderFilterWork() {
-        const filterWork = document.getElementById('filterWork');
-        if (!filterWork) return;
-        const currentSelection = filterWork.value;
-        setupDefaultOptions(filterWork, "Work");
-
-        const active = activeRoles();
-        const showAll = active.length === 0;
-        roleList.forEach(r => {
-            if (showAll || active.includes(r.id)) appendRoleGroup(filterWork, `${r.name} Work`, dataList, 'role_id', r.id, 'work', 'work');
+    // Returns the reload chain's promise so callers that need to sequence
+    // against it (e.g. initPage for a role-restricted user) can await it —
+    // ordinary click handlers just ignore the return value.
+    function setRoleFilter(value) {
+        document.querySelectorAll('.role-seg-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.role === value);
         });
-
-        filterWork.value = currentSelection;
-        updateHighlight('filterWork');
+        positionRoleSlider();
+        return loadMasterData().then(applyFilters); // Work/Assign options are computed live from activeRoles() on open, so no separate re-render needed — just requery
     }
 
-    function renderFilterAssign(taskRoleRows) {
-        const filterAssign = document.getElementById('filterAssign');
-        if (!filterAssign) return;
-        const currentSelection = filterAssign.value;
-        setupDefaultOptions(filterAssign, "Assign");
-
-        const active = activeRoles();
-        const showAll = active.length === 0;
-        const byRole = {};
-        taskRoleRows.forEach(r => { (byRole[r.role_id] ||= new Set()).add(r.assign); });
-
-        roleList.forEach(r => {
-            if (!showAll && !active.includes(r.id)) return;
-            const names = [...(byRole[r.id] || [])].sort((a, b) => a.localeCompare(b, 'th'));
-            if (!names.length) return;
-            const group = document.createElement('optgroup');
-            group.label = `── ${r.name}s ──`;
-            names.forEach(name => group.appendChild(new Option(name, name)));
-            filterAssign.appendChild(group);
-        });
-
-        filterAssign.value = currentSelection;
-        updateHighlight('filterAssign');
+    function getRoleFilter() {
+        return document.querySelector('.role-seg-btn.active')?.dataset.role || '';
     }
 
-    function setStatusFilter(type) {
-        const value = type === 'all' ? '' : type;
-        document.querySelectorAll('.status-seg-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.status === value);
-        });
-        positionStatusSlider();
-        applyFilters();
-    }
-
-    function getStatusFilter() {
-        return document.querySelector('.status-seg-btn.active')?.dataset.status || '';
-    }
-
-    function positionStatusSlider() {
-        const active = document.querySelector('.status-seg-btn.active');
-        const slider = document.getElementById('statusSegSlider');
+    function positionRoleSlider() {
+        const active = document.querySelector('.role-seg-btn.active');
+        const slider = document.getElementById('roleSegSlider');
         if (!active || !slider) return;
         slider.style.left = active.offsetLeft + 'px';
         slider.style.width = active.offsetWidth + 'px';
+
+        // "All" keeps the default accent color (cleared inline styles fall
+        // back to the CSS default); a specific role tints the slider/label
+        // with that role's own color instead.
+        const color = active.dataset.role ? (roleColorMap[active.dataset.role] || '#64748b') : '';
+        document.querySelectorAll('.role-seg-btn').forEach(b => { b.style.color = ''; });
+        if (color) {
+            slider.style.background = color + '26';
+            slider.style.borderColor = color;
+            active.style.color = color;
+        } else {
+            slider.style.background = '';
+            slider.style.borderColor = '';
+        }
+
         active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-        updateStatusFade();
+        updateRoleFade();
     }
 
-    function updateStatusFade() {
-        const scroll = document.getElementById('statusSegWrap');
-        const outer = document.getElementById('statusSegOuter');
+    function updateRoleFade() {
+        const scroll = document.getElementById('roleSegWrap');
+        const outer = document.getElementById('roleSegOuter');
         if (!scroll || !outer) return;
         outer.classList.toggle('fade-left', scroll.scrollLeft > 2);
         outer.classList.toggle('fade-right', scroll.scrollLeft + scroll.clientWidth < scroll.scrollWidth - 2);
-    }
-
-    function onRoleFilterChange() {
-        updateHighlight('filterRole');
-        renderFilterWork();
-        loadMasterData().then(applyFilters); // refresh Work/Assign options against new role selection, then requery
     }
 
     function applyFilters() {
@@ -486,31 +488,121 @@
 
     function updateClearAllVisibility() {
         const val = (id) => document.getElementById(id)?.value || "";
-        const anyActive = val('globalSearch') || val('startDate') || val('endDate') || val('filterRole') ||
-            getStatusFilter() || val('filterWork') || val('filterType') || val('filterAssign') || val('filterOwner');
+        const anyActive = val('globalSearch') || val('startDate') || val('endDate') || getRoleFilter() ||
+            statusFilter?.getValues().length || workFilter?.getValues().length || typeFilter?.getValues().length ||
+            assignFilter?.getValues().length || ownerFilter?.getValues().length;
         const btn = document.getElementById('clearAllBtn');
         if (btn) btn.classList.toggle('has-filters', !!anyActive);
     }
 
+    // ── Data Visibility & Filter Defaults (set in Settings) ──
+    async function loadListConfig() {
+        const { data } = await supabaseClient.from('b-quest-config').select('rule, value')
+            .in('rule', ['list_visibility', 'list_filter_defaults', 'list_deadline_default']);
+        const map = Object.fromEntries((data || []).map(r => [r.rule, r.value]));
+        visibilityConfig = { role: 'all', owner: 'all', ...map.list_visibility };
+        filterDefaults = { status: [], type: [], role: '', ...map.list_filter_defaults };
+        deadlineDefault = {
+            lower: { mode: 'none', value: 0 }, upper: { mode: 'none', value: 0 },
+            ...map.list_deadline_default
+        };
+    }
+
+    // Union of every axis currently set to "Own" (role-match / owner-match)
+    // PLUS "assigned to me", which is always included regardless of any
+    // setting — see [[bquest-settings-roadmap]] for why. An axis set to
+    // "All" contributes nothing to the union (it's not an always-true
+    // branch — see the null short-circuit below) rather than opening
+    // visibility up to everyone. God bypasses this entirely. Cached for the
+    // session since it depends only on static config + the viewer's own
+    // identity, not on any filter state — safe to reuse across every
+    // fetchQuests() call (including pagination) without re-querying.
+    async function getVisibleQuestIds() {
+        if (visibleQuestIdsCache !== undefined) return visibleQuestIdsCache;
+
+        const perms = getBquestPerms();
+        if (!perms || perms._god) { visibleQuestIdsCache = null; return null; }
+        if (visibilityConfig.role === 'all' && visibilityConfig.owner === 'all') { visibleQuestIdsCache = null; return null; }
+
+        const myCodename = getBxUser()?.codename;
+        const myRoleIds = Object.values(perms.roles || {}).map(r => r.role_id).filter(Boolean);
+        const idSets = [];
+
+        if (visibilityConfig.role === 'own' && myRoleIds.length) {
+            const { data } = await supabaseClient.from('b-quest-task-role').select('quest_id').in('role_id', myRoleIds);
+            idSets.push(new Set((data || []).map(r => r.quest_id)));
+        }
+        if (visibilityConfig.owner === 'own' && myCodename) {
+            const { data } = await supabaseClient.from('b-quest-list').select('id').eq('owner', myCodename);
+            idSets.push(new Set((data || []).map(r => r.id)));
+        }
+        if (myCodename) {
+            const { data } = await supabaseClient.from('b-quest-task-role').select('quest_id').eq('assign', myCodename);
+            idSets.push(new Set((data || []).map(r => r.quest_id)));
+        }
+
+        const union = new Set();
+        idSets.forEach(s => s.forEach(id => union.add(id)));
+        visibleQuestIdsCache = union;
+        return union;
+    }
+
+    // Applied once at page load, before the first fetch — sets the UI state
+    // only (doesn't itself trigger a query), same reasoning as how a
+    // pre-existing filter selection would already sit in these controls.
+    function applyFilterDefaults() {
+        if (statusFilter && filterDefaults.status?.length) statusFilter.setValues(filterDefaults.status);
+        if (typeFilter && filterDefaults.type?.length) typeFilter.setValues(filterDefaults.type);
+        const [start, end] = computeDeadlineDefaultRange();
+        if (start) document.getElementById('startDate').value = start;
+        if (end) document.getElementById('endDate').value = end;
+        updateDateHighlight();
+        // Without a Role default too, initPage() never calls applyFilters()
+        // on load (it goes straight to fetchQuests()), so the Reset button's
+        // has-filters state would otherwise never get recalculated even
+        // though Status/Type/Deadline are now actually active.
+        updateClearAllVisibility();
+    }
+
+    // Mirrors computeDeadlinePreview() in b-quest-settings.html exactly —
+    // keep both in sync if this logic ever changes, so the Settings preview
+    // never lies about what viewers actually get.
+    function computeDeadlineDefaultRange() {
+        const today = new Date();
+        const iso = d => d.toISOString().split('T')[0];
+        function resolve(bound, isUpper) {
+            if (!bound || bound.mode === 'none') return null;
+            if (bound.mode === 'day') {
+                const d = new Date(today);
+                d.setDate(d.getDate() + (isUpper ? bound.value : -bound.value));
+                return iso(d);
+            }
+            return isUpper
+                ? iso(new Date(today.getFullYear(), today.getMonth() - bound.value + 1, 0))
+                : iso(new Date(today.getFullYear(), today.getMonth() - bound.value, 1));
+        }
+        return [resolve(deadlineDefault.lower, false), resolve(deadlineDefault.upper, true)];
+    }
+
     // Query "b-quest-task-role" to find which quest_ids satisfy role/work/type/assign/status/date
     // filters. Returns null when no such filter is active (= no restriction from this step).
-    // Status filters by status_id (not name — see renderStatusSeg) — a
-    // task shows if ANY of its open roles currently has that status.
+    // Status filters by status_id (not name) — a task shows if ANY of its
+    // open roles currently has that status.
     async function getMatchingQuestIds() {
         const val = (id) => document.getElementById(id)?.value || "";
         const roles = activeRoles();
-        const work = val('filterWork'), type = val('filterType'), assign = val('filterAssign');
-        const status = getStatusFilter();
+        const works = workFilter?.getValues() || [], types = typeFilter?.getValues() || [], assigns = assignFilter?.getValues() || [];
+        const statuses = statusFilter?.getValues() || [];
         const startDate = val('startDate'), endDate = val('endDate');
 
         let ids = null;
-        if (roles.length || work || type || assign || status || startDate || endDate) {
+        if (roles.length || works.length || types.length || assigns.length || statuses.length || startDate || endDate) {
             let q = supabaseClient.from('b-quest-task-role').select('quest_id');
             if (roles.length) q = q.in('role_id', roles);
-            if (work) q = q.eq('work', work);
-            if (type) q = q.eq('type', type);
-            if (assign) q = q.eq('assign', assign);
-            if (status) q = q.eq('status_id', status);
+            if (works.length) q = q.in('work', works);
+            if (types.length) q = q.in('type', types);
+            if (assigns.length) q = q.in('assign', assigns);
+            if (statuses.length) q = q.in('status_id', statuses);
             if (startDate) q = q.gte('deadline', startDate);
             if (endDate) q = q.lte('deadline', endDate);
             const { data } = await q;
@@ -528,21 +620,33 @@
         const to = from + limit - 1;
 
         try {
+            // Two independent restriction layers, intersected: matchIds is
+            // "what the user is currently choosing to filter by" (can
+            // change any time), visibleIds is "what they're allowed to see
+            // at all" (fixed per session, see getVisibleQuestIds). Both
+            // null means no restriction from this step at all.
             const matchIds = await getMatchingQuestIds();
-            if (matchIds !== null && matchIds.length === 0) {
+            const visibleIds = await getVisibleQuestIds();
+            let finalIds = null;
+            if (matchIds !== null && visibleIds !== null) finalIds = matchIds.filter(id => visibleIds.has(id));
+            else if (matchIds !== null) finalIds = matchIds;
+            else if (visibleIds !== null) finalIds = [...visibleIds];
+
+            if (finalIds !== null && finalIds.length === 0) {
                 if (currentPage === 0) renderCards([]);
                 hasMore = false;
                 return;
             }
 
             let query = supabaseClient.from('b-quest-list').select('*, roles:"b-quest-task-role"(*)');
-            if (matchIds !== null) query = query.in('id', matchIds);
+            if (finalIds !== null) query = query.in('id', finalIds);
 
             const search = document.getElementById('globalSearch').value.trim();
             if (search) query = query.or(SEARCH_COLUMNS.map(col => `${col}.ilike.%${search}%`).join(','));
 
             const val = (id) => document.getElementById(id)?.value || "";
-            if (val('filterOwner')) query = query.eq('owner', val('filterOwner'));
+            const owners = ownerFilter?.getValues() || [];
+            if (owners.length) query = query.in('owner', owners);
 
             query = query.range(from, to).order('last_update', { ascending: false });
 
@@ -716,42 +820,60 @@
         document.getElementById('endDate').value = '';
         document.getElementById('btnToday').classList.remove('active');
         updateDateHighlight();
-        document.getElementById('filterRole').value = '';
-        ['filterWork', 'filterType', 'filterAssign', 'filterOwner'].forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.value = "";
-            updateHighlight(id);
-        });
-        setStatusFilter('all');
+        statusFilter?.clear();
+        workFilter?.clear();
+        typeFilter?.clear();
+        assignFilter?.clear();
+        ownerFilter?.clear();
+        setRoleFilter('');
     }
 
     async function initPage() {
         try {
             sessionStorage.removeItem('bx_perms_bquest');
             await initLayout(B_QUEST_CONFIG);
+            await loadListConfig(); // before loadMasterData() — Data Visibility scopes roleList/ownerList as they're built
             await loadMasterData();
-            applyPermUI();
-            positionStatusSlider();
-            document.getElementById('statusSegWrap')?.addEventListener('scroll', updateStatusFade);
-            await fetchQuests(true);
+            document.getElementById('roleSegWrap')?.addEventListener('scroll', updateRoleFade);
+            applyFilterDefaults(); // Status/Type/Deadline defaults — UI state only, no query yet
+
+            // A role-restricted user's setRoleFilter() already re-runs
+            // loadMasterData()+fetchQuests() on its own — awaiting that
+            // single chain instead of also firing our own fetchQuests(true)
+            // avoids two overlapping fetches racing to populate/clear
+            // taskContainer (the second one's reset could wipe out cards
+            // the first one had just rendered). Precedence: a user's own
+            // single-role restriction beats the admin's company-wide
+            // default Role (more specific wins), which beats plain "All".
+            const restrictedRoleId = applyPermUI();
+            if (restrictedRoleId) {
+                await setRoleFilter(restrictedRoleId);
+            } else if (filterDefaults.role && roleList.some(r => r.id === filterDefaults.role)) {
+                await setRoleFilter(filterDefaults.role);
+            } else {
+                positionRoleSlider();
+                await fetchQuests(true);
+            }
         } catch (e) { console.error(e); }
     }
 
+    // Returns the role_id to restrict the view to, or null if the user
+    // isn't restricted to exactly one role.
     function applyPermUI() {
         if (!canBquest('new')) document.querySelector('.fab-add').style.display = 'none';
 
         const p = getBquestPerms();
-        if (!p || p._god) return;
+        if (!p || p._god) return null;
 
         // p.roles is keyed by role NAME (see loadBquestPerms in b-quest.js),
-        // but the filter dropdown's option values are role_id now — bridge
+        // but the filter carousel's button values are role_id now — bridge
         // through roleList rather than assuming they're the same string.
         const allowedRoles = Object.keys(p.roles || {});
         if (allowedRoles.length === 1) {
             const match = roleList.find(r => r.name === allowedRoles[0]);
-            const sel = document.getElementById('filterRole');
-            if (sel && match) { sel.value = match.id; updateHighlight('filterRole'); }
+            if (match) return match.id;
         }
+        return null;
     }
 
     document.getElementById('toggleFilters').addEventListener('click', () => {
@@ -783,21 +905,48 @@
         applyFilters();
     });
 
-    ['startDate', 'endDate', 'filterWork', 'filterType', 'filterAssign', 'filterOwner'].forEach(id => {
+    ['startDate', 'endDate'].forEach(id => {
         document.getElementById(id)?.addEventListener('change', () => {
-            if (id.startsWith('filter')) updateHighlight(id);
-            if (id === 'startDate' || id === 'endDate') {
-                const today = new Date().toISOString().split('T')[0];
-                const s = document.getElementById('startDate').value;
-                const e = document.getElementById('endDate').value;
-                if (s !== today || e !== today) document.getElementById('btnToday').classList.remove('active');
-                updateDateHighlight();
-            }
+            const today = new Date().toISOString().split('T')[0];
+            const s = document.getElementById('startDate').value;
+            const e = document.getElementById('endDate').value;
+            if (s !== today || e !== today) document.getElementById('btnToday').classList.remove('active');
+            updateDateHighlight();
             applyFilters();
         });
     });
 
-    document.getElementById('filterRole')?.addEventListener('change', onRoleFilterChange);
+    statusFilter = createMultiSelect({
+        trigger: document.getElementById('wrap-filterStatus'),
+        label: 'Status',
+        getOptions: () => statusList.map(s => ({ value: s.id, label: s.name })),
+        onChange: () => applyFilters()
+    });
+    workFilter = createMultiSelect({
+        trigger: document.getElementById('wrap-filterWork'),
+        label: 'Work',
+        getOptions: workOptions,
+        onChange: () => applyFilters(),
+        width: 340
+    });
+    typeFilter = createMultiSelect({
+        trigger: document.getElementById('wrap-filterType'),
+        label: 'Type',
+        getOptions: () => typeList.map(t => ({ value: t.name, label: t.name })),
+        onChange: () => applyFilters()
+    });
+    assignFilter = createMultiSelect({
+        trigger: document.getElementById('wrap-filterAssign'),
+        label: 'Assign',
+        getOptions: assignOptions,
+        onChange: () => applyFilters()
+    });
+    ownerFilter = createMultiSelect({
+        trigger: document.getElementById('wrap-filterOwner'),
+        label: 'Owner',
+        getOptions: () => ownerList.map(o => ({ value: o, label: o })),
+        onChange: () => applyFilters()
+    });
 
     document.getElementById('globalSearch').addEventListener('keypress', e => { if(e.key==='Enter') applyFilters() });
 

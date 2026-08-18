@@ -27,7 +27,7 @@ async function loadBquestPerms() {
         // permissions/roles — system.js's generic menu-perm gate reads
         // perms[menu.perm] directly (shared across every project, not
         // b-quest-aware), so it needs a flat lookup.
-        const godPerms = { _god: true, permissions: ['setting', 'dashboard'], roles, setting: true, assign: true, dashboard: true };
+        const godPerms = { _god: true, permissions: ['setting', 'member', 'dashboard'], roles, setting: true, member: true, assign: true, dashboard: true };
         sessionStorage.setItem('bx_perms_bquest', JSON.stringify(godPerms));
         return godPerms;
     }
@@ -51,6 +51,7 @@ async function loadBquestPerms() {
             permissions,
             roles,
             setting: permissions.includes('setting'),
+            member: permissions.includes('member'),
             dashboard: permissions.includes('dashboard'),
             assign: Object.values(roles).some(r => r.assign)
         };
@@ -66,8 +67,8 @@ function getBquestPerms() {
 }
 
 // action: 'new' | 'edit' | 'delete' | 'assign' (true if granted on ANY role) |
-// 'setting' | 'duplicate' | 'share' (flat member-level flags, not per-role)
-const BQUEST_FLAT_PERMS = ['setting', 'duplicate', 'share'];
+// 'setting' | 'member' | 'duplicate' | 'share' (flat member-level flags, not per-role)
+const BQUEST_FLAT_PERMS = ['setting', 'member', 'duplicate', 'share'];
 function canBquest(action) {
     const p = getBquestPerms();
     if (!p) return false;

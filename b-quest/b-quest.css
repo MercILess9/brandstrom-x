@@ -93,3 +93,64 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 /* ── FAB ── */
 .fab-add { position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px; background: #1e293b; color: #bdc432; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); cursor: pointer; border: none; z-index: 1000; transition: 0.3s; }
 .fab-add:hover { transform: scale(1.1) rotate(90deg); background: #0f172a; }
+
+/* ── Filter Zone (shared) — search + sliding segmented control + date
+   range + select dropdowns + collapsible advance panel + reset. Used by
+   b-quest-list.html and b-quest-assignment.html; each page's own <style>
+   keeps only its deltas (sizing tweaks, List's Today button) layered on top. ── */
+.flt-wrapper { background: #fff; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; }
+.flt-inner { max-width: 1300px; margin: 0 auto; }
+.flt-row { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; }
+.flt-right-group { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+
+.flt-search-input:hover, .flt-date-group:hover, .flt-btn-adv:hover, .flt-btn-reset:hover {
+    border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(189,196,50,0.2); transform: translateY(-1px);
+}
+.flt-btn-adv:hover, .flt-btn-reset:hover { color: var(--c-accent); }
+.flt-btn-adv.active { background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
+
+.flt-search { position: relative; }
+.flt-search .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--c-text-muted); z-index: 2; pointer-events: none; }
+.flt-search-input { background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; padding: 8px 34px 8px 40px; font-size: 0.85rem; width: 100%; outline: none; transition: 0.2s; }
+.clear-search-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #cbd5e1; cursor: pointer; z-index: 2; font-size: 0.85rem; transition: color 0.15s; }
+.clear-search-btn:hover { color: #94a3b8; }
+
+/* 2-way sort toggle (List: Last Update/Last ID, Assignment: Last Update/
+   Deadline) — the slider's slide-right is driven by ":last-child.active"
+   rather than a specific button id, so it works regardless of which page's
+   two button ids are in play. */
+.flt-sort-wrap { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.sort-seg-wrap { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; width: 72px; flex-shrink: 0; padding: 3px; }
+.sort-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: transform 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
+.sort-seg-wrap:has(.sort-seg-btn:last-child.active) .sort-seg-slider { transform: translateX(100%); }
+.sort-seg-btn { position: relative; z-index: 1; flex: 1; height: 100%; border: none; background: transparent; font-size: 0.85rem; color: var(--c-slate); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.2s; }
+.sort-seg-btn.active { color: #7a8500; }
+.sort-seg-btn:not(.active):hover { color: var(--c-accent); }
+
+.flt-date-today-wrap { display: flex; align-items: center; flex-shrink: 0; }
+.flt-date-group { display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; height: 38px; flex-shrink: 0; transition: 0.2s; }
+.flt-date-today-wrap.active-filter .flt-date-group { background: var(--c-accent-light); border-color: var(--c-accent); }
+.flt-date-input { border: none; background: transparent; font-size: 0.78rem; color: var(--c-slate); outline: none; font-family: inherit; width: 108px; }
+
+.role-seg-wrap { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; flex-shrink: 0; overflow: hidden; }
+.role-seg-label { flex-shrink: 0; background: #f1f5f9; color: #64748b; font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; }
+.role-seg-scroll-outer { position: relative; flex: 1; min-width: 0; height: 100%; }
+.role-seg-scroll { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; height: 100%; padding: 3px; overflow-x: auto; scrollbar-width: none; }
+.role-seg-scroll::-webkit-scrollbar { display: none; }
+.role-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
+.role-seg-scroll-outer::before, .role-seg-scroll-outer::after { content: ''; position: absolute; top: 1px; bottom: 1px; width: 32px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s; }
+.role-seg-scroll-outer::before { left: 0; background: linear-gradient(to right, rgba(30,41,59,0.16), transparent); }
+.role-seg-scroll-outer::after { right: 0; background: linear-gradient(to left, rgba(30,41,59,0.16), transparent); }
+.role-seg-scroll-outer.fade-left::before { opacity: 1; }
+.role-seg-scroll-outer.fade-right::after { opacity: 1; }
+.role-seg-btn { position: relative; z-index: 1; border: none; background: transparent; padding: 0 14px; height: 100%; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; flex-shrink: 0; display: flex; align-items: center; gap: 5px; }
+.role-seg-btn.active { color: #7a8500; }
+.role-seg-btn:not(.active):hover { color: var(--c-accent); }
+
+.flt-btn-adv { width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; font-size: 1rem; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.flt-btn-reset { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; visibility: hidden; pointer-events: none; }
+.flt-btn-reset.has-filters { visibility: visible; pointer-events: auto; }
+
+.flt-advanced-zone { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out, opacity 0.3s ease; opacity: 0; border-top: 1px dashed transparent; }
+.flt-advanced-zone.show { max-height: 200px; opacity: 1; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; }
+.flt-advanced-row { display: flex; align-items: center; gap: 12px; justify-content: center; flex-wrap: nowrap; }

@@ -343,12 +343,8 @@ const BQuestApp = (() => {
     }
 
 
-    function hexToRgba(hex, alpha) {
-        const h = (hex || '#64748b').replace('#', '');
-        const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
-        const n = parseInt(full, 16);
-        return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
-    }
+    // hexToRgba() is now the shared helper in b-quest.js (loaded before this
+    // file wherever it's used) — was an identical local copy here.
 
     // Status color used directly as text on a light tint of itself reads
     // fine for dark/saturated hues but goes nearly invisible for light ones
@@ -766,6 +762,17 @@ const BQuestApp = (() => {
         } catch (e) { console.error(e); }
     }
 
+    // NOT switched over to the shared b-quest-assign-picker.js component
+    // (unlike b-quest-assignment.html's own openAssignPicker, which was).
+    // This version reuses the SAME #bq-search-overlay/#uni-search-input/
+    // #uni-list-container elements as openSearchOverlay above (the generic
+    // account/opportunity-name search), including the searchOverlayToken
+    // race-guard that keeps a slow openSearchOverlay fetch from clobbering
+    // this one if the user opens Assign while it's still in flight. Giving
+    // this its own self-injected overlay (the shared component's whole
+    // convention) would mean a second, separate overlay element instead of
+    // one shared one — a real behavior/DOM change, not just deduplication —
+    // so it was deliberately left as its own local copy.
     function openAssignPicker(roleId) {
         const role = State.visibleRoles.find(r => r.id === roleId);
         const canAssign = typeof canBquest === 'function' ? canBquest('assign') : false;
@@ -833,7 +840,12 @@ const BQuestApp = (() => {
             await Promise.all([BQuestService.loadProfiles(), BQuestService.loadTypes()]);
             setupDropdowns(workData);
 
-            const canAssign = !!(taskId && typeof canBquest === 'function' && canBquest('assign'));
+            // Not gated on taskId — a user with 'assign' can pick an
+            // assignee while creating a brand-new task too, not just after
+            // saving and reopening it in Edit. openAssignPicker() itself
+            // already checked canBquest('assign') fresh, independent of
+            // taskId; this just controls the badge's visibility/click state.
+            const canAssign = typeof canBquest === 'function' && canBquest('assign');
             State.allowAssign = canAssign;
 
             if (taskId) {
@@ -1017,7 +1029,20 @@ const BQuestApp = (() => {
                 }
                 return Swal.fire('Some errors occurred', errors.join('\n'), 'error');
             }
-            Swal.fire({ icon: 'success', title: 'Success!', showConfirmButton: false, timer: 1500 }).then(() => location.reload());
+            // Used to be location.reload() — that lost the List page's
+            // scroll position (back to page 0 of infinite scroll) and
+            // silently swapped the user's own filters for the admin's
+            // configured defaults, since a full reload re-runs initPage()
+            // from scratch. Patching just this one card avoids both: the
+            // rest of the page's JS state (filters, scroll, loaded pages)
+            // is never touched. Falls back to reload only if some future
+            // page loads this modal without defining the List page's own
+            // helper.
+            Swal.fire({ icon: 'success', title: 'Success!', showConfirmButton: false, timer: 1500 }).then(() => {
+                bootstrap.Modal.getOrCreateInstance(el('b-quest-modal')).hide();
+                if (typeof window.refreshSingleCard === 'function') window.refreshSingleCard(questId);
+                else location.reload();
+            });
         },
 
         updateRoleUI, updateStatusUI, openSearchOverlay, openAssignPicker,

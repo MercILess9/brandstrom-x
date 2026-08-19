@@ -12,87 +12,46 @@
     <script src="/system/save-bar.js"></script>
     <script src="/system/multi-select.js"></script>
     <script src="b-quest.js"></script>
+    <script src="b-quest-assign-picker.js"></script>
     <link rel="stylesheet" href="b-quest.css">
 
     <style>
         body { padding-bottom: 120px; }
 
         /* ==========================================================================
-           FILTER ZONE — ported from b-quest-list.html's reusable pattern
-           (search + sliding segmented control + date/today + advance panel +
-           reset). Same mechanic, just fed Role instead of Status here, and
-           Status demoted to a plain dropdown in the advance row instead —
-           this page's primary axis is "which role's queue am I looking
-           at", not status.
+           FILTER ZONE — shared mechanics (search + sliding segmented control +
+           date/today + sort toggle + advance panel + reset) now live centrally
+           in b-quest.css and the filter JS pattern below; ported from
+           b-quest-list.html's original reusable pattern. Only this page's own
+           deltas stay here: sizing tweaks, plus the Status-as-dropdown swap
+           this page uses instead of List's Status segment (this page's
+           primary axis is "which role's queue am I looking at", not status).
            ========================================================================== */
-        .flt-wrapper { background: #fff; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; border-radius: 16px; border: 1px solid var(--c-border); margin-bottom: 20px; }
-        .flt-inner { max-width: 1300px; margin: 0 auto; }
-        .flt-row { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; }
-        .flt-sort-wrap { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-        .sort-seg-wrap { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; width: 72px; flex-shrink: 0; padding: 3px; }
-        .sort-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: transform 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
-        .sort-seg-wrap:has(#sortDeadline.active) .sort-seg-slider { transform: translateX(100%); }
-        .sort-seg-btn { position: relative; z-index: 1; flex: 1; height: 100%; border: none; background: transparent; font-size: 0.85rem; color: var(--c-slate); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.2s; }
-        .sort-seg-btn.active { color: #7a8500; }
-        .sort-seg-btn:not(.active):hover { color: var(--c-accent); }
-        .flt-right-group { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+        .flt-wrapper { border-radius: 16px; border: 1px solid var(--c-border); margin-bottom: 20px; }
 
-        .flt-search-input:hover, .flt-date-group:hover, .flt-btn-adv:hover,
-        .flt-btn-reset:hover {
-            border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(189,196,50,0.2); transform: translateY(-1px);
-        }
-        .flt-btn-adv:hover, .flt-btn-reset:hover { color: var(--c-accent); }
-        .flt-btn-adv.active { background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
+        .flt-search { flex: 0 1 320px; min-width: 140px; }
 
-        .flt-search { position: relative; flex: 0 1 320px; min-width: 140px; }
-        .flt-search .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--c-text-muted); z-index: 2; pointer-events: none; }
-        .flt-search-input { background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; padding: 8px 34px 8px 40px; font-size: 0.85rem; width: 100%; outline: none; transition: 0.2s; }
-        .clear-search-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #cbd5e1; cursor: pointer; z-index: 2; font-size: 0.85rem; transition: color 0.15s; }
-        .clear-search-btn:hover { color: #94a3b8; }
-
-        .flt-date-today-wrap { display: flex; align-items: center; flex-shrink: 0; }
-        .flt-date-group { display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; padding: 0 14px; height: 38px; flex-shrink: 0; transition: 0.2s; }
-        .flt-date-today-wrap.active-filter .flt-date-group { background: var(--c-accent-light); border-color: var(--c-accent); }
-        .flt-date-input { border: none; background: transparent; font-size: 0.78rem; color: var(--c-slate); outline: none; font-family: inherit; width: 108px; }
+        .flt-date-group { border-radius: 20px; padding: 0 14px; }
 
         /* Role — same sliding-segment mechanic as Status uses on the List
            page, single-select ("All" + one button per role). */
-        .role-seg-wrap { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; flex-shrink: 0; width: 400px; overflow: hidden; }
-        .role-seg-label { flex-shrink: 0; background: #f1f5f9; color: #64748b; font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; }
-        .role-seg-scroll-outer { position: relative; flex: 1; min-width: 0; height: 100%; }
-        .role-seg-scroll { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; height: 100%; padding: 3px; overflow-x: auto; scrollbar-width: none; }
-        .role-seg-scroll::-webkit-scrollbar { display: none; }
-        .role-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
-        .role-seg-scroll-outer::before, .role-seg-scroll-outer::after { content: ''; position: absolute; top: 1px; bottom: 1px; width: 32px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s; }
-        .role-seg-scroll-outer::before { left: 0; background: linear-gradient(to right, rgba(30,41,59,0.16), transparent); }
-        .role-seg-scroll-outer::after { right: 0; background: linear-gradient(to left, rgba(30,41,59,0.16), transparent); }
-        .role-seg-scroll-outer.fade-left::before { opacity: 1; }
-        .role-seg-scroll-outer.fade-right::after { opacity: 1; }
-        .role-seg-btn { position: relative; z-index: 1; border: none; background: transparent; padding: 0 14px; height: 100%; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; flex-shrink: 0; display: flex; align-items: center; gap: 5px; }
-        .role-seg-btn.active { color: #7a8500; }
-        .role-seg-btn:not(.active):hover { color: var(--c-accent); }
+        .role-seg-wrap { width: 400px; }
 
-        .flt-select-box { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; display: flex; align-items: center; overflow: hidden; height: 38px; transition: 0.2s; width: 240px; flex-shrink: 0; }
-        .flt-select-box:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(189,196,50,0.2); transform: translateY(-1px); }
-        .flt-select-tag { background: #f1f5f9; color: #64748b; font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; transition: 0.2s; }
-        .flt-select-box:hover .flt-select-tag { background: #e8edf2; color: var(--c-slate); }
-        .flt-select-input { border: none; font-size: 0.8rem; font-weight: 600; color: var(--c-slate); padding: 0 8px; width: 100%; outline: none; background: transparent; cursor: pointer; font-family: inherit; text-align-last: center; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
-        .flt-select-box.active-filter { background: var(--c-accent-light); border-color: var(--c-accent); }
-        .flt-select-box.active-filter .flt-select-tag { background: var(--c-accent); color: var(--c-dark); border-right-color: var(--c-accent); }
-        .flt-select-box.active-filter:hover { box-shadow: 0 2px 8px rgba(189,196,50,0.2); }
-
-        .flt-btn-adv { width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; font-size: 1rem; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .flt-btn-reset { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; visibility: hidden; pointer-events: none; }
-        .flt-btn-reset.has-filters { visibility: visible; pointer-events: auto; }
-
-        .flt-advanced-zone { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out, opacity 0.3s ease; opacity: 0; border-top: 1px dashed transparent; }
-        .flt-advanced-zone.show { max-height: 200px; opacity: 1; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; }
-        .flt-advanced-row { display: flex; align-items: center; gap: 12px; justify-content: center; flex-wrap: nowrap; }
+        /* Base .flt-select-box/.flt-select-tag/.flt-select-input/.active-filter
+           now live in b-quest.css (shared) — only the delta this page needs
+           (fixed width + ellipsis on overflow) stays here. */
+        .flt-advanced-row .flt-select-box { width: 240px; flex-shrink: 0; }
+        .flt-advanced-row .flt-select-input { text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
 
         /* ── Page header ── */
         .page-header { margin: 0 0 20px; display: flex; align-items: center; gap: 10px; }
         .page-header h1 { font-size: 1.4rem; font-weight: 800; color: var(--c-dark); margin: 0; }
         .page-header .count-badge { background: var(--c-accent); color: var(--c-dark); border-radius: 20px; padding: 2px 12px; font-size: 0.78rem; font-weight: 800; }
+        .btn-refresh { margin-left: auto; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; color: var(--c-slate); font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
+        .btn-refresh:hover:not(:disabled) { border-color: var(--c-accent); color: #7a8500; background: var(--c-accent-light); }
+        .btn-refresh:disabled { opacity: 0.6; cursor: default; }
+        .btn-refresh.spinning i { animation: btn-refresh-spin 0.6s linear; }
+        @keyframes btn-refresh-spin { to { transform: rotate(360deg); } }
 
         .assign-wrapper { max-width: 1300px; margin: 0 auto; padding: 24px 20px 40px; }
 
@@ -161,32 +120,9 @@
         .assign-card-wrap { position: relative; z-index: 1; display: flex; flex-direction: column; background: #fff; border-radius: 14px; border: 1px solid #eef2f7; border-left: 3px solid; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.05); overflow: hidden; transition: box-shadow 0.2s, transform 0.15s; }
         .assign-card-wrap:hover { box-shadow: 0 8px 24px -4px rgba(0,0,0,0.09); }
 
-        /* Assign picker popup — same recipe as the task Modal's own
-           Assign picker (bq-search-overlay/bq-am-item) and Settings'
-           Add Member modal, ported here since this page doesn't load
-           b-quest-modal.js. */
-        .bq-search-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.4); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
-        .bq-search-card { background: #fff; width: 480px; max-height: 80vh; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.15); }
-        .bq-search-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--c-border); }
-        .bq-search-title { font-size: 1rem; font-weight: 800; color: var(--c-dark); margin: 0; display: flex; align-items: center; gap: 8px; }
-        .bq-search-title i { color: var(--c-accent); }
-        .bq-modal-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #94a3b8; transition: 0.2s; flex-shrink: 0; }
-        .bq-modal-close:hover { background: #e2e8f0; color: #1e293b; }
-        .bq-uni-search-wrap { position: relative; margin-bottom: 14px; }
-        .bq-uni-search { width: 100%; border-radius: 12px; padding: 9px 34px 9px 14px; font-size: 0.85rem; border: 1px solid var(--c-border); outline: none; font-family: inherit; transition: 0.2s; background: var(--c-bg); box-sizing: border-box; }
-        .bq-uni-search:focus { border-color: var(--c-accent); background: #fff; box-shadow: none; }
-        .bq-uni-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #cbd5e1; cursor: pointer; font-size: 0.85rem; transition: color 0.15s; }
-        .bq-uni-clear:hover { color: #94a3b8; }
-        .bq-am-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: background 0.15s; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
-        .bq-am-item:hover { background: var(--c-bg); }
-        .bq-am-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--c-accent-light); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: #7a8500; flex-shrink: 0; }
-        .bq-am-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-        .bq-am-nick { font-size: 0.85rem; font-weight: 700; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .bq-am-line2 { font-size: 0.72rem; color: var(--c-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .bq-am-dept { flex-shrink: 0; font-size: 0.65rem; font-weight: 700; color: var(--c-slate); background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
-        .bq-am-empty { padding: 30px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
-        .bq-am-clear .bq-am-avatar { background: #f1f5f9; color: #94a3b8; }
-        #assign-list-container { min-height: 280px; }
+        /* Assign picker popup is now the shared b-quest-assign-picker.js
+           component (self-injects its own overlay + styles) — no page-local
+           markup/CSS needed. */
 
         .empty-state { padding: 60px 24px; text-align: center; color: var(--c-muted); background: #fff; border-radius: 14px; border: 1px dashed var(--c-border); }
         .empty-state i { font-size: 2.2rem; opacity: 0.3; display: block; margin-bottom: 12px; }
@@ -255,25 +191,12 @@
     <div class="page-header">
         <h1><i class="bi bi-person-lines-fill me-2" style="color:var(--c-accent)"></i>B-QUEST Assignment</h1>
         <span class="count-badge" id="badge-count">0</span>
+        <button class="btn-refresh" id="btnRefresh" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
     </div>
 
     <div id="list-rows"></div>
     <div id="assign-load-more-trigger" style="height:50px;"></div>
 
-</div>
-
-<div id="assign-search-overlay" class="bq-search-overlay" onclick="closeAssignOverlay()">
-    <div class="bq-search-card" onclick="event.stopPropagation()">
-        <div class="bq-search-header">
-            <h5 class="bq-search-title"><i class="bi bi-person-check-fill"></i> Assign</h5>
-            <button type="button" class="bq-modal-close" onclick="closeAssignOverlay()"><i class="bi bi-x"></i></button>
-        </div>
-        <div class="bq-uni-search-wrap">
-            <input type="text" class="bq-uni-search" id="assign-search-input" placeholder="Search...">
-            <i class="bi bi-x-circle-fill bq-uni-clear" id="assign-search-clear" style="display:none;"></i>
-        </div>
-        <div id="assign-list-container" style="overflow-y: auto; flex: 1; padding-right:5px;"></div>
-    </div>
 </div>
 
 <script>
@@ -313,6 +236,24 @@
         setupInfiniteScroll();
         setupDateToday();
         setupSort();
+        setupRefreshBtn();
+    }
+
+    // Manual refresh without location.reload() — that would lose scroll
+    // position and silently reset every filter widget back to empty,
+    // same reasoning as List's pull-to-refresh (system/pull-refresh.js).
+    // resetAndReload() already re-queries from whatever the filter widgets
+    // currently hold, never touching them.
+    function setupRefreshBtn() {
+        const btn = document.getElementById('btnRefresh');
+        btn.addEventListener('click', async () => {
+            if (btn.disabled) return;
+            btn.disabled = true;
+            btn.classList.add('spinning');
+            await resetAndReload();
+            btn.classList.remove('spinning');
+            btn.disabled = false;
+        });
     }
 
     function setupMultiSelects() {
@@ -394,75 +335,26 @@
     }
 
     // ── Role segmented control (single-select, "All" + one per role) ──
-    function renderRoleSeg() {
-        const wrap = document.getElementById('roleSegWrap');
-        if (!wrap) return;
-        const prevValue = getRoleFilter();
-        const buttons = [{ label: 'All', value: '', icon: '' }, ...roleList.map(r => ({ label: r.name, value: r.id, icon: r.icon || 'bi-person-workspace' }))];
-        const activeValue = buttons.some(b => b.value === prevValue) ? prevValue : '';
-
-        wrap.querySelectorAll('.role-seg-btn').forEach(b => b.remove());
-        buttons.forEach(b => {
-            const btn = document.createElement('button');
-            btn.className = 'role-seg-btn' + (b.value === activeValue ? ' active' : '');
-            btn.dataset.role = b.value;
-            btn.innerHTML = b.icon ? `<i class="bi ${b.icon}"></i> ${esc(b.label)}` : esc(b.label);
-            btn.onclick = () => setRoleFilter(b.value);
-            wrap.appendChild(btn);
-        });
-        positionRoleSlider();
-    }
+    // Shared factory (b-quest.js) — same mechanic as List's own role-seg.
+    const roleSeg = createRoleSegControl({
+        wrapId: 'roleSegWrap', outerId: 'roleSegOuter', sliderId: 'roleSegSlider',
+        getButtons: () => [{ label: 'All', value: '', icon: '', color: '' }, ...roleList.map(r => ({ label: r.name, value: r.id, icon: r.icon || 'bi-person-workspace', color: roleColorMap[r.id] || '#64748b' }))],
+        onSelect: value => setRoleFilter(value)
+    });
+    function renderRoleSeg() { roleSeg.render(); }
 
     function setRoleFilter(value) {
-        document.querySelectorAll('.role-seg-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.role === value));
-        positionRoleSlider();
+        roleSeg.setActive(value);
         if (workFilter) workFilter.setValues(workFilter.getValues().filter(v => workOptions().some(o => o.value === v)));
         applyFilters();
     }
 
     function getRoleFilter() {
-        return document.querySelector('.role-seg-btn.active')?.dataset.role || '';
+        return roleSeg.getValue();
     }
 
-    function positionRoleSlider() {
-        const active = document.querySelector('.role-seg-btn.active');
-        const slider = document.getElementById('roleSegSlider');
-        if (!active || !slider) return;
-        slider.style.left = active.offsetLeft + 'px';
-        slider.style.width = active.offsetWidth + 'px';
-
-        // "All" keeps the default accent color (cleared inline styles fall
-        // back to the CSS default); a specific role tints the slider/label
-        // with that role's own color instead.
-        const color = active.dataset.role ? (roleColorMap[active.dataset.role] || '#64748b') : '';
-        document.querySelectorAll('.role-seg-btn').forEach(b => { b.style.color = ''; });
-        if (color) {
-            slider.style.background = hexToRgba(color, 0.15);
-            slider.style.borderColor = color;
-            active.style.color = color;
-        } else {
-            slider.style.background = '';
-            slider.style.borderColor = '';
-        }
-
-        active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-        updateRoleSegFade();
-    }
-
-    function updateRoleSegFade() {
-        const scroll = document.getElementById('roleSegWrap');
-        const outer = document.getElementById('roleSegOuter');
-        if (!scroll || !outer) return;
-        outer.classList.toggle('fade-left', scroll.scrollLeft > 2);
-        outer.classList.toggle('fade-right', scroll.scrollLeft + scroll.clientWidth < scroll.scrollWidth - 2);
-    }
-
-    function hexToRgba(hex, alpha) {
-        const h = (hex || '#64748b').replace('#', '');
-        const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
-        const n = parseInt(full, 16);
-        return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
-    }
+    // hexToRgba() is now the shared helper in b-quest.js — was an identical
+    // local copy here.
 
     // ── Data ──
     // Search/Owner live on the parent b-quest-list row, not on
@@ -555,7 +447,7 @@
     function resetAndReload() {
         assignPage = 0; assignHasMore = true; assignFetching = false;
         allRows = [];
-        loadRows(true);
+        return loadRows(true);
     }
 
     // Owner options come from a dedicated query (independent of
@@ -633,7 +525,7 @@
                 applyFilters();
             });
         });
-        document.getElementById('roleSegWrap')?.addEventListener('scroll', updateRoleSegFade);
+        document.getElementById('roleSegWrap')?.addEventListener('scroll', () => roleSeg.updateFade());
     }
 
     function setupSort() {
@@ -715,7 +607,7 @@
 
                     <div class="ac-actions">
                         <button class="ac-btn-view" onclick="handleViewAssignTask('${r.quest_id}')" title="View"><i class="bi bi-eye"></i></button>
-                        <button class="ac-btn-assign ${pending ? 'is-pending' : ''}" type="button" onclick="openAssignPicker('${r.id}','${r.quest_id}','${r.role_id}')">
+                        <button class="ac-btn-assign ${pending ? 'is-pending' : ''}" type="button" onclick="openAssignPickerForRow('${r.id}','${r.quest_id}','${r.role_id}')">
                             <i class="bi ${pending ? 'bi-person-check' : 'bi-person-plus'}"></i><span class="assign-btn-label">${pending ? esc(pending.value) : 'Assign'}</span>
                         </button>
                     </div>
@@ -790,67 +682,17 @@
         updateSaveBar();
     }
 
-    // ── Assign picker popup — same recipe as the task Modal's own
-    // openAssignPicker (avatar + name + department, click to pick) ──
-    function openAssignPicker(taskRoleId, questId, roleId) {
-        const candidates = assignCandidates[roleId] || [];
-        const overlay = document.getElementById('assign-search-overlay');
-        const container = document.getElementById('assign-list-container');
-        const searchInput = document.getElementById('assign-search-input');
-
-        const clearIcon = document.getElementById('assign-search-clear');
-        overlay.style.display = 'flex';
-        searchInput.value = '';
-        clearIcon.style.display = 'none';
-
-        const render = (filter = '') => {
-            container.innerHTML = '';
-            const clearBtn = document.createElement('button');
-            clearBtn.className = 'bq-am-item bq-am-clear w-100';
-            clearBtn.innerHTML = `
-                <div class="bq-am-avatar"><i class="bi bi-x-circle"></i></div>
-                <div class="bq-am-info"><span class="bq-am-nick">Unassigned</span></div>`;
-            clearBtn.onclick = () => { selectAssignee(taskRoleId, questId, ''); closeAssignOverlay(); };
-            container.appendChild(clearBtn);
-
-            const fl = filter.toLowerCase();
-            const matches = candidates.filter(c =>
-                c.codename.toLowerCase().includes(fl) ||
-                (c.full_name || '').toLowerCase().includes(fl) ||
-                (c.department || '').toLowerCase().includes(fl)
-            );
-            if (!matches.length) {
-                container.insertAdjacentHTML('beforeend', `<div class="bq-am-empty">${filter ? 'No matches' : 'No candidates for this role'}</div>`);
-            }
-            matches.forEach(c => {
-                const btn = document.createElement('button');
-                btn.className = 'bq-am-item w-100';
-                btn.innerHTML = `
-                    <div class="bq-am-avatar"><i class="bi bi-person-fill"></i></div>
-                    <div class="bq-am-info">
-                        <span class="bq-am-nick">${esc(c.codename)}</span>
-                        ${c.full_name ? `<span class="bq-am-line2">${esc(c.full_name)}</span>` : ''}
-                    </div>
-                    ${c.department ? `<span class="bq-am-dept">${esc(c.department)}</span>` : ''}`;
-                btn.onclick = () => { selectAssignee(taskRoleId, questId, c.codename); closeAssignOverlay(); };
-                container.appendChild(btn);
-            });
-        };
-        render();
-        searchInput.oninput = e => {
-            clearIcon.style.display = e.target.value ? 'block' : 'none';
-            render(e.target.value);
-        };
-        clearIcon.onclick = () => {
-            searchInput.value = '';
-            clearIcon.style.display = 'none';
-            searchInput.focus();
-            render('');
-        };
-    }
-
-    function closeAssignOverlay() {
-        document.getElementById('assign-search-overlay').style.display = 'none';
+    // Assign picker popup is now the shared b-quest-assign-picker.js
+    // component (avatar + name + department, click to pick, clear-to-
+    // unassign) — this just supplies this row's own candidates + what to do
+    // with the pick.
+    function openAssignPickerForRow(taskRoleId, questId, roleId) {
+        openAssignPicker({
+            candidates: assignCandidates[roleId] || [],
+            title: 'Assign',
+            emptyText: 'No candidates for this role',
+            onSelect: value => selectAssignee(taskRoleId, questId, value)
+        });
     }
 
     function updateSaveBar() {

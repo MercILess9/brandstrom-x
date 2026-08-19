@@ -105,6 +105,122 @@ function guardBquestPage(perm) {
     if (!canBquest(perm)) window.location.replace('b-quest-list.html');
 }
 
+// Shared hex->rgba helper — was duplicated identically in
+// b-quest-assignment.html and b-quest-modal.js; b-quest-list.html and
+// b-quest-settings.html used the `color + '26'` hex-alpha-suffix hack
+// (0x26/255 ≈ 0.15) instead, now switched to call this with 0.15 directly
+// so there's one source of truth.
+function hexToRgba(hex, alpha) {
+    const h = (hex || '#64748b').replace('#', '');
+    const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+    const n = parseInt(full, 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+}
+
+// Shared iOS-style sliding role-segment control — was triplicated (with
+// small behavioral differences) across b-quest-list.html, b-quest-
+// assignment.html and b-quest-settings.html's Default Filters box.
+//
+// wrapId/outerId/sliderId: ids of the scroll track / fade-outer / slider
+// pill elements (each page keeps its own markup + CSS class names —
+// List/Assignment use .role-seg-*, Settings uses .fd-role-seg-* — only the
+// JS behavior is shared here).
+// btnClass: the per-button CSS class this page's markup expects
+// (default 'role-seg-btn').
+// getButtons(): () => [{ label, value, icon, color }, ...] — called fresh
+// on every render() so a role added/renamed/recolored elsewhere shows up
+// immediately. `value` is the role id ('' for "All"); `color` should
+// already be resolved (e.g. via a roleColorMap[r.id] lookup) since the
+// factory just stores it on the button's dataset for reposition() to use.
+// getActiveValue(): optional. If provided, render() uses it as the sole
+// source of truth for which button should start active (Settings needs
+// this — its active role comes from a staged buffer, not from whatever
+// the DOM happened to show before a rebuild). If omitted (List/
+// Assignment), render() falls back to preserving whatever button is
+// currently .active in the DOM, dropping back to "All" if that value
+// isn't among the fresh button set.
+// onSelect(value): called on button click with the clicked value. List/
+// Assignment call setActive() themselves inside this callback (for instant
+// visual feedback) before kicking off their own async re-fetch; Settings
+// instead stages the value into its own change-buffer and re-renders the
+// whole section — the factory doesn't assume either behavior, it just
+// hands back the click.
+function createRoleSegControl({ wrapId, outerId, sliderId, btnClass = 'role-seg-btn', getButtons, getActiveValue, onSelect }) {
+    function currentDomValue() {
+        return document.querySelector(`#${wrapId} .${btnClass}.active`)?.dataset.role || '';
+    }
+
+    function render() {
+        const wrap = document.getElementById(wrapId);
+        if (!wrap) return;
+        const buttons = getButtons();
+        let activeValue;
+        if (getActiveValue) {
+            activeValue = getActiveValue() || '';
+        } else {
+            const prevValue = currentDomValue();
+            activeValue = buttons.some(b => b.value === prevValue) ? prevValue : '';
+        }
+
+        wrap.querySelectorAll(`.${btnClass}`).forEach(b => b.remove());
+        buttons.forEach(b => {
+            const btn = document.createElement('button');
+            btn.className = btnClass + (b.value === activeValue ? ' active' : '');
+            btn.dataset.role = b.value;
+            btn.dataset.color = b.color || '';
+            btn.innerHTML = b.icon ? `<i class="bi ${b.icon}"></i> ${esc(b.label)}` : esc(b.label);
+            btn.onclick = () => onSelect(b.value);
+            wrap.appendChild(btn);
+        });
+        reposition();
+    }
+
+    // Pure DOM class toggle + reposition, no onSelect side effect — for
+    // callers (List/Assignment) that need immediate visual feedback before
+    // their own async chain (e.g. a re-fetch) runs.
+    function setActive(value) {
+        const wrap = document.getElementById(wrapId);
+        wrap?.querySelectorAll(`.${btnClass}`).forEach(btn => btn.classList.toggle('active', btn.dataset.role === value));
+        reposition();
+    }
+
+    function reposition() {
+        const wrap = document.getElementById(wrapId);
+        const active = wrap?.querySelector(`.${btnClass}.active`);
+        const slider = document.getElementById(sliderId);
+        if (!active || !slider) return;
+        slider.style.left = active.offsetLeft + 'px';
+        slider.style.width = active.offsetWidth + 'px';
+
+        // "All" keeps the default accent color (cleared inline styles fall
+        // back to the CSS default); a specific role tints the slider/label
+        // with that role's own color instead.
+        const color = active.dataset.role ? (active.dataset.color || '') : '';
+        wrap.querySelectorAll(`.${btnClass}`).forEach(b => { b.style.color = ''; });
+        if (color) {
+            slider.style.background = hexToRgba(color, 0.15);
+            slider.style.borderColor = color;
+            active.style.color = color;
+        } else {
+            slider.style.background = '';
+            slider.style.borderColor = '';
+        }
+
+        active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        updateFade();
+    }
+
+    function updateFade() {
+        const scroll = document.getElementById(wrapId);
+        const outer = document.getElementById(outerId);
+        if (!scroll || !outer) return;
+        outer.classList.toggle('fade-left', scroll.scrollLeft > 2);
+        outer.classList.toggle('fade-right', scroll.scrollLeft + scroll.clientWidth < scroll.scrollWidth - 2);
+    }
+
+    return { render, reposition, updateFade, getValue: currentDomValue, setActive };
+}
+
 B_QUEST_CONFIG.getMenuPerms = loadBquestPerms;
 
 const BQ_ROLES = ['designer', 'creative'];

@@ -19,7 +19,13 @@ auth/
   *.html            — Auth pages (signup.html loads departments from DB)
 index.html          — Portal home (project cards grid + top-right gear/logout icons)
 b-quest/
-  b-quest.js            — Config, permission loader, God mode logic
+  b-quest.js            — Config, permission loader, God mode logic; also shared
+                          helpers for other B-Quest pages: hexToRgba() and
+                          createRoleSegControl() (sliding role-segment filter)
+  b-quest-assign-picker.js — Shared assign-picker popup (search + pick-a-person
+                          list, clear-to-unassign), self-injecting CSS/markup
+                          convention like system/multi-select.js. Loaded by any
+                          page that needs it (currently b-quest-assignment.html).
   b-quest-modal.js      — Task create/edit modal (IIFE: BQuestApp)
   b-quest-list.html     — Task list with infinite scroll + filter
   b-quest-assignment.html — Unassigned task queue

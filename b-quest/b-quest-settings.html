@@ -810,7 +810,7 @@
         saveBar = createSaveBar({ label: 'B-Quest Settings', onSave: saveAll, onCancel: cancelAllChanges, onUndo: undoLastChange });
         setupFilterDefaultMultiSelects();
         setupAdminAddSearch();
-        document.getElementById('fdRoleSegWrap')?.addEventListener('scroll', updateFdRoleFade);
+        document.getElementById('fdRoleSegWrap')?.addEventListener('scroll', () => fdRoleSeg.updateFade());
         await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadAllProfiles(), loadConfig(), loadDepartments(), loadAdminAccess()]);
         renderFilterDefaultsSection(); // needs originalRoles/Statuses/Types + originalConfig, all settled by the Promise.all above
         await loadWork();
@@ -1001,8 +1001,6 @@
         renderNotifySection();
         renderAdminAccess();
     }
-
-    function esc(s) { return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
     // Newly-added rows are blank and need a name typed in right away —
     // jump straight to it instead of leaving the user to find and click the
@@ -1675,67 +1673,26 @@
         renderDeadlineDefaultFields();
     }
 
-    // Role default — ported from the List page's renderRoleSeg()/
-    // positionRoleSlider()/updateRoleFade() (b-quest-list.html), just wired
+    // Role default — shared sliding role-segment control (createRoleSegControl
+    // in b-quest.js, same mechanic as List/Assignment's own role-seg), wired
     // to stage into filterDefaultsChanges instead of calling setRoleFilter.
-    // Rebuilds every render so a role added/renamed/recolored earlier in
-    // this same Settings session shows up immediately.
-    function renderFdRoleSeg() {
-        const wrap = document.getElementById('fdRoleSegWrap');
-        if (!wrap) return;
-        const fd = filterDefaultsBuffer();
-        const roles = roleBuffer().filter(r => !r._deleted);
-        const buttons = [{ label: 'All', value: '', icon: '', color: '' }, ...roles.map(r => ({ label: r.name, value: r.id, icon: r.icon || 'bi-person-workspace', color: r.color || '#64748b' }))];
-
-        wrap.querySelectorAll('.fd-role-seg-btn').forEach(b => b.remove());
-        buttons.forEach(b => {
-            const btn = document.createElement('button');
-            btn.className = 'fd-role-seg-btn' + (b.value === (fd.role || '') ? ' active' : '');
-            btn.dataset.role = b.value;
-            btn.dataset.color = b.color;
-            btn.innerHTML = b.icon ? `<i class="bi ${b.icon}"></i> ${esc(b.label)}` : esc(b.label);
-            btn.onclick = () => {
-                filterDefaultsChanges.list_filter_defaults = { ...filterDefaultsBuffer(), role: b.value };
-                markDirty('section-filterdefaults');
-                renderFilterDefaultsSection();
-            };
-            wrap.appendChild(btn);
-        });
-        positionFdRoleSlider();
-    }
-
-    function positionFdRoleSlider() {
-        const active = document.querySelector('#fdRoleSegWrap .fd-role-seg-btn.active');
-        const slider = document.getElementById('fdRoleSegSlider');
-        if (!active || !slider) return;
-        slider.style.left = active.offsetLeft + 'px';
-        slider.style.width = active.offsetWidth + 'px';
-
-        // "All" keeps the default accent color; a specific role tints the
-        // slider/label with that role's own color instead — same rule as
-        // the List page's role-seg slider.
-        const color = active.dataset.role ? active.dataset.color : '';
-        document.querySelectorAll('#fdRoleSegWrap .fd-role-seg-btn').forEach(b => { b.style.color = ''; });
-        if (color) {
-            slider.style.background = color + '26';
-            slider.style.borderColor = color;
-            active.style.color = color;
-        } else {
-            slider.style.background = '';
-            slider.style.borderColor = '';
+    // getActiveValue reads the staged buffer (not DOM state) since that's
+    // this page's actual source of truth — matters on first render (restores
+    // a previously-saved default with no prior DOM state to fall back on)
+    // and on Cancel (buffer resets, DOM must follow, not the other way
+    // round). Rebuilds every render so a role added/renamed/recolored
+    // earlier in this same Settings session shows up immediately.
+    const fdRoleSeg = createRoleSegControl({
+        wrapId: 'fdRoleSegWrap', outerId: 'fdRoleSegOuter', sliderId: 'fdRoleSegSlider', btnClass: 'fd-role-seg-btn',
+        getButtons: () => [{ label: 'All', value: '', icon: '', color: '' }, ...roleBuffer().filter(r => !r._deleted).map(r => ({ label: r.name, value: r.id, icon: r.icon || 'bi-person-workspace', color: r.color || '#64748b' }))],
+        getActiveValue: () => filterDefaultsBuffer().role || '',
+        onSelect: value => {
+            filterDefaultsChanges.list_filter_defaults = { ...filterDefaultsBuffer(), role: value };
+            markDirty('section-filterdefaults');
+            renderFilterDefaultsSection();
         }
-
-        active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-        updateFdRoleFade();
-    }
-
-    function updateFdRoleFade() {
-        const scroll = document.getElementById('fdRoleSegWrap');
-        const outer = document.getElementById('fdRoleSegOuter');
-        if (!scroll || !outer) return;
-        outer.classList.toggle('fade-left', scroll.scrollLeft > 2);
-        outer.classList.toggle('fade-right', scroll.scrollLeft + scroll.clientWidth < scroll.scrollWidth - 2);
-    }
+    });
+    function renderFdRoleSeg() { fdRoleSeg.render(); }
 
     // Status/Type default pickers — initialized once (trigger elements are
     // static HTML, always present), getOptions() re-reads the live buffer

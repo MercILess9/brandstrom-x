@@ -1,7 +1,7 @@
 
 let supabaseClient;
 
-function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+function esc(s) { return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 function safeLink(url) { if (!url) return '#'; const u = url.trim(); return (u.startsWith('http://') || u.startsWith('https://')) ? u : '#'; }
 
@@ -332,14 +332,18 @@ async function renderSystemMenu(config) {
         perms = null;
     }
 
-    const currentPath = window.location.pathname.split('/').pop();
+    // vercel.json has cleanUrls:true, so the real browser pathname never
+    // carries ".html" (e.g. "/b-quest/b-quest-list", not "b-quest-list.html")
+    // — strip it from both sides before comparing, or this never matches on
+    // any page and the active-menu underline never shows anywhere.
+    const currentPath = window.location.pathname.split('/').pop().replace(/\.html$/, '');
     menuBar.innerHTML = config.menus.filter(menu => {
         if (!menu.perm) return true;
         if (!perms) return false;
         if (perms._god) return true;
         return !!perms[menu.perm];
     }).map(menu => {
-        const isActive = (currentPath === menu.link) ? 'active' : '';
+        const isActive = (currentPath === menu.link.replace(/\.html$/, '')) ? 'active' : '';
         return `<a href="${menu.link}" class="sys-menu-link ${isActive}">${menu.name}</a>`;
     }).join('');
 }

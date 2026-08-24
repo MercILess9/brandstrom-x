@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
+    <script src="/system/multi-select.js"></script>
     <script src="b-quest.js"></script>
 
     <style>
@@ -21,12 +22,6 @@
             --c-muted: #94a3b8;
             --c-slate: #626e7f;
             --c-border: #e2e8f0;
-            --c-des: #3b82f6;
-            --c-des-bg: #eff6ff;
-            --c-des-border: #dbeafe;
-            --c-cre: #8b5cf6;
-            --c-cre-bg: #f5f3ff;
-            --c-cre-border: #ede9fe;
         }
 
         body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); color: var(--c-dark); margin: 0; padding-bottom: 80px; }
@@ -67,48 +62,91 @@
         /* ── Wrapper ── */
         .dash-wrapper { max-width: 1300px; margin: 0 auto; padding: 24px 20px 60px; display: flex; flex-direction: column; gap: 20px; }
 
+        /* ── Filter Row (Role seg + Person multi-select) ──
+           These mirror b-quest.css's .role-seg-*/.flt-select-* rules
+           verbatim (same class names/behavior) — copied here rather than
+           loading b-quest.css itself, since this page's CSS is meant to
+           stay self-contained per this project's convention (Dashboard
+           shares no markup with List/Assignment/Settings). */
+        .dash-filter-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .role-seg-wrap { position: relative; display: flex; align-items: center; background: #fff; border: 1px solid var(--c-border); border-radius: 20px; height: 38px; flex-shrink: 0; overflow: hidden; width: 420px; max-width: 100%; }
+        .role-seg-label { flex-shrink: 0; background: #f1f5f9; color: #64748b; font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; }
+        .role-seg-scroll-outer { position: relative; flex: 1; min-width: 0; height: 100%; }
+        .role-seg-scroll { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; height: 100%; padding: 3px; overflow-x: auto; scrollbar-width: none; }
+        .role-seg-scroll::-webkit-scrollbar { display: none; }
+        .role-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
+        .role-seg-scroll-outer::before, .role-seg-scroll-outer::after { content: ''; position: absolute; top: 1px; bottom: 1px; width: 32px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s; }
+        .role-seg-scroll-outer::before { left: 0; background: linear-gradient(to right, rgba(30,41,59,0.16), transparent); }
+        .role-seg-scroll-outer::after { right: 0; background: linear-gradient(to left, rgba(30,41,59,0.16), transparent); }
+        .role-seg-scroll-outer.fade-left::before { opacity: 1; }
+        .role-seg-scroll-outer.fade-right::after { opacity: 1; }
+        .role-seg-btn { position: relative; z-index: 1; border: none; background: transparent; padding: 0 14px; height: 100%; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; flex-shrink: 0; display: flex; align-items: center; gap: 5px; }
+        .role-seg-btn.active { color: #7a8500; }
+        .role-seg-btn:not(.active):hover { color: var(--c-accent); }
+
+        .flt-select-box { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; display: flex; align-items: center; overflow: hidden; height: 38px; transition: 0.2s; width: 220px; flex-shrink: 0; }
+        .flt-select-box:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(189,196,50,0.2); transform: translateY(-1px); }
+        .flt-select-tag { background: #f1f5f9; color: #64748b; font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; transition: 0.2s; }
+        .flt-select-box:hover .flt-select-tag { background: #e8edf2; color: var(--c-slate); }
+        .flt-select-input { border: none; font-size: 0.8rem; font-weight: 600; color: var(--c-slate); padding: 0 8px; width: 100%; outline: none; background: transparent; cursor: pointer; font-family: inherit; text-align-last: center; }
+        .flt-select-box.active-filter { background: var(--c-accent-light); border-color: var(--c-accent); }
+        .flt-select-box.active-filter .flt-select-tag { background: var(--c-accent); color: var(--c-dark); border-right-color: var(--c-accent); }
+
         /* ── Section ── */
         .section { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; overflow: hidden; }
         .section-header { display: flex; align-items: center; gap: 10px; padding: 15px 24px; border-bottom: 1px solid var(--c-border); }
         .section-title { font-size: 0.76rem; font-weight: 800; color: var(--c-dark); text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 8px; }
         .section-body { padding: 20px 24px; }
 
+        /* Calendar is the hero of the page — bigger radius/shadow/padding
+           than every section below it. */
+        .section-hero { border-radius: 26px; box-shadow: 0 12px 36px -10px rgba(30,41,59,0.14); border-color: #e5e9f0; }
+        .section-hero .section-header { padding: 20px 28px; }
+        .section-hero .section-title { font-size: 0.92rem; letter-spacing: 0.6px; }
+        .section-hero .section-title i { font-size: 1.05rem; color: var(--c-accent); }
+        .section-hero .section-body { padding: 22px 28px 28px; }
+
+        /* Sections below the calendar are visually secondary — smaller
+           headers, tighter padding — still fully present, just quieter. */
+        .section-secondary .section-header { padding: 11px 20px; }
+        .section-secondary .section-title { font-size: 0.68rem; opacity: 0.82; letter-spacing: 0.6px; }
+        .section-secondary .section-body { padding: 16px 20px 18px; }
+
         /* ── Overview ── */
-        .ov-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
-        .ov-card { border: 1px solid var(--c-border); border-radius: 14px; padding: 18px 20px; }
-        .ov-val { font-size: 2rem; font-weight: 900; color: var(--c-dark); line-height: 1; }
-        .ov-label { font-size: 0.68rem; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 7px; }
+        .ov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+        .ov-card { border: 1px solid var(--c-border); border-radius: 14px; padding: 16px 18px; }
+        .ov-val { font-size: 1.7rem; font-weight: 900; color: var(--c-dark); line-height: 1; }
+        .ov-label { font-size: 0.65rem; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
         .ov-card.ov-active { border-color: var(--c-accent); background: var(--c-accent-light); }
         .ov-card.ov-active .ov-val { color: #5a6400; }
-        .ov-card.ov-des { border-color: var(--c-des-border); background: var(--c-des-bg); }
-        .ov-card.ov-des .ov-val { color: var(--c-des); }
-        .ov-card.ov-cre { border-color: var(--c-cre-border); background: var(--c-cre-bg); }
-        .ov-card.ov-cre .ov-val { color: var(--c-cre); }
 
-        /* ── Two-col layout ── */
-        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .sub-col { border: 1px solid var(--c-border); border-radius: 14px; overflow: hidden; }
-        .sub-col-head { display: flex; align-items: center; gap: 8px; padding: 11px 16px; font-size: 0.73rem; font-weight: 800; border-bottom: 1px solid var(--c-border); }
-        .sub-col-head-des { background: var(--c-des-bg); color: var(--c-des); border-color: var(--c-des-border); }
-        .sub-col-head-cre { background: var(--c-cre-bg); color: var(--c-cre); border-color: var(--c-cre-border); }
+        /* ── Role as a DATA DIMENSION, not a layout axis. Every secondary
+           section below is ONE unified chart/table spanning all active
+           roles (colored/badged per row or per series) instead of a
+           repeated column per role — reads consistently whether there are
+           2 roles or 8, and the Role filter above narrows it in place. ── */
+        .role-badge-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 20px; font-size: 0.68rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+        .role-badge-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-        /* ── Work Type Donut ── */
-        .wt-body { display: flex; align-items: center; gap: 16px; padding: 14px 16px; min-height: 160px; }
-        .wt-chart-area { position: relative; width: 130px; height: 130px; flex-shrink: 0; }
-        .wt-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
-        .wt-center-val { font-size: 1.5rem; font-weight: 900; color: var(--c-dark); line-height: 1; }
-        .wt-center-lbl { font-size: 0.6rem; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px; }
-        .wt-legend { flex: 1; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
-        .wt-legend-item { display: flex; align-items: center; gap: 7px; }
-        .cal-day-info { font-size: 0.58rem; font-weight: 700; opacity: 0.82; margin-top: 2px; line-height: 1; }
-        .wt-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-        .wt-legend-name { font-size: 0.78rem; font-weight: 600; color: var(--c-dark); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .wt-legend-count { font-size: 0.78rem; font-weight: 800; color: var(--c-slate); flex-shrink: 0; }
+        /* ── Daily Capacity — one %-of-capacity line per role, normalized
+           so roles with different max_capacity are still comparable on the
+           same 0-100%+ axis. A dashed 100% line marks the overload point. ── */
+        .cap-chart-wrap { padding: 12px 16px 8px; height: 260px; }
+        .cap-empty-cap-note { font-size: 0.68rem; color: var(--c-muted); padding: 0 16px 10px; }
 
-        /* ── Work Breakdown ── */
-        .wb-table-head { display: grid; grid-template-columns: 1fr 56px 70px; gap: 8px; padding: 8px 16px; background: var(--c-bg); font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        /* ── Work Types — one stacked bar per Type, segments colored/
+           stacked by role, so "which role does this type" reads at a
+           glance instead of needing N separate donuts. ── */
+        .wt-chart-wrap { padding: 12px 16px 8px; height: 280px; }
+
+        /* ── Work Breakdown / Person Summary — one table each, Role shown
+           as a leading badge column instead of a repeated table per role.
+           Grouped by role (role order), sorted within each group same as
+           before. ── */
+        .wb-table-head, .wb-row { display: grid; grid-template-columns: 96px 1fr 56px 70px; gap: 8px; align-items: center; padding: 8px 16px; }
+        .wb-table-head { background: var(--c-bg); font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
         .wb-table-head span:not(:first-child) { text-align: center; }
-        .wb-row { display: grid; grid-template-columns: 1fr 56px 70px; gap: 8px; align-items: center; padding: 8px 16px; border-top: 1px solid #f8fafc; transition: background 0.15s; }
+        .wb-row { border-top: 1px solid #f8fafc; transition: background 0.15s; }
         .wb-row:hover { background: #fafbff; }
         .wb-row.wb-zero { opacity: 0.4; }
         .wb-name { font-size: 0.82rem; font-weight: 600; color: var(--c-dark); }
@@ -116,44 +154,37 @@
         .wb-weight-bar { height: 4px; background: var(--c-bg); border-radius: 4px; margin-top: 3px; overflow: hidden; }
         .wb-weight-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
 
-        /* ── Person Summary ── */
-        .ps-table-head { display: grid; grid-template-columns: 1fr 52px 52px 60px; gap: 8px; padding: 8px 16px; background: var(--c-bg); font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .ps-table-head, .ps-row { display: grid; grid-template-columns: 96px 1fr 52px 52px 60px; gap: 8px; align-items: center; padding: 9px 16px; }
+        .ps-table-head { background: var(--c-bg); font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
         .ps-table-head span:not(:first-child) { text-align: center; }
-        .ps-row { display: grid; grid-template-columns: 1fr 52px 52px 60px; gap: 8px; align-items: center; padding: 9px 16px; border-top: 1px solid #f8fafc; transition: background 0.15s; }
+        .ps-row { border-top: 1px solid #f8fafc; transition: background 0.15s; }
         .ps-row:hover { background: #fafbff; }
         .ps-name { font-size: 0.82rem; font-weight: 700; color: var(--c-dark); }
         .ps-num { font-size: 0.82rem; font-weight: 800; text-align: center; }
-
-        /* ── Timeline ── */
-        .tl-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; font-size: 0.73rem; font-weight: 800; border-bottom: 1px solid var(--c-border); }
-        .tl-head-des { background: var(--c-des-bg); color: var(--c-des); border-color: var(--c-des-border); }
-        .tl-head-cre { background: var(--c-cre-bg); color: var(--c-cre); border-color: var(--c-cre-border); }
-        .tl-cap-badge { font-size: 0.67rem; font-weight: 700; opacity: 0.75; }
-        .tl-chart-wrap { padding: 16px; height: 200px; }
 
         /* ── Empty / Skeleton ── */
         .col-empty { padding: 24px; text-align: center; color: var(--c-muted); font-size: 0.78rem; font-weight: 600; }
         .skel { background: #f1f5f9; border-radius: 8px; animation: shimmer 1.4s infinite; }
         @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
-        /* ── Calendar Heatmap ── */
-        .cal-grid-wrap { padding: 10px 14px 14px; }
-        .cal-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 3px; }
-        .cal-dow { font-size: 0.58rem; font-weight: 800; color: var(--c-muted); text-align: center; text-transform: uppercase; letter-spacing: 0.3px; padding: 2px 0; }
-        .cal-week-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 3px; }
+        /* ── Calendar Heatmap (hero — one unified grid) ── */
+        .cal-grid-wrap { padding: 4px 0 0; }
+        .cal-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
+        .cal-dow { font-size: 0.66rem; font-weight: 800; color: var(--c-muted); text-align: center; text-transform: uppercase; letter-spacing: 0.3px; padding: 2px 0; }
+        .cal-week-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
         .cal-day {
-            border-radius: 7px; display: flex; flex-direction: column;
+            border-radius: 10px; display: flex; flex-direction: column;
             align-items: center; justify-content: center; cursor: pointer;
             border: 1.5px solid transparent; transition: 0.15s; position: relative;
-            font-size: 0.65rem; font-weight: 700; color: var(--c-slate);
-            background: var(--c-bg); padding: 6px 2px 7px; gap: 4px;
+            font-size: 0.7rem; font-weight: 700; color: var(--c-slate);
+            background: var(--c-bg); padding: 10px 3px 11px; gap: 5px; min-height: 64px;
         }
         .cal-day:hover { border-color: #cbd5e1; }
         .cal-day.cal-empty { background: transparent; cursor: default; pointer-events: none; }
         .cal-day.cal-today { border-color: var(--c-accent) !important; color: #5a6400; }
         .cal-day.cal-selected { border-color: var(--c-dark) !important; box-shadow: 0 0 0 2px var(--c-dark); }
         .cal-day.cal-selected.cal-today { border-color: var(--c-accent) !important; box-shadow: 0 0 0 2px var(--c-accent); }
-        .cal-day-num { line-height: 1; font-size: 0.75rem; }
+        .cal-day-num { line-height: 1; font-size: 0.9rem; }
 
         /* past days — muted */
         .cal-day.cal-past { opacity: 0.35; }
@@ -162,28 +193,17 @@
         /* badges inside cell */
         .cal-badges { display: flex; gap: 2px; flex-wrap: wrap; justify-content: center; }
         .cal-badge {
-            font-size: 0.52rem; font-weight: 800; padding: 1px 5px;
+            font-size: 0.55rem; font-weight: 800; padding: 1px 5px;
             border-radius: 4px; line-height: 1.5; letter-spacing: 0.2px;
         }
         .cal-badge-task { background: rgba(220,38,38,0.15); color: #b91c1c; font-weight: 900; }
         .cal-badge-ongoing { background: rgba(0,0,0,0.06); color: inherit; opacity: 0.75; }
         .cal-badge-over { background: #dc2626; color: #fff !important; }
 
-        /* heatmap intensity — designer */
-        .cal-day.heat-des-1 { background: #dbeafe; color: #1d4ed8; }
-        .cal-day.heat-des-2 { background: #bfdbfe; color: #1d4ed8; }
-        .cal-day.heat-des-3 { background: #93c5fd; color: #1e40af; }
-        .cal-day.heat-des-4 { background: #60a5fa; color: #fff; }
-        .cal-day.heat-des-5 { background: #3b82f6; color: #fff; }
-        .cal-day.heat-des-over { background: #fee2e2; color: #991b1b; border-color: #ef4444 !important; }
-
-        /* heatmap intensity — creative */
-        .cal-day.heat-cre-1 { background: #ede9fe; color: #6d28d9; }
-        .cal-day.heat-cre-2 { background: #ddd6fe; color: #6d28d9; }
-        .cal-day.heat-cre-3 { background: #c4b5fd; color: #5b21b6; }
-        .cal-day.heat-cre-4 { background: #a78bfa; color: #fff; }
-        .cal-day.heat-cre-5 { background: #8b5cf6; color: #fff; }
-        .cal-day.heat-cre-over { background: #fee2e2; color: #991b1b; border-color: #ef4444 !important; }
+        /* over-capacity — a hard class (not inline) so it can safely sit
+           above cal-today/cal-selected's own !important border rule
+           without a specificity fight. */
+        .cal-day.cal-heat-over { background: #fee2e2 !important; color: #991b1b !important; border-color: #ef4444 !important; }
 
         /* ── Day Detail Modal ── */
         #day-modal-backdrop {
@@ -194,7 +214,7 @@
         #day-modal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             z-index: 901; background: #fff; border-radius: 20px;
-            box-shadow: 0 24px 60px rgba(0,0,0,0.18); width: 92%; max-width: 960px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.18); width: 92%; max-width: 1040px;
             max-height: 82vh; display: flex; flex-direction: column;
             animation: slideUp 0.2s ease;
         }
@@ -213,15 +233,13 @@
             cursor: pointer; color: var(--c-slate); font-size: 0.8rem; transition: 0.15s;
         }
         .dm-close:hover { background: #f1f5f9; color: var(--c-dark); }
-        .dm-body {
-            display: grid; grid-template-columns: 1fr 1fr; overflow-y: auto; flex: 1;
-        }
-        .dm-col { padding: 18px 20px; }
+        /* One column per active role — flex row that scrolls horizontally
+           once 3+ roles are shown, rather than a fixed 2-up grid. */
+        .dm-body { display: flex; overflow-x: auto; overflow-y: auto; flex: 1; }
+        .dm-col { padding: 18px 20px; flex: 1 1 260px; min-width: 240px; }
         .dm-col + .dm-col { border-left: 1px solid var(--c-border); }
 
         .day-col-head { font-size: 0.67rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
-        .day-col-head-des { color: var(--c-des); }
-        .day-col-head-cre { color: var(--c-cre); }
         .day-task-card {
             padding: 11px 14px; border-radius: 12px;
             border: 1px solid var(--c-border); margin-bottom: 8px; background: #fff;
@@ -233,9 +251,6 @@
         .day-task-row1 { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
         .day-task-name { font-size: 0.84rem; font-weight: 700; color: var(--c-dark); line-height: 1.3; flex: 1; }
         .day-task-status { font-size: 0.63rem; font-weight: 800; padding: 2px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; letter-spacing: 0.2px; }
-        .status-done { background: #dcfce7; color: #15803d; }
-        .status-progress { background: var(--c-accent-light); color: #5a6400; }
-        .status-pending { background: #f1f5f9; color: var(--c-slate); }
 
         /* Row 2: Account | Opp */
         .day-task-row2 { display: flex; align-items: center; gap: 5px; }
@@ -243,20 +258,19 @@
         .day-task-opp { font-size: 0.72rem; color: var(--c-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
         .day-task-dot { font-size: 0.55rem; color: #cbd5e1; flex-shrink: 0; }
 
-        /* Row 3: Work + Weight | Owner | Deadline */
+        /* Row 3: Work + Weight | Assign | Owner | Deadline */
         .day-task-row3 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid #f1f5f9; }
         .day-task-w { font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
-        .day-task-w-des { background: var(--c-des-bg); color: var(--c-des); }
-        .day-task-w-cre { background: var(--c-cre-bg); color: var(--c-cre); }
         .day-task-meta { font-size: 0.68rem; font-weight: 600; color: var(--c-muted); display: flex; align-items: center; gap: 3px; }
         .day-task-meta i { font-size: 0.6rem; opacity: 0.6; }
         .day-task-spacer { flex: 1; }
 
         .day-empty { color: var(--c-muted); font-size: 0.78rem; font-weight: 600; padding: 8px 0; }
 
-        @media (max-width: 600px) {
-            .dm-body { grid-template-columns: 1fr; }
+        @media (max-width: 700px) {
+            .dm-body { flex-direction: column; }
             .dm-col + .dm-col { border-left: none; border-top: 1px solid var(--c-border); }
+            .role-seg-wrap { width: 100%; }
         }
     </style>
 </head>
@@ -294,120 +308,82 @@
 <!-- Dashboard Content -->
 <div class="dash-wrapper">
 
-    <!-- 1. Overview -->
-    <div class="section">
+    <!-- Filters — Role + Person, narrows every section below at once -->
+    <div class="dash-filter-row">
+        <div class="role-seg-wrap">
+            <span class="role-seg-label">Role</span>
+            <div class="role-seg-scroll-outer" id="dashRoleSegOuter">
+                <div class="role-seg-scroll" id="dashRoleSegWrap">
+                    <div class="role-seg-slider" id="dashRoleSegSlider"></div>
+                    <!-- Buttons rendered by roleSeg.render() from b-quest-role -->
+                </div>
+            </div>
+        </div>
+        <div class="flt-select-box" id="wrap-filterAssign"></div>
+    </div>
+
+    <!-- Calendar — hero of the page -->
+    <div class="section section-hero">
+        <div class="section-header">
+            <div class="section-title"><i class="bi bi-calendar3-week-fill"></i> Calendar — Deadline Load</div>
+        </div>
+        <div class="section-body">
+            <div class="cal-grid-wrap" id="cal-grid"></div>
+        </div>
+    </div>
+
+    <!-- Overview -->
+    <div class="section section-secondary">
         <div class="section-header">
             <div class="section-title"><i class="bi bi-grid-1x2-fill"></i> Overview</div>
         </div>
         <div class="section-body">
             <div class="ov-grid" id="ov-grid">
-                <div class="ov-card" style="grid-column:1/6"><div class="skel" style="height:70px"></div></div>
+                <div class="ov-card" style="grid-column:1/6"><div class="skel" style="height:60px"></div></div>
             </div>
         </div>
     </div>
 
-    <!-- 2. Calendar Heatmap -->
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title"><i class="bi bi-calendar3-week-fill"></i> Calendar — Deadline Load</div>
-        </div>
-        <div class="section-body">
-            <div class="two-col">
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-des"><i class="bi bi-brush-fill"></i> Designer</div>
-                    <div class="cal-grid-wrap" id="cal-des"></div>
-                </div>
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-cre"><i class="bi bi-rocket-fill"></i> Creative</div>
-                    <div class="cal-grid-wrap" id="cal-cre"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. Daily Capacity -->
-    <div class="section">
+    <!-- Daily Capacity -->
+    <div class="section section-secondary">
         <div class="section-header">
             <div class="section-title"><i class="bi bi-bar-chart-fill"></i> Daily Capacity</div>
         </div>
         <div class="section-body">
-            <div class="two-col">
-                <div class="sub-col">
-                    <div class="tl-head tl-head-des">
-                        <span><i class="bi bi-brush-fill me-1"></i> Designer</span>
-                        <span class="tl-cap-badge" id="cap-badge-des">—</span>
-                    </div>
-                    <div class="tl-chart-wrap"><canvas id="chart-des"></canvas></div>
-                </div>
-                <div class="sub-col">
-                    <div class="tl-head tl-head-cre">
-                        <span><i class="bi bi-rocket-fill me-1"></i> Creative</span>
-                        <span class="tl-cap-badge" id="cap-badge-cre">—</span>
-                    </div>
-                    <div class="tl-chart-wrap"><canvas id="chart-cre"></canvas></div>
-                </div>
-            </div>
+            <div class="cap-chart-wrap" id="cap-chart-wrap"><canvas id="chart-capacity"></canvas></div>
+            <div class="cap-empty-cap-note" id="cap-note"></div>
         </div>
     </div>
 
-    <!-- 4. Work Types (donut) -->
-    <div class="section">
+    <!-- Work Types -->
+    <div class="section section-secondary">
         <div class="section-header">
             <div class="section-title"><i class="bi bi-pie-chart-fill"></i> Work Types</div>
         </div>
         <div class="section-body">
-            <div class="two-col">
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-des"><i class="bi bi-brush-fill"></i> Designer</div>
-                    <div id="wt-des"><div class="col-empty">Loading...</div></div>
-                </div>
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-cre"><i class="bi bi-rocket-fill"></i> Creative</div>
-                    <div id="wt-cre"><div class="col-empty">Loading...</div></div>
-                </div>
-            </div>
+            <div class="wt-chart-wrap" id="wt-chart-wrap"><canvas id="chart-worktypes"></canvas></div>
         </div>
     </div>
 
-    <!-- 5. Work Breakdown -->
-    <div class="section">
+    <!-- Work Breakdown -->
+    <div class="section section-secondary">
         <div class="section-header">
             <div class="section-title"><i class="bi bi-table"></i> Work Breakdown</div>
         </div>
         <div class="section-body">
-            <div class="two-col">
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-des"><i class="bi bi-brush-fill"></i> Designer</div>
-                    <div class="wb-table-head"><span>Work</span><span>Tasks</span><span>% Done</span></div>
-                    <div id="wb-des"><div class="col-empty">Loading...</div></div>
-                </div>
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-cre"><i class="bi bi-rocket-fill"></i> Creative</div>
-                    <div class="wb-table-head"><span>Work</span><span>Tasks</span><span>% Done</span></div>
-                    <div id="wb-cre"><div class="col-empty">Loading...</div></div>
-                </div>
-            </div>
+            <div class="wb-table-head"><span>Role</span><span>Work</span><span>Tasks</span><span>% Done</span></div>
+            <div id="wb-rows"></div>
         </div>
     </div>
 
-    <!-- 6. Person Summary -->
-    <div class="section">
+    <!-- Person Summary -->
+    <div class="section section-secondary">
         <div class="section-header">
             <div class="section-title"><i class="bi bi-people-fill"></i> Person Summary</div>
         </div>
         <div class="section-body">
-            <div class="two-col">
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-des"><i class="bi bi-brush-fill"></i> Designer</div>
-                    <div class="ps-table-head"><span>Member</span><span>Tasks</span><span>Done</span><span>Weight</span></div>
-                    <div id="ps-des"><div class="col-empty">Loading...</div></div>
-                </div>
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-cre"><i class="bi bi-rocket-fill"></i> Creative</div>
-                    <div class="ps-table-head"><span>Member</span><span>Tasks</span><span>Done</span><span>Weight</span></div>
-                    <div id="ps-cre"><div class="col-empty">Loading...</div></div>
-                </div>
-            </div>
+            <div class="ps-table-head"><span>Role</span><span>Member</span><span>Tasks</span><span>Done</span><span>Weight</span></div>
+            <div id="ps-rows"></div>
         </div>
     </div>
 
@@ -421,33 +397,37 @@
             </div>
             <button class="dm-close" onclick="closeDayModal()"><i class="bi bi-x-lg"></i></button>
         </div>
-        <div class="dm-body">
-            <div class="dm-col">
-                <div class="day-col-head day-col-head-des"><i class="bi bi-brush-fill"></i> Designer</div>
-                <div id="day-tasks-des"></div>
-            </div>
-            <div class="dm-col">
-                <div class="day-col-head day-col-head-cre"><i class="bi bi-rocket-fill"></i> Creative</div>
-                <div id="day-tasks-cre"></div>
-            </div>
-        </div>
+        <div class="dm-body" id="dm-body"></div>
     </div>
 
 </div>
 
 <script>
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const DONUT_PALETTE = [
-        '#3b82f6','#06b6d4','#10b981','#f59e0b','#ef4444',
-        '#8b5cf6','#ec4899','#84cc16','#f97316','#64748b'
-    ];
+    const CAL_HEAT_BASE = '#3b82f6'; // merged/"All" calendar heat color — a single role in the filter uses that role's own color instead
 
     let curYear, curMonth;
-    let chartDes = null, chartCre = null;
-    let chartWtDes = null, chartWtCre = null;
-    let capDes = 0, capCre = 0;
     let pickerYear;
-    let workList = [];
+
+    // ── Master data (loaded once) ──
+    let roleList = [];       // active roles — [{id, name, color, icon, active}]
+    let roleColorMap = {};   // role_id -> color (ALL roles, incl. inactive — an existing task-role row can reference a deactivated role)
+    let roleNameMap = {};    // role_id -> name (ALL roles)
+    let maxCapByRole = {};   // role_id -> max_capacity (from b-quest-role, ALL roles)
+    let statusList = [];     // active statuses, sort_order-ascending — [{id, name, color}]
+    let statusColorMap = {}; // status_id -> color (ALL statuses)
+    let statusNameMap = {};  // status_id -> name (ALL statuses)
+    let workList = [];       // b-quest-work rows — [{work, day, weight, max_per_day, role_id}]
+    let taskRoleAssignRows = []; // [{role_id, assign}] — unfiltered snapshot, feeds the Person filter's grouped option list
+    let workdayWeight = { sun: 100, mon: 100, tue: 100, wed: 100, thu: 100, fri: 100, sat: 100 };
+
+    // ── Filter + per-month state ──
+    let selectedAssigns = [];   // Person filter values (codenames)
+    let monthRows = [];         // b-quest-task-role rows (+ joined quest) for the displayed month, already scoped by Role/Person filters
+    let calSelectedDate = null;
+    let assignFilter;
+    let capacityChart = null;   // single unified Chart instance
+    let worktypesChart = null;  // single unified Chart instance
 
     // ── Month helpers ──
     function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
@@ -496,7 +476,7 @@
                 curMonth = parseInt(btn.dataset.m);
                 updateLabel();
                 closePicker();
-                loadData();
+                reloadAndRenderAll();
             };
         });
     }
@@ -513,547 +493,240 @@
 
     document.getElementById('btn-prev').onclick = () => {
         if (--curMonth < 0) { curMonth = 11; curYear--; }
-        updateLabel(); loadData();
+        updateLabel(); reloadAndRenderAll();
     };
     document.getElementById('btn-next').onclick = () => {
         if (++curMonth > 11) { curMonth = 0; curYear++; }
-        updateLabel(); loadData();
+        updateLabel(); reloadAndRenderAll();
     };
     document.getElementById('btn-today').onclick = () => {
         const now = new Date(); curYear = now.getFullYear(); curMonth = now.getMonth();
-        updateLabel(); loadData();
+        updateLabel(); reloadAndRenderAll();
     };
 
-    // ── Load ──
-    async function loadData() {
-        calSelectedDate = null;
+    // ── Role filter (shared sliding-segment control from b-quest.js) ──
+    const roleSeg = createRoleSegControl({
+        wrapId: 'dashRoleSegWrap', outerId: 'dashRoleSegOuter', sliderId: 'dashRoleSegSlider',
+        getButtons: () => [{ label: 'All', value: '', icon: '', color: '' }, ...roleList.map(r => ({ label: r.name, value: r.id, icon: r.icon || 'bi-person-workspace', color: roleColorMap[r.id] || '#64748b' }))],
+        onSelect: value => setRoleFilter(value)
+    });
+    function getRoleFilter() { return roleSeg.getValue(); }
+    // Roles the rest of the page should render columns for — every active
+    // role when "All" is selected, just the one filtered role otherwise.
+    function activeRoleList() {
+        const v = getRoleFilter();
+        return v ? roleList.filter(r => r.id === v) : roleList;
+    }
+    function setRoleFilter(value) {
+        roleSeg.setActive(value);
+        pruneAssignFilter();
+        return reloadAndRenderAll();
+    }
 
-        const { start, end } = monthRange();
+    // Person/Assign options grouped by Role, scoped to whichever role is
+    // currently active — same idea as List's Assign filter.
+    function assignOptions() {
+        const active = getRoleFilter();
+        const showAll = !active;
+        const byRole = {};
+        taskRoleAssignRows.forEach(r => { (byRole[r.role_id] ||= new Set()).add(r.assign); });
+        const opts = [];
+        roleList.forEach(r => {
+            if (!showAll && r.id !== active) return;
+            const names = [...(byRole[r.id] || [])].sort((a, b) => a.localeCompare(b, 'th'));
+            names.forEach(name => opts.push({ value: name, label: name, group: `${r.name}s` }));
+        });
+        return opts;
+    }
+    // Drops any selected person no longer valid for the newly active role
+    // (e.g. switching Role narrows the candidate pool) instead of leaving
+    // the filter silently stuck on a name that can't match anything.
+    function pruneAssignFilter() {
+        if (!assignFilter) return;
+        const valid = new Set(assignOptions().map(o => o.value));
+        const kept = assignFilter.getValues().filter(v => valid.has(v));
+        assignFilter.setValues(kept);
+        selectedAssigns = kept;
+    }
 
-        const [tasksRes, capRes, workRes] = await Promise.all([
-            supabaseClient.from('b-quest-list').select('*')
-                .or(`and(designer_deadline.gte.${start},designer_deadline.lte.${end}),and(creative_deadline.gte.${start},creative_deadline.lte.${end})`),
-            supabaseClient.from('b_quest_capacity').select('*'),
-            supabaseClient.from('b-quest-work').select('*').order('work')
+    // ── Status "done" heuristic ──
+    // Status is now a fully admin-configured, dynamically-ordered list (no
+    // fixed Progress/Done pair) — the last status in sort_order is treated
+    // as the completion state, same convention Settings' default-status
+    // fallback already leans on (a workflow is naturally configured in
+    // order, e.g. Pending -> In Progress -> Done).
+    function doneStatusId() { return statusList.length ? statusList[statusList.length - 1].id : null; }
+    function isDoneStatus(statusId) { const d = doneStatusId(); return d != null && statusId === d; }
+
+    // ── Master data (loaded once per page load) ──
+    async function loadMasterData() {
+        const [roleRes, statusRes, workRes, assignRes, cfgRes] = await Promise.all([
+            supabaseClient.from('b-quest-role').select('id, name, color, icon, max_capacity, active').order('sort_order'),
+            supabaseClient.from('b-quest-status').select('id, name, color, active').order('sort_order'),
+            supabaseClient.from('b-quest-work').select('work, day, weight, max_per_day, role_id').order('work'),
+            supabaseClient.from('b-quest-task-role').select('role_id, assign').not('assign', 'is', null),
+            supabaseClient.from('b-quest-config').select('value').eq('rule', 'workday_weight').maybeSingle()
         ]);
 
-        const tasks = tasksRes.data || [];
-        const caps  = capRes.data  || [];
-        workList    = workRes.data  || [];
-        capDes = caps.find(c => c.role === 'Designer')?.max_capacity || 0;
-        capCre = caps.find(c => c.role === 'Creative')?.max_capacity || 0;
+        const allRoles = roleRes.data || [];
+        roleList = allRoles.filter(r => r.active !== false);
+        roleColorMap = Object.fromEntries(allRoles.map(r => [r.id, r.color || '#64748b']));
+        roleNameMap = Object.fromEntries(allRoles.map(r => [r.id, r.name]));
+        maxCapByRole = Object.fromEntries(allRoles.map(r => [r.id, r.max_capacity ?? 10]));
 
-        renderOverview(tasks);
-        renderWorkTypes(tasks);
-        renderWorkBreakdown(tasks);
-        renderPersons(tasks);
-        renderTimeline(tasks);
-        renderCalendar(tasks);
+        const allStatuses = statusRes.data || [];
+        statusList = allStatuses.filter(s => s.active !== false);
+        statusColorMap = Object.fromEntries(allStatuses.map(s => [s.id, s.color || '#94a3b8']));
+        statusNameMap = Object.fromEntries(allStatuses.map(s => [s.id, s.name]));
+
+        workList = workRes.data || [];
+        taskRoleAssignRows = assignRes.data || [];
+        workdayWeight = { sun: 100, mon: 100, tue: 100, wed: 100, thu: 100, fri: 100, sat: 100, ...(cfgRes.data?.value || {}) };
+
+        roleSeg.render();
     }
 
-    // ── Section 1: Overview ──
-    function renderOverview(tasks) {
+    // ── Fetch this month's task-role rows, scoped by Role/Person filters ──
+    // Joined against b-quest-list for the task-level fields the Day Detail
+    // modal needs (avoids an N+1 lookup per card). Only rows whose OWN
+    // deadline falls in the displayed month are fetched — a row whose
+    // deadline lands in a later month but whose Day-spread reaches back
+    // into this month's tail end won't show (same scope the previous
+    // per-role query used; not attempted to fix here since it's a
+    // pre-existing edge case, not part of this rewrite's brief).
+    async function fetchMonthRows() {
         const { start, end } = monthRange();
-
-        const dTasks = tasks.filter(t => t.designer_deadline >= start && t.designer_deadline <= end && t.designer_assign);
-        const cTasks = tasks.filter(t => t.creative_deadline >= start && t.creative_deadline <= end && t.creative_assign);
-        const allIds = new Set([...dTasks, ...cTasks].map(t => t.id));
-
-        const activeUniq = new Set(tasks.filter(t =>
-            (dTasks.find(d => d.id === t.id) && t.designer_status === 'On Progress') ||
-            (cTasks.find(c => c.id === t.id) && t.creative_status === 'On Progress')
-        ).map(t => t.id)).size;
-
-        const done = [...allIds].filter(id => {
-            const t = tasks.find(r => r.id === id);
-            const dDone = !dTasks.find(d => d.id === id) || t.designer_status === 'Done';
-            const cDone = !cTasks.find(c => c.id === id) || t.creative_status === 'Done';
-            return dDone && cDone;
-        }).length;
-
-        document.getElementById('ov-grid').innerHTML = `
-            <div class="ov-card">
-                <div class="ov-val">${allIds.size}</div>
-                <div class="ov-label">Total Tasks</div>
-            </div>
-            <div class="ov-card ov-active">
-                <div class="ov-val">${activeUniq}</div>
-                <div class="ov-label">On Progress</div>
-            </div>
-            <div class="ov-card">
-                <div class="ov-val">${done}</div>
-                <div class="ov-label">Done</div>
-            </div>
-            <div class="ov-card ov-des">
-                <div class="ov-val">${new Set(dTasks.map(t => t.designer_assign)).size}</div>
-                <div class="ov-label">Designers Working</div>
-            </div>
-            <div class="ov-card ov-cre">
-                <div class="ov-val">${new Set(cTasks.map(t => t.creative_assign)).size}</div>
-                <div class="ov-label">Creatives Working</div>
-            </div>
-        `;
+        let q = supabaseClient.from('b-quest-task-role')
+            .select('*, quest:"b-quest-list"(id, account_name, opportunity_name, task_name, owner, link, publish_date)')
+            .gte('deadline', start).lte('deadline', end);
+        const roleFilter = getRoleFilter();
+        if (roleFilter) q = q.eq('role_id', roleFilter);
+        if (selectedAssigns.length) q = q.in('assign', selectedAssigns);
+        const { data, error } = await q;
+        if (error) { console.error(error); return []; }
+        return data || [];
     }
 
-    // ── Section 2: Work Types (Donut) ──
-    function renderWorkTypes(tasks) {
+    async function reloadAndRenderAll() {
+        calSelectedDate = null;
+        monthRows = await fetchMonthRows();
+        renderCalendar();
+        renderOverview();
+        renderCapacity();
+        renderWorkTypes();
+        renderWorkBreakdown();
+        renderPersons();
+    }
+
+    // ── Spread math (contributionOnDate/effectiveMaxCap are the shared
+    // functions in b-quest.js — the same formula b-quest-modal.js's own
+    // capacity check uses, so the two pages can never silently disagree on
+    // what "over capacity" means). ──
+    function spreadRoleRows(rows) {
         const { start, end } = monthRange();
-
-        function countBy(list, typeField, deadlineField) {
-            const map = {};
-            list.filter(t => t[deadlineField] >= start && t[deadlineField] <= end && t[typeField])
-                .forEach(t => { map[t[typeField]] = (map[t[typeField]] || 0) + 1; });
-            return Object.entries(map).sort((a, b) => b[1] - a[1]);
-        }
-
-        const desEntries = countBy(tasks.filter(t => t.designer_deadline), 'designer_type', 'designer_deadline');
-        const creEntries = countBy(tasks.filter(t => t.creative_deadline), 'creative_type', 'creative_deadline');
-
-        function renderDonut(entries, containerId, chartKey) {
-            const el = document.getElementById(containerId);
-            if (!entries.length) {
-                el.innerHTML = `<div class="col-empty">No data this month</div>`;
-                return;
+        const weightMap = {}, dueCount = {}, ongoingCount = {};
+        rows.forEach(r => {
+            if (!r.deadline) return;
+            const weight = Number(r.weight) || 0;
+            const day = Number(r.day) || 1;
+            const deadlineDate = new Date(r.deadline + 'T00:00:00');
+            for (let i = 0; i < day; i++) {
+                const dt = new Date(deadlineDate);
+                dt.setDate(dt.getDate() - i);
+                const ds = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+                if (ds < start || ds > end) continue;
+                const contribution = contributionOnDate(weight, day, r.deadline, workdayWeight, ds);
+                if (contribution <= 1e-9) continue;
+                weightMap[ds] = (weightMap[ds] || 0) + contribution;
+                if (ds === r.deadline) dueCount[ds] = (dueCount[ds] || 0) + 1;
+                else ongoingCount[ds] = (ongoingCount[ds] || 0) + 1;
             }
-
-            const total = entries.reduce((s, [,n]) => s + n, 0);
-            const canvasId = `wt-chart-${containerId}`;
-            const colors   = entries.map((_, i) => DONUT_PALETTE[i % DONUT_PALETTE.length]);
-
-            el.innerHTML = `
-                <div class="wt-body">
-                    <div class="wt-chart-area">
-                        <canvas id="${canvasId}"></canvas>
-                        <div class="wt-center">
-                            <div class="wt-center-val">${total}</div>
-                            <div class="wt-center-lbl">tasks</div>
-                        </div>
-                    </div>
-                    <div class="wt-legend">
-                        ${entries.map(([name, count], i) => `
-                            <div class="wt-legend-item">
-                                <div class="wt-legend-dot" style="background:${colors[i]}"></div>
-                                <div class="wt-legend-name">${name}</div>
-                                <div class="wt-legend-count">${count}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-
-if (chartKey === 'des' && chartWtDes) { chartWtDes.destroy(); chartWtDes = null; }
-            if (chartKey === 'cre' && chartWtCre) { chartWtCre.destroy(); chartWtCre = null; }
-
-            const ctx = document.getElementById(canvasId).getContext('2d');
-            const chart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: entries.map(([n]) => n),
-                    datasets: [{ data: entries.map(([,n]) => n), backgroundColor: colors, borderWidth: 2, borderColor: '#fff', hoverOffset: 4 }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '68%',
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: item => ` ${item.label}: ${item.parsed} (${Math.round(item.parsed / total * 100)}%)`
-                            }
-                        }
-                    }
-                }
-            });
-
-            if (chartKey === 'des') chartWtDes = chart;
-            else chartWtCre = chart;
-        }
-
-        renderDonut(desEntries, 'wt-des', 'des');
-        renderDonut(creEntries, 'wt-cre', 'cre');
+        });
+        return { weightMap, dueCount, ongoingCount };
+    }
+    // Merged capacity for a date — sum of every active role's own
+    // effectiveMaxCap on that date (the "All" view's notion of team
+    // capacity); a single filtered role just returns its own.
+    function capOnDate(ds, roles) {
+        return roles.reduce((sum, r) => sum + effectiveMaxCap(r.id, ds, maxCapByRole, workdayWeight), 0);
     }
 
-    // ── Section 3: Work Breakdown (b-quest-work × tasks) ──
-    function renderWorkBreakdown(tasks) {
-        const { start, end } = monthRange();
-
-        const dTasks = tasks.filter(t => t.designer_deadline >= start && t.designer_deadline <= end);
-        const cTasks = tasks.filter(t => t.creative_deadline >= start && t.creative_deadline <= end);
-
-        function buildBreakdown(works, role, taskList, workField, statusField) {
-            return works
-                .filter(w => w.role === role)
-                .map(w => {
-                    const matched = taskList.filter(t => t[workField] === w.work);
-                    const done    = matched.filter(t => t[statusField] === 'Done').length;
-                    const pct     = matched.length > 0 ? Math.round(done / matched.length * 100) : null;
-                    return { work: w.work, tasks: matched.length, done, pct };
-                })
-                .sort((a, b) => b.tasks - a.tasks);
-        }
-
-        const desBreakdown = buildBreakdown(workList, 'Designer', dTasks, 'designer', 'designer_status');
-        const creBreakdown = buildBreakdown(workList, 'Creative', cTasks, 'creative', 'creative_status');
-
-        function renderWb(rows, color, fillColor, id) {
-            const el = document.getElementById(id);
-            if (!rows.length) { el.innerHTML = `<div class="col-empty">No work types configured</div>`; return; }
-            el.innerHTML = rows.map(r => {
-                const pctDisplay = r.pct !== null ? `${r.pct}%` : '—';
-                const barColor   = r.pct === 100 ? '#10b981' : fillColor;
-                return `
-                <div class="wb-row${r.tasks === 0 ? ' wb-zero' : ''}">
-                    <div>
-                        <div class="wb-name">${r.work}</div>
-                        ${r.tasks > 0 ? `<div class="wb-weight-bar"><div class="wb-weight-fill" style="width:${r.pct ?? 0}%;background:${barColor}"></div></div>` : ''}
-                    </div>
-                    <div class="wb-num" style="color:${r.tasks > 0 ? color : 'var(--c-muted)'}">${r.tasks}</div>
-                    <div class="wb-num" style="color:${r.pct === 100 ? '#10b981' : r.pct !== null ? 'var(--c-dark)' : 'var(--c-muted)'}">${pctDisplay}</div>
-                </div>`;
-            }).join('');
-        }
-
-        renderWb(desBreakdown, 'var(--c-des)', 'rgba(59,130,246,0.35)', 'wb-des');
-        renderWb(creBreakdown, 'var(--c-cre)', 'rgba(139,92,246,0.35)', 'wb-cre');
+    // ── Calendar Heatmap (hero, unified) ──
+    function heatFor(baseColor, weight, cap) {
+        if (weight <= 0) return null;
+        const isOver = cap > 0 && weight > cap;
+        if (isOver) return { over: true };
+        const ratio = cap > 0 ? Math.min(weight / cap, 1) : Math.min(weight / 10, 1);
+        const alpha = 0.15 + ratio * 0.65;
+        return { over: false, bg: hexToRgba(baseColor, alpha), text: ratio > 0.55 ? '#fff' : '#1e293b' };
     }
 
-    // ── Section 5: Person Summary ──
-    function renderPersons(tasks) {
-        const { start, end } = monthRange();
-
-        function buildMap(list, assignField, weightField, statusField, deadlineField) {
-            const map = {};
-            list.filter(t => t[deadlineField] >= start && t[deadlineField] <= end && t[assignField])
-                .forEach(t => {
-                    const k = t[assignField];
-                    if (!map[k]) map[k] = { tasks: 0, done: 0, weight: 0 };
-                    map[k].tasks++;
-                    if (t[statusField] === 'Done') map[k].done++;
-                    map[k].weight += (t[weightField] || 0);
-                });
-            return Object.entries(map).sort((a, b) => b[1].weight - a[1].weight);
-        }
-
-        const desData = buildMap(tasks.filter(t => t.designer_deadline), 'designer_assign', 'designer_weight', 'designer_status', 'designer_deadline');
-        const creData = buildMap(tasks.filter(t => t.creative_deadline), 'creative_assign', 'creative_weight', 'creative_status', 'creative_deadline');
-
-        function renderPs(entries, taskColor, id) {
-            const el = document.getElementById(id);
-            if (!entries.length) { el.innerHTML = `<div class="col-empty">No data this month</div>`; return; }
-            el.innerHTML = entries.map(([name, d]) => `
-                <div class="ps-row">
-                    <div class="ps-name">${name}</div>
-                    <div class="ps-num" style="color:${taskColor}">${d.tasks}</div>
-                    <div class="ps-num" style="color:${d.done === d.tasks && d.tasks > 0 ? '#10b981' : 'var(--c-slate)'}">${d.done}</div>
-                    <div class="ps-num" style="color:var(--c-dark)">${d.weight}</div>
-                </div>
-            `).join('');
-        }
-
-        renderPs(desData, 'var(--c-des)', 'ps-des');
-        renderPs(creData, 'var(--c-cre)', 'ps-cre');
-    }
-
-    // ── Section 4: Daily Capacity Timeline ──
-    function renderTimeline(tasks) {
-        const { start, end } = monthRange();
-        const days   = daysInMonth(curYear, curMonth);
-        const labels = Array.from({ length: days }, (_, i) => i + 1);
-
-        function buildDayWeights(role) {
-            const spread = bqSpreadWeight(tasks.filter(t => t[`${role}_deadline`]), role, start, end, pad);
-            return {
-                due:     labels.map(d => spread.weightMap[`${curYear}-${pad(curMonth+1)}-${pad(d)}`] || 0),
-                ongoing: labels.map(d => {
-                    const ds = `${curYear}-${pad(curMonth+1)}-${pad(d)}`;
-                    return (spread.ongoingCount[ds] || 0) > 0
-                        ? tasks.filter(t => {
-                            if (!t[`${role}_deadline`]) return false;
-                            const dur = t[`${role}_day`] || 1;
-                            const dl = new Date(t[`${role}_deadline`]);
-                            const st = new Date(dl); st.setDate(st.getDate() - dur + 1);
-                            return st.toISOString().slice(0,10) <= ds && t[`${role}_deadline`] > ds;
-                        }).reduce((sum, t) => sum + (t[`${role}_weight`] || 0), 0)
-                        : 0
-                })
-            };
-        }
-
-        const desWeights = buildDayWeights('designer');
-        const creWeights = buildDayWeights('creative');
-
-        const today = new Date();
-        const todayIdx = (today.getFullYear() === curYear && today.getMonth() === curMonth)
-            ? today.getDate() - 1 : null;
-
-        document.getElementById('cap-badge-des').textContent = capDes > 0 ? `Max ${capDes} / day` : '';
-        document.getElementById('cap-badge-cre').textContent = capCre > 0 ? `Max ${capCre} / day` : '';
-
-        function makeChart(canvasId, dueData, ongoingData, cap, dueColor, ongoingColor, overColor, key) {
-            const ctx = document.getElementById(canvasId).getContext('2d');
-
-            if (key === 'des' && chartDes) { chartDes.destroy(); chartDes = null; }
-            if (key === 'cre' && chartCre) { chartCre.destroy(); chartCre = null; }
-
-            const total = dueData.map((v, i) => v + ongoingData[i]);
-            const dueBgs = dueData.map((v, i) => {
-                const isOver = cap > 0 && total[i] > cap;
-                if (i === todayIdx) return isOver ? 'rgba(239,68,68,0.9)' : dueColor.replace('0.7', '0.9');
-                return isOver ? overColor : dueColor;
-            });
-
-            const datasets = [
-                {
-                    label: 'Ongoing',
-                    data: ongoingData,
-                    backgroundColor: ongoingColor,
-                    borderRadius: 0,
-                    stack: 'load',
-                    order: 2
-                },
-                {
-                    label: 'Due',
-                    data: dueData,
-                    backgroundColor: dueBgs,
-                    borderRadius: 3,
-                    stack: 'load',
-                    order: 2
-                }
-            ];
-
-            if (cap > 0) {
-                datasets.push({
-                    label: `Cap ${cap}`,
-                    data: Array(days).fill(cap),
-                    type: 'line',
-                    borderColor: 'rgba(239,68,68,0.6)',
-                    borderWidth: 1.5,
-                    borderDash: [5, 4],
-                    pointRadius: 0,
-                    fill: false,
-                    order: 1
-                });
-            }
-
-            const chart = new Chart(ctx, {
-                type: 'bar',
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 9 }, color: '#94a3b8', filter: item => item.text === 'Ongoing' || item.text === 'Due' } },
-                        tooltip: {
-                            callbacks: {
-                                title: items => `Day ${items[0].label}`,
-                                label: item => ` ${item.dataset.label}: ${item.parsed.y}`
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            stacked: true,
-                            grid: { display: false },
-                            ticks: { font: { size: 9 }, maxRotation: 0, color: '#94a3b8' }
-                        },
-                        y: {
-                            stacked: true,
-                            beginAtZero: true,
-                            grid: { color: '#f1f5f9' },
-                            ticks: { font: { size: 9 }, color: '#94a3b8', precision: 0 }
-                        }
-                    }
-                }
-            });
-
-            if (key === 'des') chartDes = chart;
-            else chartCre = chart;
-        }
-
-        makeChart('chart-des', desWeights.due, desWeights.ongoing, capDes, 'rgba(59,130,246,0.75)',  'rgba(59,130,246,0.25)',  'rgba(239,68,68,0.75)', 'des');
-        makeChart('chart-cre', creWeights.due, creWeights.ongoing, capCre, 'rgba(139,92,246,0.75)', 'rgba(139,92,246,0.25)', 'rgba(239,68,68,0.75)', 'cre');
-    }
-
-    // ── Section 6: Calendar Heatmap ──
-    let calSelectedDate = null;
-    let calAllTasks = [];
-
-    function heatClass(weight, cap, prefix) {
-        if (weight === 0) return '';
-        if (cap > 0 && weight > cap) return `heat-${prefix}-over`;
-        const ratio = cap > 0 ? weight / cap : weight;
-        if (ratio <= 0.2) return `heat-${prefix}-1`;
-        if (ratio <= 0.4) return `heat-${prefix}-2`;
-        if (ratio <= 0.6) return `heat-${prefix}-3`;
-        if (ratio <= 0.8) return `heat-${prefix}-4`;
-        return `heat-${prefix}-5`;
-    }
-
-    function renderCalendar(tasks) {
-        calAllTasks = tasks;
-        const { start, end } = monthRange();
+    function buildCalGrid(containerId, weightMap, dueCountMap, ongoingCountMap, capFn, baseColor) {
+        const el = document.getElementById(containerId);
+        if (!el) return;
         const days = daysInMonth(curYear, curMonth);
         const today = new Date();
-        const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+        const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+        const firstDow = new Date(curYear, curMonth, 1).getDay();
+        const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-        const des = bqSpreadWeight(tasks, 'designer', start, end, pad);
-        const cre = bqSpreadWeight(tasks, 'creative', start, end, pad);
-        const desMap = des.weightMap, desTaskCount = des.dueCount, desOngoingCount = des.ongoingCount;
-        const creMap = cre.weightMap, creTaskCount = cre.dueCount, creOngoingCount = cre.ongoingCount;
-
-        function buildGrid(containerId, weightMap, taskCountMap, ongoingCountMap, cap, prefix) {
-            const el = document.getElementById(containerId);
-            const firstDow = new Date(curYear, curMonth, 1).getDay();
-            const startOffset = firstDow;
-            const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
-            let html = `<div class="cal-dow-row">${DOW.map(d => `<div class="cal-dow">${d}</div>`).join('')}</div>`;
-
-            // weeks
-            let dayNum = 1;
-            for (let week = 0; week < 6; week++) {
-                if (dayNum > days) break;
-                html += `<div class="cal-week-row">`;
-                for (let dow = 0; dow < 7; dow++) {
-                    const cellIdx = week * 7 + dow;
-                    if (cellIdx < startOffset || dayNum > days) {
-                        html += `<div class="cal-day cal-empty"></div>`;
-                    } else {
-                        const dateStr = `${curYear}-${pad(curMonth+1)}-${pad(dayNum)}`;
-                        const w = weightMap[dateStr] || 0;
-                        const tc = taskCountMap[dateStr] || 0;
-                        const oc = ongoingCountMap[dateStr] || 0;
-                        const heat = heatClass(w, cap, prefix);
-                        const isToday = dateStr === todayStr;
-                        const isPast = dateStr < todayStr;
-                        const isSel = dateStr === calSelectedDate;
-                        const cls = [heat, isToday ? 'cal-today' : '', isPast && !heat ? 'cal-past' : '', isSel ? 'cal-selected' : ''].filter(Boolean).join(' ');
-                        const isOver = cap > 0 && w > cap;
-                        const badgeDue = tc > 0 ? `<span class="cal-badge ${isOver ? 'cal-badge-over' : 'cal-badge-task'}">${tc} due</span>` : '';
-                        const badgeOng = oc > 0 ? `<span class="cal-badge cal-badge-ongoing">${oc} ongoing</span>` : '';
-                        const badges = (tc > 0 || oc > 0) ? `<div class="cal-badges">${badgeDue}${badgeOng}</div>` : '';
-                        html += `<div class="cal-day ${cls}" data-date="${dateStr}" data-role="${prefix}">
-                            <span class="cal-day-num">${dayNum}</span>
-                            ${badges}
-                        </div>`;
-                        dayNum++;
-                    }
+        let html = `<div class="cal-dow-row">${DOW.map(d => `<div class="cal-dow">${d}</div>`).join('')}</div>`;
+        let dayNum = 1;
+        for (let week = 0; week < 6; week++) {
+            if (dayNum > days) break;
+            html += `<div class="cal-week-row">`;
+            for (let dow = 0; dow < 7; dow++) {
+                const cellIdx = week * 7 + dow;
+                if (cellIdx < firstDow || dayNum > days) {
+                    html += `<div class="cal-day cal-empty"></div>`;
+                } else {
+                    const dateStr = `${curYear}-${pad(curMonth + 1)}-${pad(dayNum)}`;
+                    const w = weightMap[dateStr] || 0;
+                    const tc = dueCountMap[dateStr] || 0;
+                    const oc = ongoingCountMap[dateStr] || 0;
+                    const cap = capFn(dateStr);
+                    const heat = heatFor(baseColor, w, cap);
+                    const isToday = dateStr === todayStr;
+                    const isPast = dateStr < todayStr;
+                    const isSel = dateStr === calSelectedDate;
+                    const cls = ['cal-day', heat?.over ? 'cal-heat-over' : '', isToday ? 'cal-today' : '', (isPast && !heat) ? 'cal-past' : '', isSel ? 'cal-selected' : ''].filter(Boolean).join(' ');
+                    const style = (heat && !heat.over) ? ` style="background:${heat.bg};color:${heat.text}"` : '';
+                    const isOver = !!heat?.over;
+                    const badgeDue = tc > 0 ? `<span class="cal-badge ${isOver ? 'cal-badge-over' : 'cal-badge-task'}">${tc} due</span>` : '';
+                    const badgeOng = oc > 0 ? `<span class="cal-badge cal-badge-ongoing">${oc} ongoing</span>` : '';
+                    const badges = (tc > 0 || oc > 0) ? `<div class="cal-badges">${badgeDue}${badgeOng}</div>` : '';
+                    html += `<div class="${cls}"${style} data-date="${dateStr}">
+                        <span class="cal-day-num">${dayNum}</span>
+                        ${badges}
+                    </div>`;
+                    dayNum++;
                 }
-                html += `</div>`;
             }
-            el.innerHTML = html;
-
-            el.querySelectorAll('.cal-day:not(.cal-empty)').forEach(cell => {
-                cell.onclick = () => {
-                    calSelectedDate = cell.dataset.date;
-                    renderDayDetail(calSelectedDate);
-                };
-            });
+            html += `</div>`;
         }
+        el.innerHTML = html;
 
-        const isCurrentMonth = today.getFullYear() === curYear && today.getMonth() === curMonth;
-        if (!calSelectedDate && isCurrentMonth) {
-            calSelectedDate = todayStr;
-        }
-
-        buildGrid('cal-des', desMap, desTaskCount, desOngoingCount, capDes, 'des');
-        buildGrid('cal-cre', creMap, creTaskCount, creOngoingCount, capCre, 'cre');
-
+        el.querySelectorAll('.cal-day:not(.cal-empty)').forEach(cell => {
+            cell.onclick = () => {
+                calSelectedDate = cell.dataset.date;
+                renderCalendar();
+                renderDayDetail(calSelectedDate);
+            };
+        });
     }
 
-    function renderDayDetail(dateStr) {
-        const { start, end } = monthRange();
-        if (dateStr < start || dateStr > end) return;
+    function renderCalendar() {
+        const roles = activeRoleList();
+        const roleFilter = getRoleFilter();
+        const baseColor = roleFilter ? (roleColorMap[roleFilter] || CAL_HEAT_BASE) : CAL_HEAT_BASE;
+        const { weightMap, dueCount, ongoingCount } = spreadRoleRows(monthRows);
 
-        const [y, m, d] = dateStr.split('-').map(Number);
-        const label = new Date(y, m-1, d).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        document.getElementById('dm-date').textContent = label;
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+        const isCurrentMonth = today.getFullYear() === curYear && today.getMonth() === curMonth;
+        if (!calSelectedDate && isCurrentMonth) calSelectedDate = todayStr;
 
-        const desDue  = calAllTasks.filter(t => t.designer_deadline === dateStr);
-        const creDue  = calAllTasks.filter(t => t.creative_deadline === dateStr);
-
-        const desInProgress = calAllTasks.filter(t => {
-            if (!t.designer_deadline) return false;
-            if (t.designer_deadline <= dateStr) return false;
-            const day = t.designer_day || 1;
-            const dl = new Date(t.designer_deadline);
-            const startDate = new Date(dl);
-            startDate.setDate(startDate.getDate() - day + 1);
-            return startDate.toISOString().slice(0,10) <= dateStr;
-        });
-        const creInProgress = calAllTasks.filter(t => {
-            if (!t.creative_deadline) return false;
-            if (t.creative_deadline <= dateStr) return false;
-            const day = t.creative_day || 1;
-            const dl = new Date(t.creative_deadline);
-            const startDate = new Date(dl);
-            startDate.setDate(startDate.getDate() - day + 1);
-            return startDate.toISOString().slice(0,10) <= dateStr;
-        });
-
-        function statusCls(s) {
-            if (s === 'Done') return 'status-done';
-            if (s === 'On Progress') return 'status-progress';
-            return 'status-pending';
-        }
-        function statusLabel(s) { return s || 'Pending'; }
-
-        function renderTaskCards(taskList, assignField, weightField, dayField, statusField, wCls, isDue) {
-            if (!taskList.length) return '';
-            const deadlineField = assignField === 'designer_assign' ? 'designer_deadline' : 'creative_deadline';
-            const workField     = assignField === 'designer_assign' ? 'designer' : 'creative';
-            return taskList.map(t => {
-                const wLabel   = isDue ? `${t[workField] || '?'}  •  w: ${t[weightField] || 0}` : `${t[workField] || '?'}  •  w: ${t[weightField] || 0}/day`;
-                const deadline = t[deadlineField] || '—';
-                return `
-                <div class="day-task-card">
-                    <div class="day-task-row1">
-                        <span class="day-task-name">${t.task_name || '—'}</span>
-                        <span class="day-task-status ${statusCls(t[statusField])}">${statusLabel(t[statusField])}</span>
-                    </div>
-                    <div class="day-task-row2">
-                        ${t.account_name ? `<span class="day-task-account">${t.account_name}</span>` : ''}
-                        ${t.account_name && t.opportunity_name ? `<span class="day-task-dot">|</span>` : ''}
-                        ${t.opportunity_name ? `<span class="day-task-opp">${t.opportunity_name}</span>` : ''}
-                    </div>
-                    <div class="day-task-row3">
-                        <span class="day-task-w ${wCls}">${t[workField] || '—'}</span>
-                        <span class="day-task-spacer"></span>
-                        <span class="day-task-meta"><i class="bi bi-person-fill"></i>${t[assignField] || '—'}</span>
-                        <span class="day-task-dot">·</span>
-                        <span class="day-task-meta"><i class="bi bi-person-lines-fill"></i>${t.owner || '—'}</span>
-                        <span class="day-task-dot">·</span>
-                        <span class="day-task-meta"><i class="bi bi-calendar3"></i>${deadline}</span>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        const sectionLabel = (text, mt = false) =>
-            `<div style="font-size:0.6rem;font-weight:800;color:var(--c-muted);text-transform:uppercase;letter-spacing:0.6px;${mt ? 'margin:10px 0 6px' : 'margin-bottom:6px'}">${text}</div>`;
-
-        function buildSection(inProgress, due, assignField, weightField, dayField, statusField, wCls) {
-            let html = '';
-            if (due.length) {
-                if (inProgress.length) html += sectionLabel('📌 Due Today');
-                html += renderTaskCards(due, assignField, weightField, dayField, statusField, wCls, true);
-            }
-            if (inProgress.length) {
-                html += sectionLabel('🔄 Ongoing', due.length > 0);
-                html += renderTaskCards(inProgress, assignField, weightField, dayField, statusField, wCls, false);
-            }
-            return html || `<div class="day-empty">No tasks</div>`;
-        }
-
-        document.getElementById('day-tasks-des').innerHTML =
-            buildSection(desInProgress, desDue, 'designer_assign', 'designer_weight', 'designer_day', 'designer_status', 'day-task-w-des');
-        document.getElementById('day-tasks-cre').innerHTML =
-            buildSection(creInProgress, creDue, 'creative_assign', 'creative_weight', 'creative_day', 'creative_status', 'day-task-w-cre');
-
-        document.getElementById('day-modal-backdrop').style.display = 'block';
-        document.getElementById('day-modal').style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+        buildCalGrid('cal-grid', weightMap, dueCount, ongoingCount, ds => capOnDate(ds, roles), baseColor);
     }
 
     function closeDayModal() {
@@ -1061,16 +734,320 @@ if (chartKey === 'des' && chartWtDes) { chartWtDes.destroy(); chartWtDes = null;
         document.getElementById('day-modal-backdrop').style.display = 'none';
         document.getElementById('day-modal').style.display = 'none';
         document.body.style.overflow = '';
-        renderCalendar(calAllTasks);
+        renderCalendar();
     }
-
-    // Escape to close modal
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDayModal(); });
 
+    function dayDetailSectionLabel(text, mt = false) {
+        return `<div style="font-size:0.6rem;font-weight:800;color:var(--c-muted);text-transform:uppercase;letter-spacing:0.6px;${mt ? 'margin:10px 0 6px' : 'margin-bottom:6px'}">${text}</div>`;
+    }
+
+    function dayTaskCardHtml(row, roleColor, isDue) {
+        const q = row.quest || {};
+        const statusColor = statusColorMap[row.status_id] || '#94a3b8';
+        const statusName = statusNameMap[row.status_id] || row.status || 'Pending';
+        return `
+        <div class="day-task-card">
+            <div class="day-task-row1">
+                <span class="day-task-name">${esc(q.task_name) || '—'}</span>
+                <span class="day-task-status" style="background:${hexToRgba(statusColor, 0.16)};color:${statusColor}">${esc(statusName)}</span>
+            </div>
+            <div class="day-task-row2">
+                ${q.account_name ? `<span class="day-task-account">${esc(q.account_name)}</span>` : ''}
+                ${q.account_name && q.opportunity_name ? `<span class="day-task-dot">|</span>` : ''}
+                ${q.opportunity_name ? `<span class="day-task-opp">${esc(q.opportunity_name)}</span>` : ''}
+            </div>
+            <div class="day-task-row3">
+                <span class="day-task-w" style="background:${hexToRgba(roleColor, 0.12)};color:${roleColor}">${esc(row.work) || '—'} • w: ${row.weight || 0}${isDue ? '' : '/day'}</span>
+                <span class="day-task-spacer"></span>
+                <span class="day-task-meta"><i class="bi bi-person-fill"></i>${esc(row.assign) || '—'}</span>
+                <span class="day-task-dot">·</span>
+                <span class="day-task-meta"><i class="bi bi-person-lines-fill"></i>${esc(q.owner) || '—'}</span>
+                <span class="day-task-dot">·</span>
+                <span class="day-task-meta"><i class="bi bi-calendar3"></i>${row.deadline || '—'}</span>
+            </div>
+        </div>`;
+    }
+
+    function dayColumnHtml(role, dateStr) {
+        const color = roleColorMap[role.id] || '#64748b';
+        const roleRows = monthRows.filter(r => r.role_id === role.id);
+        const due = roleRows.filter(r => r.deadline === dateStr);
+        const ongoing = roleRows.filter(r => r.deadline && r.deadline > dateStr &&
+            contributionOnDate(Number(r.weight) || 0, r.day, r.deadline, workdayWeight, dateStr) > 1e-9);
+
+        let inner = '';
+        if (due.length) {
+            if (ongoing.length) inner += dayDetailSectionLabel('📌 Due Today');
+            inner += due.map(r => dayTaskCardHtml(r, color, true)).join('');
+        }
+        if (ongoing.length) {
+            inner += dayDetailSectionLabel('🔄 Ongoing', due.length > 0);
+            inner += ongoing.map(r => dayTaskCardHtml(r, color, false)).join('');
+        }
+        if (!inner) inner = `<div class="day-empty">No tasks</div>`;
+
+        return `<div class="dm-col">
+            <div class="day-col-head" style="color:${color}"><i class="bi ${role.icon || 'bi-person-workspace'}"></i> ${esc(role.name)}</div>
+            ${inner}
+        </div>`;
+    }
+
+    function renderDayDetail(dateStr) {
+        const { start, end } = monthRange();
+        if (dateStr < start || dateStr > end) return;
+
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const label = new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        document.getElementById('dm-date').textContent = label;
+
+        const roles = activeRoleList();
+        document.getElementById('dm-body').innerHTML = roles.length
+            ? roles.map(role => dayColumnHtml(role, dateStr)).join('')
+            : `<div class="dm-col"><div class="day-empty">No roles configured</div></div>`;
+
+        document.getElementById('day-modal-backdrop').style.display = 'block';
+        document.getElementById('day-modal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    // ── Overview ──
+    function renderOverview() {
+        const roles = activeRoleList();
+        const questIds = new Set(monthRows.map(r => r.quest_id));
+        const activeCount = monthRows.filter(r => !isDoneStatus(r.status_id)).length;
+        const doneCount = monthRows.filter(r => isDoneStatus(r.status_id)).length;
+
+        const roleCards = roles.map(role => {
+            const color = roleColorMap[role.id] || '#64748b';
+            const workingCount = new Set(monthRows.filter(r => r.role_id === role.id && r.assign).map(r => r.assign)).size;
+            return `<div class="ov-card" style="border-color:${hexToRgba(color, 0.35)};background:${hexToRgba(color, 0.08)}">
+                <div class="ov-val" style="color:${color}">${workingCount}</div>
+                <div class="ov-label">${esc(role.name)} Working</div>
+            </div>`;
+        }).join('');
+
+        document.getElementById('ov-grid').innerHTML = `
+            <div class="ov-card">
+                <div class="ov-val">${questIds.size}</div>
+                <div class="ov-label">Total Tasks</div>
+            </div>
+            <div class="ov-card ov-active">
+                <div class="ov-val">${activeCount}</div>
+                <div class="ov-label">Role Rows Active</div>
+            </div>
+            <div class="ov-card">
+                <div class="ov-val">${doneCount}</div>
+                <div class="ov-label">Role Rows Done</div>
+            </div>
+            ${roleCards}
+        `;
+    }
+
+    // ── Daily Capacity — one %-of-capacity line per role, normalized so
+    // roles with different max_capacity stay comparable on one 0-100%+
+    // axis (a raw-weight chart per role can't be compared like this). A
+    // dashed 100% reference line marks the overload point for every role
+    // at once, and the legend can toggle roles on/off (Chart.js default).
+    function renderCapacity() {
+        if (capacityChart) { capacityChart.destroy(); capacityChart = null; }
+        const roles = activeRoleList();
+        const wrap = document.getElementById('cap-chart-wrap');
+        const noteEl = document.getElementById('cap-note');
+        if (!roles.length) { wrap.innerHTML = `<div class="col-empty">No roles configured</div>`; noteEl.textContent = ''; return; }
+        wrap.innerHTML = '<canvas id="chart-capacity"></canvas>';
+
+        const days = daysInMonth(curYear, curMonth);
+        const labels = Array.from({ length: days }, (_, i) => i + 1);
+
+        const datasets = roles.map(role => {
+            const color = roleColorMap[role.id] || '#64748b';
+            const rows = monthRows.filter(r => r.role_id === role.id);
+            const data = [];
+            for (let d = 1; d <= days; d++) {
+                const ds = `${curYear}-${pad(curMonth + 1)}-${pad(d)}`;
+                let load = 0;
+                rows.forEach(r => {
+                    if (!r.deadline) return;
+                    load += contributionOnDate(Number(r.weight) || 0, r.day, r.deadline, workdayWeight, ds);
+                });
+                const cap = effectiveMaxCap(role.id, ds, maxCapByRole, workdayWeight);
+                data.push(cap > 0 ? Math.round(load / cap * 1000) / 10 : 0);
+            }
+            return { label: role.name, data, borderColor: color, backgroundColor: color, borderWidth: 2.25, pointRadius: 2, pointHoverRadius: 5, tension: 0.25, fill: false };
+        });
+        datasets.push({ label: '100% Cap', data: labels.map(() => 100), borderColor: 'rgba(239,68,68,0.55)', borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, fill: false, order: 99 });
+
+        noteEl.textContent = roles.map(r => `${r.name} max ${maxCapByRole[r.id] ?? '—'}/day`).join('   ·   ');
+
+        const ctx = document.getElementById('chart-capacity').getContext('2d');
+        capacityChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 10 }, color: '#64748b' } },
+                    tooltip: { callbacks: { title: items => `Day ${items[0].label}`, label: item => ` ${item.dataset.label}: ${item.parsed.y}%` } }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 0, color: '#94a3b8' } },
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 9 }, color: '#94a3b8', callback: v => v + '%' } }
+                }
+            }
+        });
+    }
+
+    // ── Work Types — one stacked bar per Type, segments colored/stacked by
+    // role instead of N separate donuts, so "which role does this type"
+    // reads at a glance regardless of how many roles exist.
+    function renderWorkTypes() {
+        if (worktypesChart) { worktypesChart.destroy(); worktypesChart = null; }
+        const roles = activeRoleList();
+        const wrap = document.getElementById('wt-chart-wrap');
+        if (!roles.length) { wrap.innerHTML = `<div class="col-empty">No roles configured</div>`; return; }
+
+        const typeTotals = {};
+        monthRows.forEach(r => { if (r.type) typeTotals[r.type] = (typeTotals[r.type] || 0) + 1; });
+        const types = Object.keys(typeTotals).sort((a, b) => typeTotals[b] - typeTotals[a]);
+        if (!types.length) { wrap.innerHTML = `<div class="col-empty">No data this month</div>`; return; }
+        wrap.innerHTML = '<canvas id="chart-worktypes"></canvas>';
+
+        const datasets = roles.map(role => {
+            const color = roleColorMap[role.id] || '#64748b';
+            const counts = {};
+            monthRows.filter(r => r.role_id === role.id && r.type).forEach(r => { counts[r.type] = (counts[r.type] || 0) + 1; });
+            return { label: role.name, data: types.map(t => counts[t] || 0), backgroundColor: color, borderRadius: 3 };
+        });
+
+        const ctx = document.getElementById('chart-worktypes').getContext('2d');
+        worktypesChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: types, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 10 }, color: '#64748b' } },
+                    tooltip: { callbacks: { label: item => ` ${item.dataset.label}: ${item.parsed.y}` } }
+                },
+                scales: {
+                    x: { stacked: true, grid: { display: false }, ticks: { font: { size: 9 }, color: '#94a3b8' } },
+                    y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 9 }, color: '#94a3b8', precision: 0 } }
+                }
+            }
+        });
+    }
+
+    // ── Work Breakdown — one table, Role shown as a leading badge column
+    // instead of a repeated table per role. Rows grouped by role (already
+    // sort_order-ascending via roleList/activeRoleList), sorted by task
+    // count within each group, same as before.
+    function renderWorkBreakdown() {
+        const container = document.getElementById('wb-rows');
+        const roles = activeRoleList();
+        if (!roles.length) { container.innerHTML = `<div class="col-empty">No roles configured</div>`; return; }
+
+        const allRows = [];
+        roles.forEach(role => {
+            const works = workList.filter(w => w.role_id === role.id);
+            const roleRows = monthRows.filter(r => r.role_id === role.id);
+            const rows = works.map(w => {
+                const matched = roleRows.filter(r => r.work === w.work);
+                const done = matched.filter(r => isDoneStatus(r.status_id)).length;
+                const pct = matched.length ? Math.round(done / matched.length * 100) : null;
+                return { role, work: w.work, tasks: matched.length, done, pct };
+            }).sort((a, b) => b.tasks - a.tasks);
+            allRows.push(...rows);
+        });
+
+        if (!allRows.length) { container.innerHTML = `<div class="col-empty">No work types configured</div>`; return; }
+
+        container.innerHTML = allRows.map(r => {
+            const color = roleColorMap[r.role.id] || '#64748b';
+            const pctDisplay = r.pct !== null ? `${r.pct}%` : '—';
+            const barColor = r.pct === 100 ? '#10b981' : hexToRgba(color, 0.4);
+            return `
+            <div class="wb-row${r.tasks === 0 ? ' wb-zero' : ''}">
+                <span class="role-badge-chip" style="background:${hexToRgba(color, 0.12)};color:${color}"><span class="role-badge-dot" style="background:${color}"></span>${esc(r.role.name)}</span>
+                <div>
+                    <div class="wb-name">${esc(r.work)}</div>
+                    ${r.tasks > 0 ? `<div class="wb-weight-bar"><div class="wb-weight-fill" style="width:${r.pct ?? 0}%;background:${barColor}"></div></div>` : ''}
+                </div>
+                <div class="wb-num" style="color:${r.tasks > 0 ? color : 'var(--c-muted)'}">${r.tasks}</div>
+                <div class="wb-num" style="color:${r.pct === 100 ? '#10b981' : r.pct !== null ? 'var(--c-dark)' : 'var(--c-muted)'}">${pctDisplay}</div>
+            </div>`;
+        }).join('');
+    }
+
+    // ── Person Summary — one table, Role shown as a leading badge column
+    // instead of a repeated table per role. Grouped by role, sorted by
+    // weight within each group, same as before.
+    function renderPersons() {
+        const container = document.getElementById('ps-rows');
+        const roles = activeRoleList();
+        if (!roles.length) { container.innerHTML = `<div class="col-empty">No roles configured</div>`; return; }
+
+        const allRows = [];
+        roles.forEach(role => {
+            const rows = monthRows.filter(r => r.role_id === role.id && r.assign);
+            const map = {};
+            rows.forEach(r => {
+                const k = r.assign;
+                if (!map[k]) map[k] = { tasks: 0, done: 0, weight: 0 };
+                map[k].tasks++;
+                if (isDoneStatus(r.status_id)) map[k].done++;
+                map[k].weight += Number(r.weight) || 0;
+            });
+            const entries = Object.entries(map).sort((a, b) => b[1].weight - a[1].weight);
+            entries.forEach(([name, d]) => allRows.push({ role, name, ...d }));
+        });
+
+        if (!allRows.length) { container.innerHTML = `<div class="col-empty">No data this month</div>`; return; }
+
+        container.innerHTML = allRows.map(r => {
+            const color = roleColorMap[r.role.id] || '#64748b';
+            return `
+            <div class="ps-row">
+                <span class="role-badge-chip" style="background:${hexToRgba(color, 0.12)};color:${color}"><span class="role-badge-dot" style="background:${color}"></span>${esc(r.role.name)}</span>
+                <div class="ps-name">${esc(r.name)}</div>
+                <div class="ps-num" style="color:${color}">${r.tasks}</div>
+                <div class="ps-num" style="color:${r.done === r.tasks && r.tasks > 0 ? '#10b981' : 'var(--c-slate)'}">${r.done}</div>
+                <div class="ps-num" style="color:var(--c-dark)">${r.weight}</div>
+            </div>`;
+        }).join('');
+    }
+
+    // ── Guard — mirrors b-quest-settings.html's own guardPermission() ──
+    function guardDashboardAccess() {
+        const user = getBxUser();
+        if (user?.level === 'god') return;
+        const perms = getBquestPerms();
+        if (!perms?.permissions?.includes('dashboard')) window.location.replace('b-quest-list.html');
+    }
+
     // ── Init ──
-    initMonth();
-    initLayout(B_QUEST_CONFIG);
-    loadData();
+    async function initPage() {
+        sessionStorage.removeItem('bx_perms_bquest');
+        await initLayout(B_QUEST_CONFIG);
+        guardDashboardAccess();
+        initMonth();
+        await loadMasterData();
+        document.getElementById('dashRoleSegWrap')?.addEventListener('scroll', () => roleSeg.updateFade());
+
+        assignFilter = createMultiSelect({
+            trigger: document.getElementById('wrap-filterAssign'),
+            label: 'Person',
+            getOptions: assignOptions,
+            onChange: (values) => { selectedAssigns = values; reloadAndRenderAll(); },
+            width: 260
+        });
+
+        await reloadAndRenderAll();
+    }
+
+    initPage();
 </script>
 </body>
 </html>

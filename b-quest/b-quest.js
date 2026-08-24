@@ -223,44 +223,46 @@ function createRoleSegControl({ wrapId, outerId, sliderId, btnClass = 'role-seg-
 
 B_QUEST_CONFIG.getMenuPerms = loadBquestPerms;
 
-const BQ_ROLES = ['designer', 'creative'];
-
-function bqCalcDayLoad(tasks, role, dl, excludeId = null) {
-    const dlDate = new Date(dl);
-    return tasks
-        .filter(t => {
-            if (excludeId && t.id === excludeId) return false;
-            const deadline = t[`${role}_deadline`];
-            if (!deadline) return false;
-            const d = t[`${role}_day`] || 1;
-            const deadlineDate = new Date(deadline);
-            const startDate = new Date(deadlineDate);
-            startDate.setDate(startDate.getDate() - d + 1);
-            return startDate <= dlDate && deadlineDate >= dlDate;
-        })
-        .reduce((sum, t) => sum + (Number(t[`${role}_weight`]) || 0), 0);
+// Shared capacity-spread math — was private to b-quest-modal.js's IIFE
+// (checkCapacity()); b-quest-dashboard.html needs the exact same formula so
+// the two pages can never silently disagree on what "over capacity" means.
+// A task's Weight×Day is a total BUDGET, not "weight every day" — walk
+// backward from its own deadline spending that budget, capped per day at
+// weight × (that weekday's Daily Capacity %). A day at 0% (or a low %)
+// absorbs less than its share, so the leftover rolls further back until the
+// budget runs out — including the deadline day itself, which is just the
+// first day walked. contributionOnDate answers "how much of THIS row's
+// spread lands on targetDateStr specifically". guard caps the walk so a
+// pathological config (e.g. every day at 0%) can't loop forever — purely a
+// technical safety valve, not a business rule; real Weight/Day values are
+// small enough to never approach it.
+const WEEK_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']; // index = Date.getDay()
+const SPREAD_LOOKBACK_GUARD = 3650;
+function contributionOnDate(weight, day, deadlineStr, workdayWeight, targetDateStr) {
+    let budget = weight * (Number(day) || 1);
+    let cursor = new Date(deadlineStr + 'T00:00:00');
+    const target = new Date(targetDateStr + 'T00:00:00');
+    let guard = 0;
+    while (budget > 1e-9 && cursor >= target && guard < SPREAD_LOOKBACK_GUARD) {
+        const pct = workdayWeight[WEEK_KEYS[cursor.getDay()]] ?? 100;
+        const cap = weight * (pct / 100);
+        const absorb = Math.min(budget, cap);
+        if (cursor.getTime() === target.getTime()) return absorb;
+        budget -= absorb;
+        cursor.setDate(cursor.getDate() - 1);
+        guard++;
+    }
+    return 0;
 }
 
-function bqSpreadWeight(tasks, role, start, end, pad) {
-    const weightMap = {}, dueCount = {}, ongoingCount = {};
-    tasks.forEach(t => {
-        const deadline = t[`${role}_deadline`];
-        if (!deadline || deadline < start || deadline > end) return;
-        const weight = t[`${role}_weight`] || 0;
-        const day = t[`${role}_day`] || 1;
-        const deadlineDate = new Date(deadline);
-        for (let i = 0; i < day; i++) {
-            const dt = new Date(deadlineDate);
-            dt.setDate(dt.getDate() - i);
-            const ds = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
-            if (ds >= start && ds <= end) {
-                weightMap[ds] = (weightMap[ds] || 0) + weight;
-                if (i === 0) dueCount[ds] = (dueCount[ds] || 0) + 1;
-                else ongoingCount[ds] = (ongoingCount[ds] || 0) + 1;
-            }
-        }
-    });
-    return { weightMap, dueCount, ongoingCount };
+// Role's flat max_capacity scaled by the target day's own Daily Capacity %
+// — e.g. a 10pt role on a 50% Saturday can only take 5pt that day.
+// maxCapByRole/workdayWeight are passed explicitly (rather than read off a
+// shared State object) since this now has two independent callers
+// (modal.js's own State, dashboard's own local vars).
+function effectiveMaxCap(roleId, targetDateStr, maxCapByRole, workdayWeight) {
+    const pct = workdayWeight?.[WEEK_KEYS[new Date(targetDateStr + 'T00:00:00').getDay()]] ?? 100;
+    return (maxCapByRole?.[roleId] ?? 10) * (pct / 100);
 }
 
 async function handleDeleteTask(id) {

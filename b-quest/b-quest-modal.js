@@ -580,44 +580,12 @@ const BQuestApp = (() => {
         refreshAssignBadge(roleId, name, canAssign);
     }
 
-    // A task's Weight×Day is a total BUDGET, not "weight every day" — walk
-    // backward from its own deadline spending that budget, capped per day
-    // at weight × (that weekday's Daily Capacity %). A day at 0% (or a low
-    // %) absorbs less than its share, so the leftover rolls further back
-    // until the budget runs out — including the deadline day itself, which
-    // is just the first day walked. contributionOnDate answers "how much
-    // of THIS row's spread lands on targetDateStr specifically", which is
-    // all capacity-checking here ever needs (see checkCapacity below).
-    // guard caps the walk so a pathological config (e.g. every day at 0%)
-    // can't loop forever — purely a technical safety valve, not a business
-    // rule; real Weight/Day values are small enough to never approach it.
-    const WEEK_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']; // index = Date.getDay()
-    const SPREAD_LOOKBACK_GUARD = 3650;
-    function contributionOnDate(weight, day, deadlineStr, workdayWeight, targetDateStr) {
-        let budget = weight * (Number(day) || 1);
-        let cursor = new Date(deadlineStr + 'T00:00:00');
-        const target = new Date(targetDateStr + 'T00:00:00');
-        let guard = 0;
-        while (budget > 1e-9 && cursor >= target && guard < SPREAD_LOOKBACK_GUARD) {
-            const pct = workdayWeight[WEEK_KEYS[cursor.getDay()]] ?? 100;
-            const cap = weight * (pct / 100);
-            const absorb = Math.min(budget, cap);
-            if (cursor.getTime() === target.getTime()) return absorb;
-            budget -= absorb;
-            cursor.setDate(cursor.getDate() - 1);
-            guard++;
-        }
-        return 0;
-    }
-
-    // Role's flat max_capacity scaled by the target day's own Daily
-    // Capacity % — e.g. a 10pt role on a 50% Saturday can only take 5pt
-    // that day.
-    function effectiveMaxCap(roleId, targetDateStr) {
-        const pct = State.workdayWeight?.[WEEK_KEYS[new Date(targetDateStr + 'T00:00:00').getDay()]] ?? 100;
-        return (State.maxCap[roleId] ?? 10) * (pct / 100);
-    }
-
+    // contributionOnDate()/effectiveMaxCap() are now the shared functions
+    // in b-quest.js (loaded before this file wherever it's used) — was an
+    // identical local copy here. effectiveMaxCap now takes maxCapByRole/
+    // workdayWeight explicitly since it no longer closes over this file's
+    // own State object (b-quest-dashboard.html is a second caller with its
+    // own separate state).
     async function checkCapacity(roleId) {
         const info = el(`${roleId}-capacity-info`);
         const hideInfo = () => { if (info) { info.className = 'bq-cap-info'; info.innerHTML = ''; } };
@@ -655,7 +623,7 @@ const BQuestApp = (() => {
             // slot gets capped, same rule as every other day in the spread.
             const newContribution = contributionOnDate(weight, dayVal, dl, workdayWeight, dl);
             const total = existingTotal + newContribution;
-            const maxCap = effectiveMaxCap(roleId, dl);
+            const maxCap = effectiveMaxCap(roleId, dl, State.maxCap, State.workdayWeight);
             State.capacities[roleId] = total;
             State.maxCapEffective[roleId] = maxCap;
 

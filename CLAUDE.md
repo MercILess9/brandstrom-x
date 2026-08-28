@@ -36,15 +36,24 @@ vercel.json
 
 ## Database Schema (Supabase)
 
+All table names are `snake_case` (no hyphens) — standardized 2026-08-27, see [[project:db-table-rename-2026-08]] memory for the full before/after list and why.
+
 | Table | Key Columns |
 |---|---|
 | `profiles` | id (uuid), codename, employee_id, nick_name, full_name, email, department, level, created_at |
 | `departments` | name (text, PK) — list of departments, RLS: SELECT open to authenticated |
-| `b-quest-list` | id, account_name, opportunity_name, task_name, detail, link, publish_date, designer, designer_weight, designer_type, designer_deadline, designer_assign, designer_status, creative, creative_weight, creative_type, creative_deadline, creative_assign, creative_status, owner, create_date, last_update |
-| `b-quest-work` | role, work, day, weight |
-| `b_quest_capacity` | role, max_capacity |
-| `b-quest-setting` | codename (PK), ae, creative, designer, new, edit, delete, assign, setting |
+| `b_quest_list` | id, account_name, opportunity_name, task_name, detail, link, publish_date, owner, create_date, last_update — per-role fields (deadline/assign/weight/status/etc.) live on `b_quest_task_role` instead, not flat columns here |
+| `b_quest_task_role` | id, quest_id (FK → `b_quest_list.id`), role_id (FK → `b_quest_role.id`), role (denormalized name), status_id (FK → `b_quest_status.id`), status (denormalized name), work, type, deadline, weight, day, max_per_day, assign — one row per role a task has open |
+| `b_quest_role` | id, name, color, icon, active, sort_order, max_capacity — dynamic role list (Designer/Creative/IT/...), `max_capacity` is the per-role daily cap Dashboard/Modal both read |
+| `b_quest_status` | id, name, color, active, sort_order — dynamic status list |
+| `b_quest_type` | id, name, active, sort_order |
+| `b_quest_work` | role, work, day, weight |
+| `b_quest_config` | rule, value — misc B-Quest-wide settings (e.g. Data Visibility mode) |
+| `b_quest_member` | codename (PK), creative, designer, setting, permissions |
+| `b_quest_member_role` | id, codename, role_id, new, edit, delete, assign, accept, edit_scope, delete_scope — per-role permission grants (replaces the old flat `b-quest-setting` table) |
 | `setting_project` | codename (PK), bquest, bdashboard, baccount, bcommission, bfinance, system_setting |
+
+`b_quest_capacity` (role, max_capacity) and 14 legacy flat designer_*/creative_* columns on `b_quest_list` were dropped 2026-08-27 — dead since the task-role cutover, nothing in the codebase read them anymore.
 
 ## Auth & Permission System
 
@@ -95,9 +104,20 @@ initPage().then(() => observer.observe(triggerEl));
 ## CSS Architecture Rules
 
 - แต่ละ project มีไฟล์ CSS ของตัวเอง เช่น `b-quest.css`
-- `:root` variables ทั้งหมดอยู่ใน `<project>.css` เท่านั้น — ห้ามประกาศซ้ำใน HTML
+- `:root` variables ทั้งหมดอยู่ใน `<project>.css` เท่านั้น (ยกเว้น theme tokens ด้านล่าง) — ห้ามประกาศซ้ำใน HTML
 - แต่ละ HTML โหลด `<project>.css` แทน และมีแค่ style เฉพาะหน้านั้น
-- โหลดลำดับ: supabase → sweetalert2 → config.js → system.js → `<project>.js` → `<project>.css`
+- โหลดลำดับ: supabase → sweetalert2 → config.js → system.js → `<project>.js` → `/system/theme.css` → `<project>.css`
+
+### Shared Theme Tokens (`system/theme.css`)
+
+- `--c-accent` (#bdc432), `--c-accent-light` (#f4f7a1), `--c-accent-dark` (#7a8500) — สีเขียวแบรนด์ที่ใช้ซ้ำทุก project (ปุ่ม/border/icon เต็มค่า, พื้น active-hover อ่อน, ตัวหนังสือบนพื้นอ่อน ตามลำดับ)
+- `--c-on-accent` (#1e293b) — ตัวหนังสือที่วางทับพื้น `--c-accent` เต็มค่าโดยตรง (เช่น badge, ปุ่ม solid) แยกจาก `--c-dark` (สีตัวหนังสือทั่วไปของแต่ละ project) โดยตั้งใจ — วันนี้เผอิญค่าเท่ากัน แต่ธีมสีเข้มในอนาคตอาจต้องให้ `--c-on-accent` เป็นขาว ในขณะที่ `--c-dark` (หัวข้อ/เนื้อหาทั่วไป) ไม่ต้องเปลี่ยน
+- `--c-accent-rgb` (`189, 196, 50`) — ค่า R,G,B ของ `--c-accent` แบบ comma-separated สำหรับ `rgba(var(--c-accent-rgb), 0.2)` ที่ต้องมี alpha (เงา/glow) — CSS variable เติม alpha เองไม่ได้ ต้องมีตัวนี้แยกไว้ และต้องอัปเดตคู่กับ `--c-accent` เองด้วยมือเสมอ (derive กันไม่ได้)
+- โหลดทุกหน้า (ทุก project + `system/setting.html`) ก่อน `<project>.css` — ห้ามประกาศ `--c-accent`/`--c-accent-light`/`--c-accent-dark`/`--c-on-accent`/`--c-accent-rgb` ซ้ำใน `<project>.css` หรือ inline `<style>` อีก
+- เวลาหา hardcode สีเขียวที่ยังไม่ผูกกับ theme — grep เลข `#bdc432` เฉยๆ ไม่พอ ต้อง grep `rgba(189` ด้วย เพราะ hardcode มักซ่อนอยู่ใน `rgba(189,196,50,...)` ของ box-shadow/glow ที่ grep หา hex ตรงๆ จะมองไม่เห็น
+- สีความหมายอื่น (แดง danger, สี role แต่ละแบบ) ยังอยู่ใน `<project>.css` ของตัวเองเหมือนเดิม ไม่ย้ายเข้ามาที่นี่
+- Text วางทับพื้น `--c-accent` เต็มค่าโดยตรง (ไม่ใช่ `--c-accent-light`) ต้องใช้ `--c-on-accent` เสมอ ห้ามใช้ `--c-dark`/hardcode hex ตรงๆ — ตอนสร้างหน้าเลือกสีธีมในอนาคต จุดที่ต้องคำนวณสี (เทียบ contrast ดำ/ขาว) คือ token นี้ตัวเดียว
+- ออกแบบไว้ให้ future Setting เปลี่ยน theme สีหลักได้ — เปลี่ยน 3 ค่านี้พร้อมกันเป็นชุดเดียวเท่านั้น (ห้ามเปลี่ยนแค่ตัวเดียว จะพังคอนทราสต์)
 
 ## Performance Rules
 

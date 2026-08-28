@@ -12,6 +12,7 @@
     <script src="/system/save-bar.js"></script>
     <script src="/system/multi-select.js"></script>
     <script src="b-quest.js"></script>
+    <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-quest.css">
 
     <style>
@@ -56,7 +57,7 @@
         .am-item { display: flex; align-items: center; gap: 14px; padding: 11px 12px; border-radius: 14px; cursor: pointer; transition: background 0.15s; }
         .am-item:hover { background: var(--c-bg); }
         .am-item:has(.modern-checkbox:checked) { background: var(--c-accent-light); }
-        .am-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--c-accent-light); border: 1px solid transparent; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; color: #7a8500; flex-shrink: 0; }
+        .am-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--c-accent-light); border: 1px solid transparent; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; color: var(--c-accent-dark); flex-shrink: 0; }
         .am-item:has(.modern-checkbox:checked) .am-avatar { background: var(--c-accent); }
         .am-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
         .am-nick { font-size: 0.88rem; font-weight: 700; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -133,7 +134,7 @@
         .cfg-swatch { position: relative; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(0,0,0,0.08); flex-shrink: 0; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
         .cfg-swatch:hover { transform: scale(1.15); box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
         .cfg-icon-swatch { position: relative; width: 32px; height: 32px; border-radius: 10px; border: 1.5px solid var(--c-border); flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--c-slate); font-size: 0.95rem; background: #fff; transition: transform 0.15s, border-color 0.15s, background 0.15s, color 0.15s; }
-        .cfg-icon-swatch:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: #7a8500; transform: scale(1.1); }
+        .cfg-icon-swatch:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); transform: scale(1.1); }
         .cfg-name-input { flex: 1; min-width: 100px; border: 1px solid transparent; border-radius: 8px; padding: 6px 10px; font-size: 0.85rem; font-weight: 700; color: var(--c-dark); background: transparent; outline: none; font-family: inherit; }
         .cfg-name-input:hover { border-color: var(--c-border); background: var(--c-bg); }
         .cfg-name-input:focus { border-color: var(--c-accent); background: #fff; }
@@ -174,7 +175,7 @@
         .cfg-btn-undo:hover { color: var(--c-danger-dark); }
         .cfg-btn-add { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 7px 14px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: 0.15s; }
         .cfg-btn-sort { background: none; border: 1px solid var(--c-border); color: var(--c-slate); border-radius: 9px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; margin-left: auto; flex-shrink: 0; transition: 0.15s; }
-        .cfg-btn-sort:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: #7a8500; }
+        .cfg-btn-sort:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
         .cfg-btn-info { background: none; border: none; color: var(--c-muted); cursor: pointer; padding: 2px; font-size: 1rem; display: flex; align-items: center; transition: 0.15s; }
         .cfg-btn-info:hover { color: var(--c-accent); transform: scale(1.15); }
         .cfg-info-item { margin-bottom: 10px; }
@@ -187,7 +188,7 @@
         .cfg-info-item.divided { padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
         .cfg-info-item.divided:last-child { padding-bottom: 0; border-bottom: none; }
         .cfg-info-title { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; }
-        .cfg-info-title i { font-size: 0.8rem; color: #7a8500; }
+        .cfg-info-title i { font-size: 0.8rem; color: var(--c-accent-dark); }
         .cfg-info-scope-row { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
         .cfg-info-scope-row .mem-scope-badge { flex-shrink: 0; pointer-events: none; cursor: default; }
         .cfg-info-scope-row span.info-txt { color: var(--c-slate); font-size: 0.76rem; line-height: 1.4; }
@@ -214,7 +215,7 @@
         .cfg-icon-search:focus { border-color: var(--c-accent); }
         .cfg-picker-icon { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--c-border); background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--c-slate); font-size: 0.85rem; }
         .cfg-picker-icon:hover { background: var(--c-bg); }
-        .cfg-picker-icon.sel { background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
+        .cfg-picker-icon.sel { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
         .cfg-picker-color { width: 25px; height: 25px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
         .cfg-picker-color.sel { border-color: var(--c-dark); }
         .cfg-color-wheel { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; border: none; border-radius: 10px; cursor: pointer; background: none; padding: 0; }
@@ -302,7 +303,7 @@
         .vis-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 999px; transition: transform 0.22s cubic-bezier(.4,0,.2,1); z-index: 0; }
         .vis-seg.state-own .vis-seg-slider { transform: translateX(100%); }
         .vis-seg button { position: relative; z-index: 1; flex: 1; border: none; background: transparent; font-family: inherit; font-size: 0.72rem; font-weight: 800; color: var(--c-muted); cursor: pointer; border-radius: 999px; }
-        .vis-seg button.on { color: #7a8500; }
+        .vis-seg button.on { color: var(--c-accent-dark); }
 
         /* ── Filter Defaults ── */
         .fd-group { padding: 12px 0; border-bottom: 1px solid var(--c-border); }
@@ -335,7 +336,7 @@
         .fd-role-seg-scroll-outer.fade-left::before { opacity: 1; }
         .fd-role-seg-scroll-outer.fade-right::after { opacity: 1; }
         .fd-role-seg-btn { position: relative; z-index: 1; border: none; background: transparent; padding: 0 12px; height: 100%; font-size: 0.72rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; flex-shrink: 0; display: flex; align-items: center; gap: 5px; }
-        .fd-role-seg-btn.active { color: #7a8500; }
+        .fd-role-seg-btn.active { color: var(--c-accent-dark); }
         .fd-role-seg-btn:not(.active):hover { color: var(--c-accent); }
         .fd-daterange { display: flex; flex-direction: column; gap: 10px; }
         .fd-bound { display: flex; align-items: center; gap: 8px; }
@@ -349,7 +350,7 @@
         .fd-mode-seg { position: relative; display: inline-flex; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 999px; padding: 3px; height: 30px; }
         .fd-mode-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 999px; transition: left 0.2s cubic-bezier(.4,0,.2,1), width 0.2s cubic-bezier(.4,0,.2,1); z-index: 0; }
         .fd-mode-seg button { position: relative; z-index: 1; border: none; background: transparent; font-family: inherit; font-size: 0.7rem; font-weight: 800; color: var(--c-muted); cursor: pointer; padding: 0 10px; border-radius: 999px; white-space: nowrap; }
-        .fd-mode-seg button.on { color: #7a8500; }
+        .fd-mode-seg button.on { color: var(--c-accent-dark); }
         .fd-preview-row { margin-top: 6px; display: flex; align-items: center; gap: 10px; }
         .fd-preview { width: fit-content; flex-shrink: 0; display: flex; align-items: center; gap: 8px; font-size: 0.65rem; color: var(--c-muted); background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 999px; padding: 8px 14px; }
         .fd-preview .bi-calendar-range { color: var(--c-accent); font-size: 0.82rem; }
@@ -381,7 +382,7 @@
            different audiences, not just a channel flag on one rule. ── */
         .np-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
         .np-tab { border: 1px solid var(--c-border); background: #fff; color: var(--c-slate); font-size: 0.74rem; font-weight: 700; font-family: inherit; border-radius: 20px; padding: 5px 14px; cursor: pointer; transition: 0.15s; }
-        .np-tab:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: #7a8500; }
+        .np-tab:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
         .np-tab.active { background: var(--c-dark); border-color: var(--c-dark); color: var(--c-accent); }
         .np-rows { display: flex; flex-direction: column; gap: 14px; }
         /* Card per action, not just a divider line — an all-empty section
@@ -402,7 +403,7 @@
         .np-without-add:hover { color: var(--c-danger); background: #fef2f2; }
         .np-quick-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
         .np-quick-chip { display: flex; align-items: center; gap: 6px; border: 1px solid var(--c-border); border-radius: 20px; padding: 5px 12px; font-size: 0.76rem; font-weight: 700; color: var(--c-slate); cursor: pointer; }
-        .np-quick-chip:has(input:checked) { background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
+        .np-quick-chip:has(input:checked) { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
         .np-scroll-list { max-height: 160px; overflow-y: auto; margin-bottom: 10px; }
         .np-list-item { display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-size: 0.8rem; font-weight: 600; color: var(--c-dark); cursor: pointer; border-radius: 7px; }
         .np-list-item:hover { background: var(--c-bg); }
@@ -412,7 +413,7 @@
         .bq-toggle input { opacity: 0; width: 0; height: 0; }
         .bq-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--c-border); transition: .3s; border-radius: 34px; }
         .bq-toggle:hover .bq-slider { box-shadow: 0 0 0 4px rgba(0,0,0,0.06); }
-        .bq-toggle:hover input:checked + .bq-slider { box-shadow: 0 0 0 4px rgba(189,196,50,0.25); }
+        .bq-toggle:hover input:checked + .bq-slider { box-shadow: 0 0 0 4px rgba(var(--c-accent-rgb), 0.25); }
         .bq-slider:before { position: absolute; content: ""; height: 13px; width: 13px; left: 3px; bottom: 3px; background: #fff; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
         .bq-toggle input:checked + .bq-slider { background: var(--c-accent); }
         .bq-toggle input:checked + .bq-slider:before { transform: translateX(15px); }
@@ -1019,7 +1020,7 @@
     // Roles
     // ═══════════════════════════════════════════
     async function loadRoles() {
-        const { data } = await supabaseClient.from('b-quest-role').select('*').order('sort_order');
+        const { data } = await supabaseClient.from('b_quest_role').select('*').order('sort_order');
         originalRoles = data || [];
         renderRoles();
     }
@@ -1102,7 +1103,7 @@
     // Statuses
     // ═══════════════════════════════════════════
     async function loadStatuses() {
-        const { data } = await supabaseClient.from('b-quest-status').select('*').order('sort_order');
+        const { data } = await supabaseClient.from('b_quest_status').select('*').order('sort_order');
         originalStatuses = data || [];
         renderStatuses();
     }
@@ -1217,7 +1218,7 @@
     // Types
     // ═══════════════════════════════════════════
     async function loadTypes() {
-        const { data } = await supabaseClient.from('b-quest-type').select('*').order('sort_order');
+        const { data } = await supabaseClient.from('b_quest_type').select('*').order('sort_order');
         originalTypes = data || [];
         renderTypes();
     }
@@ -1585,7 +1586,7 @@
     // Work List (per role, dynamic)
     // ═══════════════════════════════════════════
     async function loadWork() {
-        const { data } = await supabaseClient.from('b-quest-work').select('id, role_id, work, day, weight, max_per_day, sort_order').order('sort_order');
+        const { data } = await supabaseClient.from('b_quest_work').select('id, role_id, work, day, weight, max_per_day, sort_order').order('sort_order');
         originalWork = data || [];
         renderWork();
     }
@@ -1594,7 +1595,7 @@
     // Config (flat rule -> value bucket, global toggles)
     // ═══════════════════════════════════════════
     async function loadConfig() {
-        const { data } = await supabaseClient.from('b-quest-config').select('rule, value');
+        const { data } = await supabaseClient.from('b_quest_config').select('rule, value');
         originalConfig = {};
         (data || []).forEach(row => { originalConfig[row.rule] = row.value; });
         renderWorkConfigToggles();
@@ -2251,7 +2252,7 @@
             }
 
             for (const [rule, value] of Object.entries({ ...configChanges, ...statusConfigChanges, ...calendarChanges, ...visibilityChanges, ...filterDefaultsChanges, ...notifyChanges })) {
-                const { error } = await supabaseClient.from('b-quest-config').upsert({ rule, value });
+                const { error } = await supabaseClient.from('b_quest_config').upsert({ rule, value });
                 if (error) errors.push('Settings update: ' + error.message);
             }
 
@@ -2262,8 +2263,8 @@
             for (const [codename, ch] of Object.entries(adminAccessChanges)) {
                 const isNew = !originalAdminMembers.some(m => m.codename === codename);
                 const { error } = isNew
-                    ? await supabaseClient.from('b-quest-member').insert([{ codename, permissions: ch.permissions || [] }])
-                    : await supabaseClient.from('b-quest-member').update(ch).eq('codename', codename);
+                    ? await supabaseClient.from('b_quest_member').insert([{ codename, permissions: ch.permissions || [] }])
+                    : await supabaseClient.from('b_quest_member').update(ch).eq('codename', codename);
                 if (error) errors.push(`Admin Access "${codename}": ` + error.message);
             }
 
@@ -2308,7 +2309,7 @@
     // b-quest-member.permissions array Members' own page does).
     // ═══════════════════════════════════════════
     async function loadAdminAccess() {
-        const { data } = await supabaseClient.from('b-quest-member').select('codename, permissions');
+        const { data } = await supabaseClient.from('b_quest_member').select('codename, permissions');
         originalAdminMembers = data || [];
         renderAdminAccess();
     }

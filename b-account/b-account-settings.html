@@ -9,6 +9,7 @@
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="b-account.js"></script>
+    <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-account.css">
     <style>
         .settings-wrapper { max-width: 1100px; margin: 0 auto; padding: 36px 20px 140px; }
@@ -310,13 +311,13 @@
         const toInsert = state.toAdd.map(v => ({ type: key, value: v }));
 
         const ops = [];
-        if (toDelete.length) ops.push(supabaseClient.from('b_opp_config').delete().eq('type', key).in('value', toDelete));
-        if (toInsert.length) ops.push(supabaseClient.from('b_opp_config').insert(toInsert));
+        if (toDelete.length) ops.push(supabaseClient.from('b_opportunity_config').delete().eq('type', key).in('value', toDelete));
+        if (toInsert.length) ops.push(supabaseClient.from('b_opportunity_config').insert(toInsert));
         const results = await Promise.all(ops);
 
         const hasError = results.some(r => r.error);
         if (hasError) {
-            notify('error', 'Save failed');
+            notify('', 'Save failed', 'error');
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-check2"></i> Save';
             return;
@@ -331,7 +332,7 @@
     }
 
     async function loadConfig() {
-        const { data } = await supabaseClient.from('b_opp_config').select('type, value').order('value');
+        const { data } = await supabaseClient.from('b_opportunity_config').select('type, value').order('value');
         const grouped = {};
         CFG_TYPES.forEach(t => { grouped[t.key] = []; });
         (data || []).forEach(row => { if (grouped[row.type]) grouped[row.type].push(row.value); });
@@ -420,7 +421,7 @@
     }
 
     async function loadMembers() {
-        const { data } = await supabaseClient.from('b-account-setting').select('*').order('codename');
+        const { data } = await supabaseClient.from('b_account_setting').select('*').order('codename');
         _members = (data || []).map(m => ({ ...m, _state: 'existing', _changed: false }));
         renderPermTable();
     }
@@ -494,12 +495,12 @@
         const toDelete = _members.filter(m => m._state === 'deleted').map(m => m.codename);
 
         const ops = [];
-        if (toUpsert.length) ops.push(supabaseClient.from('b-account-setting').upsert(toUpsert, { onConflict: 'codename' }));
-        if (toDelete.length) ops.push(supabaseClient.from('b-account-setting').delete().in('codename', toDelete));
+        if (toUpsert.length) ops.push(supabaseClient.from('b_account_setting').upsert(toUpsert, { onConflict: 'codename' }));
+        if (toDelete.length) ops.push(supabaseClient.from('b_account_setting').delete().in('codename', toDelete));
         const results = await Promise.all(ops);
 
         const hasError = results.some(r => r.error);
-        if (hasError) { notify('error', 'Save failed'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2"></i> Save'; return; }
+        if (hasError) { notify('', 'Save failed', 'error'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2"></i> Save'; return; }
 
         _members = _members.filter(m => m._state !== 'deleted').map(m => ({ ...m, _state: 'existing', _changed: false }));
         renderPermTable();

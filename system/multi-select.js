@@ -37,7 +37,7 @@
             .bx-ms-search { width: 100%; box-sizing: border-box; border: 1px solid #e2e8f0; border-radius: 10px;
                 padding: 7px 10px 7px 30px; font-size: 0.78rem; outline: none; font-family: inherit;
                 background: #f8fafc; transition: 0.2s; }
-            .bx-ms-search:focus { border-color: var(--c-accent, #bdc432); background: #fff; }
+            .bx-ms-search:focus { border-color: var(--c-accent); background: #fff; }
             .bx-ms-search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
                 color: #94a3b8; font-size: 0.75rem; pointer-events: none; }
             /* min-height:0 is the fix — a flex item with flex:1 otherwise

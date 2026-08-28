@@ -27,7 +27,7 @@
                 box-shadow: 0 8px 40px rgba(0,0,0,0.25); transition: bottom 0.4s cubic-bezier(0.34,1.56,0.64,1); z-index: 999; }
             .bx-save-bar.visible { bottom: 24px; }
             .bx-save-bar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
-            .bx-save-bar-left i { font-size: 1.3rem; color: var(--c-accent, #bdc432); flex-shrink: 0; }
+            .bx-save-bar-left i { font-size: 1.3rem; color: var(--c-accent); flex-shrink: 0; }
             .bx-save-bar-label { font-size: 0.78rem; font-weight: 800; color: #fff; letter-spacing: 0.3px; }
             .bx-save-bar-sub { font-size: 0.72rem; color: rgba(255,255,255,0.55); margin-top: 2px; font-weight: 600; }
             .bx-save-bar-right { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
@@ -40,7 +40,7 @@
                 padding: 9px 16px; cursor: pointer; font-size: 0.82rem; font-weight: 700; font-family: inherit; transition: 0.15s;
                 display: inline-flex; align-items: center; gap: 6px; }
             .bx-btn-cancel:hover:not(:disabled) { background: rgba(239,68,68,0.2); color: #fecaca; border-color: rgba(239,68,68,0.35); }
-            .bx-btn-save { background: var(--c-accent, #bdc432); color: var(--c-dark, #1e293b); border: none; border-radius: 10px;
+            .bx-btn-save { background: var(--c-accent); color: var(--c-on-accent); border: none; border-radius: 10px;
                 padding: 9px 26px; cursor: pointer; font-size: 0.84rem; font-weight: 800; font-family: inherit;
                 display: inline-flex; align-items: center; gap: 6px; transition: 0.15s; }
             .bx-btn-save:hover:not(:disabled) { filter: brightness(1.08); }

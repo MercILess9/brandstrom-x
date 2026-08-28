@@ -10,6 +10,7 @@
     <script src="/system/system.js"></script>
     <script src="b-finance.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-finance.css">
 </head>
 <body>
@@ -94,10 +95,9 @@
 </div>
 
 <script>
-const _fmt2   = n => Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fNum    = n => (n != null && !isNaN(+n) && +n !== 0) ? _fmt2(+n) : '—';
+const fNum    = n => (n != null && !isNaN(+n) && +n !== 0) ? fmtMoney(+n) : '—';
 const fDate   = d => { if (!d) return ''; try { return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); } catch { return d; } };
-const fmtAmt  = v => (v != null && v !== '') ? _fmt2(+v) : '';
+const fmtAmt  = v => (v != null && v !== '') ? fmtMoney(+v) : '';
 const parseAmt = s => { const n = parseFloat(String(s).replace(/,/g,'')); return isNaN(n) ? null : n; };
 
 let _allAccounts    = [];
@@ -554,6 +554,8 @@ function syncQuickDateButtons() {
     document.getElementById('btnMonth').classList.toggle('active', f === `${y}-${m}-01` && t === `${y}-${m}-${last}`);
 }
 
+function viewOpp(id) { window.open(`/b-account/b-opportunity-view?id=${encodeURIComponent(id)}`, '_blank'); }
+
 function toggleQtDetail() {
     _qtDetailOpen = !_qtDetailOpen;
     document.getElementById('btnQtDetail').classList.toggle('active', _qtDetailOpen);
@@ -607,6 +609,7 @@ function renderRightPanel(opps, qtByOpp) {
                         <span class="opp-id">${esc(opp.opportunity_id)}</span>
                         <span class="opp-status-badge ${stCls}">${esc(opp.status||'—')}</span>
                         ${opp.owner ? `<span class="opp-owner-badge">${esc(opp.owner)}</span>` : ''}
+                        <button class="opp-view-btn" onclick="event.stopPropagation();viewOpp('${esc(opp.opportunity_id)}')" title="View Opportunity"><i class="bi bi-info-circle"></i></button>
                     </div>
                     <div class="opp-name">${esc(opp.opportunity_name||'—')}</div>
                 </div>
@@ -673,10 +676,9 @@ function _buildFinTable(dbRows, pendingRows, qtId, qtNumber, saleAmt) {
     const canEdit = canFinance('edit');
     const allRows = [...dbRows, ...pendingRows];
     const showSub = allRows.length >= 2;
-    const maxIdx  = allRows.length ? Math.max(...allRows.map(r => r.sub_index || 0)) : 0;
 
     const addBtn = canEdit
-        ? `<div class="fin-add-row"><button class="btn-add-sub" onclick="addSubRow('${esc(qtId)}','${esc(qtNumber||qtId)}',${maxIdx},${saleAmt||0})"><i class="bi bi-plus"></i> Add Sub</button></div>`
+        ? `<div class="fin-add-row"><button class="btn-add-sub" onclick="addSubRow('${esc(qtId)}','${esc(qtNumber||qtId)}',${saleAmt||0})"><i class="bi bi-plus"></i> Add Sub</button></div>`
         : '';
 
     if (!allRows.length) return `<div class="fin-empty-sub">${addBtn}</div>`;
@@ -742,7 +744,7 @@ function renderFinRow(r, canEdit, showSub, totalRows) {
         <td class="fin-td-idx">${r.sub_index}</td>
         ${showSub ? `<td class="fin-td"><input class="fin-input" type="text" value="${esc(r.quotation_sub||'')}" placeholder="—" ${ro} ${on('quotation_sub')}></td>` : ''}
         <td class="fin-td"><input class="fin-input" type="text" value="${esc(r.invoice||'')}" placeholder="—" ${ro} ${on('invoice')}></td>
-        <td class="fin-td"><input class="fin-input" type="text" value="${fmtAmt(r.actual_amount)}" placeholder="0" inputmode="numeric" ${ro} ${on('actual_amount','parseAmt(this.value)')} style="text-align:right"></td>
+        <td class="fin-td"><input class="fin-input" type="text" value="${fmtAmt(r.actual_amount)}" placeholder="0" inputmode="decimal" ${ro} ${on('actual_amount','parseAmt(this.value)')} onblur="this.value=fmtAmt(parseAmt(this.value))" style="text-align:right"></td>
         <td class="fin-td"><input class="fin-input" type="text" value="${esc(r.detail||'')}" placeholder="—" ${ro} ${on('detail')}></td>
         <td class="fin-td"><input class="fin-input" type="date" value="${r.bill_date||''}" ${ro} ${on('bill_date','this.value||null')}></td>
         <td class="fin-td"><input class="fin-input" type="text" value="${esc(r.receipt_no||'')}" placeholder="—" ${ro} ${on('receipt_no')}></td>
@@ -752,51 +754,44 @@ function renderFinRow(r, canEdit, showSub, totalRows) {
     </tr>`;
 }
 
-function addSubRow(qtId, qtNumber, maxIndex, saleAmt) {
+// Single unified path — no separate "first split" vs "append" branches.
+// Previously the two diverged (the "split" branch hardcoded sub_index=2
+// and did a full re-render using only the single newest pending row,
+// while "append" incrementally added a <tr> and patched the button's
+// onclick with a fresh index). That divergence is what caused Add Sub to
+// only ever work once per save: after the first click, _qtFinRows (a
+// snapshot of DB-persisted rows only) still showed just 1 row, so a
+// second click before saving re-entered the "split" branch again —
+// silently dropping the previously-added pending row from the DOM (the
+// save bar's count still included it, since it was never removed from
+// _pendingNew, just no longer rendered) and re-using sub_index 2 a
+// second time. Computing everything fresh from existingRows + this QT's
+// *other pending* rows, and always fully re-rendering that combined set,
+// removes the divergence entirely — Add Sub can be clicked any number of
+// times before saving.
+function addSubRow(qtId, qtNumber, saleAmt) {
     if (!canFinance('edit')) return;
 
     const existingRows = _qtFinRows.get(qtId) || [];
-    const isSplitting  = existingRows.length === 1 && !!existingRows[0].id;
-    const tempId       = `new-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
-    const newIdx       = maxIndex + 1;
+    const pendingForQt = _pendingNew.filter(r => r.qt_id === qtId);
+    const allRows = [...existingRows, ...pendingForQt];
+    const nextIdx = allRows.length ? Math.max(...allRows.map(r => r.sub_index || 0)) + 1 : 1;
 
-    if (isSplitting) {
-        const row1  = existingRows[0];
-        const sub01 = `${qtNumber}-01`;
-        const sub02 = `${qtNumber}-02`;
+    // quotation_sub left blank — user fills in whatever sub-label makes
+    // sense, no auto-generated "-01"/"-02" suffix forced on them.
+    const newRow = {
+        _tempId: `new-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+        qt_id: qtId, sub_index: nextIdx, quotation_sub: null,
+        invoice: null, actual_amount: null, detail: null, bill_date: null,
+        receipt_no: null, receipt_date: null, remark: null
+    };
+    _pendingNew.push(newRow);
 
-        const newRow = { _tempId: tempId, qt_id: qtId, sub_index: 2, quotation_sub: sub02,
-            invoice: null, actual_amount: null, detail: null, bill_date: null,
-            receipt_no: null, receipt_date: null, remark: null };
-        _pendingNew.push(newRow);
-
-        const updatedRow1 = { ...row1, quotation_sub: sub01 };
-        const qtBody = document.getElementById(`qtBody-${qtId}`);
-        if (qtBody) qtBody.innerHTML = _buildFinTable([updatedRow1], [newRow], qtId, qtNumber, saleAmt);
-
-        // track rename after re-render so DOM exists for is-dirty class
-        trackChange(row1.id, 'quotation_sub', sub01);
-
-        document.getElementById(`qtBody-${qtId}`)?.querySelector('.is-new input')?.focus();
-    } else {
-        const subNum = `${qtNumber}-${String(newIdx).padStart(2,'0')}`;
-        const newRow = { _tempId: tempId, qt_id: qtId, sub_index: newIdx, quotation_sub: subNum,
-            invoice: null, actual_amount: null, detail: null, bill_date: null,
-            receipt_no: null, receipt_date: null, remark: null };
-        _pendingNew.push(newRow);
-
-        const tbody = document.getElementById(`finBody-${qtId}`);
-        if (tbody) {
-            const tmp = document.createElement('tbody');
-            tmp.innerHTML = renderFinRow(newRow, true, true);
-            const newTr = tmp.firstElementChild;
-            tbody.appendChild(newTr);
-            newTr.querySelector('input')?.focus();
-
-            // update Add Sub button with new maxIdx
-            const btn = tbody.closest('.fin-table-wrap')?.querySelector('.btn-add-sub');
-            if (btn) btn.setAttribute('onclick', `addSubRow('${esc(qtId)}','${esc(qtNumber||qtId)}',${newIdx},${saleAmt||0})`);
-        }
+    const qtBody = document.getElementById(`qtBody-${qtId}`);
+    if (qtBody) {
+        qtBody.innerHTML = _buildFinTable(existingRows, [...pendingForQt, newRow], qtId, qtNumber, saleAmt);
+        const newRowEls = qtBody.querySelectorAll('.is-new');
+        newRowEls[newRowEls.length - 1]?.querySelector('input')?.focus();
     }
     updateSaveBar();
 }
@@ -824,8 +819,13 @@ async function saveChanges() {
             if (error) throw error;
         }
 
-        // Insert new
-        const inserts = _pendingNew.map(r => { const { _tempId, ...clean } = r; return clean; });
+        // Insert new — skip rows added via Add Sub but never actually
+        // filled in (every editable field still at its blank default),
+        // so clicking Add Sub several times and only using some of them
+        // doesn't leave empty junk rows in the database.
+        const FIN_FIELDS = ['quotation_sub','invoice','actual_amount','detail','bill_date','receipt_no','receipt_date','remark'];
+        const isBlankRow = r => FIN_FIELDS.every(f => r[f] === null || r[f] === undefined || r[f] === '');
+        const inserts = _pendingNew.filter(r => !isBlankRow(r)).map(r => { const { _tempId, ...clean } = r; return clean; });
         if (inserts.length) {
             const { error } = await supabaseClient.from('b_finance_qt').insert(inserts);
             if (error) throw error;
@@ -842,7 +842,7 @@ async function saveChanges() {
         await loadRightPanel(_selectedAccId);
         return true;
     } catch (err) {
-        notify('error', err.message || 'Save failed');
+        notify('', err.message || 'Save failed', 'error');
         return false;
     }
 }

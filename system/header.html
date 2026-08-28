@@ -1,6 +1,6 @@
 <style>
     :root {
-        --sys-brand: #bdc432;
+        --sys-brand: var(--c-accent, #bdc432);
         --sys-white: #ffffff;
         --sys-dark: #111111;
         --header-height: 64px;
@@ -160,19 +160,19 @@
     .sys-avatar-btn {
         width: 34px; height: 34px;
         border-radius: 50%;
-        background: var(--sys-brand);
-        color: #fff;
+        background: var(--c-accent-light, #f4f7a1);
+        color: var(--c-accent-dark, #7a8500);
         border: none;
         font-size: 1.05rem;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background 0.15s;
+        transition: box-shadow 0.15s;
     }
 
     .sys-avatar-btn:hover {
-        background: var(--sys-dark);
+        box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb, 189, 196, 50), 0.4);
     }
 
     .sys-profile-menu {
@@ -205,8 +205,8 @@
     .sys-avatar-lg {
         width: 56px; height: 56px;
         border-radius: 50%;
-        background: var(--sys-brand);
-        color: #fff;
+        background: var(--c-accent-light, #f4f7a1);
+        color: var(--c-accent-dark, #7a8500);
         font-size: 1.6rem;
         display: flex;
         align-items: center;

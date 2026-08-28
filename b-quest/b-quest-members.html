@@ -11,6 +11,7 @@
     <script src="/system/system.js"></script>
     <script src="/system/save-bar.js"></script>
     <script src="b-quest.js"></script>
+    <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-quest.css">
 
     <style>
@@ -56,7 +57,7 @@
         .cfg-btn-undo:hover { color: var(--c-danger-dark); }
         .cfg-btn-add { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 7px 14px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: 0.15s; }
         .cfg-btn-sort { background: none; border: 1px solid var(--c-border); color: var(--c-slate); border-radius: 9px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; margin-left: auto; flex-shrink: 0; transition: 0.15s; }
-        .cfg-btn-sort:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: #7a8500; }
+        .cfg-btn-sort:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
         .cfg-btn-info { background: none; border: none; color: var(--c-muted); cursor: pointer; padding: 2px; font-size: 1rem; display: flex; align-items: center; transition: 0.15s; }
         .cfg-btn-info:hover { color: var(--c-accent); transform: scale(1.15); }
         .cfg-info-item { margin-bottom: 10px; }
@@ -69,7 +70,7 @@
         .cfg-info-item.divided { padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
         .cfg-info-item.divided:last-child { padding-bottom: 0; border-bottom: none; }
         .cfg-info-title { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; }
-        .cfg-info-title i { font-size: 0.8rem; color: #7a8500; }
+        .cfg-info-title i { font-size: 0.8rem; color: var(--c-accent-dark); }
         .cfg-info-scope-row { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
         .cfg-info-scope-row .mem-scope-badge { flex-shrink: 0; pointer-events: none; cursor: default; }
         .cfg-info-scope-row span.info-txt { color: var(--c-slate); font-size: 0.76rem; line-height: 1.4; }
@@ -171,7 +172,7 @@
         .mem-matrix .mem-header-filterable:hover { color: var(--c-dark); }
         .mem-sort-icon { font-size: 0.7rem; margin-left: 2px; opacity: 0.35; }
         .mem-filter-icon { font-size: 0.62rem; margin-left: 3px; opacity: 0.35; }
-        .mem-filter-icon.active { opacity: 1; color: var(--c-accent-dark, #7a8500); }
+        .mem-filter-icon.active { opacity: 1; color: var(--c-accent-dark); }
         .mem-bulk-col-icon { font-size: 0.6rem; margin-left: 3px; color: #f59e0b; opacity: 0.7; }
         .mem-col-adv:hover .mem-bulk-col-icon { opacity: 1; }
         /* Excel-style column header filter (Member/Code/Department) — a
@@ -188,8 +189,8 @@
            of competing with Close for attention on every open. */
         .mem-filter-reset-link { background: none; border: 1px solid transparent; color: var(--c-muted); font-size: 0.7rem; font-weight: 700; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 7px; transition: 0.15s; opacity: 0.5; }
         .mem-filter-reset-link:hover { background: var(--c-bg); color: var(--c-dark); opacity: 1; }
-        .mem-filter-reset-link.active { opacity: 1; background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
-        .mem-filter-reset-link.active:hover { background: var(--c-accent); color: var(--c-dark); }
+        .mem-filter-reset-link.active { opacity: 1; background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
+        .mem-filter-reset-link.active:hover { background: var(--c-accent); color: var(--c-on-accent); }
         .mem-filter-modal-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--c-muted); transition: 0.2s; }
         .mem-filter-modal-close:hover { background: var(--c-border); color: var(--c-dark); }
         .mem-filter-modal-body { padding: 20px 26px 24px; overflow-y: auto; }
@@ -224,7 +225,7 @@
            the unchecked (excluded) rows instead is the signal that matters. */
         .mem-filter-item:has(.modern-checkbox:not(:checked)) { opacity: 0.5; }
         .mem-filter-item.mem-filter-select-all { opacity: 1; }
-        .mem-sort-icon.active { opacity: 1; color: var(--c-accent-dark, #7a8500); }
+        .mem-sort-icon.active { opacity: 1; color: var(--c-accent-dark); }
         /* Single-dot toggle for the dense action grid — a plain switch
            (track + thumb) reads as visual noise once there are 4 per role
            times several roles; one circle that fills solid with the role's
@@ -289,7 +290,7 @@
            itself carries the color/visual-interest job, which is also why
            the code badge below was dropped in favor of plain text: a
            colored pill next to a real photo would just compete with it. */
-        .am-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--c-accent-light); border: 1px solid transparent; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; color: #7a8500; flex-shrink: 0; }
+        .am-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--c-accent-light); border: 1px solid transparent; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; color: var(--c-accent-dark); flex-shrink: 0; }
         .am-item:has(.modern-checkbox:checked) .am-avatar { background: var(--c-accent); }
         /* flex:1 claims the leftover width every row, so .am-dept-side (a
            plain sibling, not a grid column) lands at the same edge on every
@@ -329,7 +330,7 @@
         .bq-toggle input { opacity: 0; width: 0; height: 0; }
         .bq-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--c-border); transition: .3s; border-radius: 34px; }
         .bq-toggle:hover .bq-slider { box-shadow: 0 0 0 4px rgba(0,0,0,0.06); }
-        .bq-toggle:hover input:checked + .bq-slider { box-shadow: 0 0 0 4px rgba(189,196,50,0.25); }
+        .bq-toggle:hover input:checked + .bq-slider { box-shadow: 0 0 0 4px rgba(var(--c-accent-rgb), 0.25); }
         .bq-slider:before { position: absolute; content: ""; height: 13px; width: 13px; left: 3px; bottom: 3px; background: #fff; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
         .bq-toggle input:checked + .bq-slider { background: var(--c-accent); }
         .bq-toggle input:checked + .bq-slider:before { transform: translateX(15px); }
@@ -605,7 +606,7 @@
     // Roles are read-only here (owned by Settings) — just the current active
     // list, no staging/CRUD needed.
     async function loadRoles() {
-        const { data } = await supabaseClient.from('b-quest-role').select('*').order('sort_order');
+        const { data } = await supabaseClient.from('b_quest_role').select('*').order('sort_order');
         originalRoles = data || [];
     }
 
@@ -715,12 +716,12 @@
                 if (memberDeletes.has(codename)) continue;
                 const isNewMember = !originalMembers.some(m => m.codename === codename);
                 const { error } = isNewMember
-                    ? await supabaseClient.from('b-quest-member').insert([{ codename, permissions: ch.permissions || [] }])
-                    : await supabaseClient.from('b-quest-member').update(ch).eq('codename', codename);
+                    ? await supabaseClient.from('b_quest_member').insert([{ codename, permissions: ch.permissions || [] }])
+                    : await supabaseClient.from('b_quest_member').update(ch).eq('codename', codename);
                 if (error) errors.push(`Member "${codename}": ` + error.message);
             }
             for (const codename of memberDeletes) {
-                const { error } = await supabaseClient.from('b-quest-member').delete().eq('codename', codename);
+                const { error } = await supabaseClient.from('b_quest_member').delete().eq('codename', codename);
                 if (error) errors.push(`Member remove "${codename}": ` + error.message);
             }
             await saveTable('b-quest-member-role', memberRoleChanges, memberRoleDeletes, 'codename', errors, 'Member Role');
@@ -755,8 +756,8 @@
     async function loadMembers() {
         showSkeleton();
         const [{ data: members, error }, { data: memberRoles }] = await Promise.all([
-            supabaseClient.from('b-quest-member').select('codename, permissions').order('codename'),
-            supabaseClient.from('b-quest-member-role').select('id, codename, role_id, new, edit, delete, accept, assign, edit_scope, delete_scope')
+            supabaseClient.from('b_quest_member').select('codename, permissions').order('codename'),
+            supabaseClient.from('b_quest_member_role').select('id, codename, role_id, new, edit, delete, accept, assign, edit_scope, delete_scope')
         ]);
         if (error) { console.error(error); return; }
         originalMembers = members || [];

@@ -1,6 +1,6 @@
+/* --c-accent / --c-accent-light / --c-accent-dark now come from
+   /system/theme.css (loaded before this file) — don't redeclare here. */
 :root {
-    --c-accent: #bdc432;
-    --c-accent-light: #f4f7a1;
     --c-dark: #1e293b;
     --c-bg: #f8fafc;
     --c-text-main: #1e293b;
@@ -10,6 +10,7 @@
     --c-border: #e2e8f0;
     --c-panel-bg: #fcfcfc;
     --radius-card: 20px;
+    --c-danger: #ef4444;
 }
 
 body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); color: var(--c-text-main); margin: 0; }
@@ -17,7 +18,7 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 /* ── Search bar ── */
 .flt-search { position: relative; flex: 1; min-width: 140px; }
 .flt-search > i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--c-text-muted); pointer-events: none; z-index: 1; }
-.flt-search-input { background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 34px 8px 40px; font-size: 0.85rem; width: 100%; outline: none; box-sizing: border-box; }
+.flt-search-input { background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; padding: 8px 34px 8px 40px; font-size: 0.85rem; width: 100%; outline: none; box-sizing: border-box; }
 .flt-search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; padding: 2px 4px; border-radius: 4px; display: none; font-size: 0.82rem; line-height: 1; z-index: 1; }
 .flt-search-clear:hover { color: #475569; }
 
@@ -25,15 +26,55 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 .flt-pill { border: 1.5px solid var(--c-border); background: #fff; border-radius: 20px; padding: 5px 14px; font-size: 0.75rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .flt-pill i { font-size: 0.8rem; }
 
-.btn-reset { border: 1px solid var(--c-border); background: #fff; color: var(--c-muted); font-size: 0.7rem; font-weight: 800; border-radius: 8px; padding: 6px 15px; cursor: pointer; transition: 0.2s; }
-.btn-reset:hover { background: var(--c-bg); color: var(--c-dark); border-color: #cbd5e1; }
-
-.flt-select-box { background: #fff; border: 1px solid var(--c-border); border-radius: 12px; display: flex; align-items: center; overflow: hidden; height: 38px; transition: 0.2s; }
+.flt-select-box { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; display: flex; align-items: center; overflow: hidden; height: 38px; transition: 0.2s; }
 .flt-select-box:hover { border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transform: translateY(-1px); }
 .flt-select-tag { background: #f1f5f9; color: var(--c-muted); font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; }
 .flt-select-input { border: none; font-size: 0.8rem; font-weight: 600; color: var(--c-slate); padding: 0 8px; width: 100%; outline: none; background: transparent; cursor: pointer; font-family: inherit; text-align-last: center; }
 .flt-select-box.active-filter { background: var(--c-accent-light); border-color: var(--c-accent); }
-.flt-select-box.active-filter .flt-select-tag { background: var(--c-accent); color: var(--c-dark); border-right-color: var(--c-accent); }
+.flt-select-box.active-filter .flt-select-tag { background: var(--c-accent); color: var(--c-on-accent); border-right-color: var(--c-accent); }
+
+/* ── Filter row layout — sort+search sit as plain direct children of
+   .flt-row (ref B-Quest — no wrapping group on that side; an earlier
+   .flt-left-group wrapper here caused .flt-search's flex-basis to be
+   silently ignored, shrinking it well below 340px despite visible slack
+   in the row — nested flex containers need care, direct children don't).
+   .flt-right-group (status carousel + BU + advance, all grouped together)
+   is pushed to the far edge via margin-left:auto. ── */
+.flt-right-group { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
+/* ── 2-way sort toggle — sliding pill, exact pattern from b-quest.css ── */
+.flt-sort-wrap { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.sort-seg-wrap { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; width: 72px; flex-shrink: 0; padding: 3px; }
+.sort-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: transform 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
+.sort-seg-wrap:has(.sort-seg-btn:last-child.active) .sort-seg-slider { transform: translateX(100%); }
+.sort-seg-btn { position: relative; z-index: 1; flex: 1; height: 100%; border: none; background: transparent; font-size: 0.85rem; color: var(--c-slate); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.2s; }
+.sort-seg-btn.active { color: var(--c-accent-dark); }
+.sort-seg-btn:not(.active):hover { color: var(--c-accent); }
+
+/* ── Status carousel — sliding segment with scroll+fade for overflow,
+   exact pattern from b-quest.css's role-seg (renamed generic here since
+   it's not role-specific in B-Account) ── */
+.status-seg-wrap { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; flex-shrink: 0; overflow: hidden; max-width: 380px; }
+.status-seg-label { flex-shrink: 0; background: #f1f5f9; color: #64748b; font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; }
+.status-seg-scroll-outer { position: relative; flex: 1; min-width: 0; height: 100%; }
+.status-seg-scroll { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; height: 100%; padding: 3px; overflow-x: auto; scrollbar-width: none; }
+.status-seg-scroll::-webkit-scrollbar { display: none; }
+.status-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
+.status-seg-scroll-outer::before, .status-seg-scroll-outer::after { content: ''; position: absolute; top: 1px; bottom: 1px; width: 32px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s; }
+.status-seg-scroll-outer::before { left: 0; background: linear-gradient(to right, rgba(30,41,59,0.16), transparent); }
+.status-seg-scroll-outer::after { right: 0; background: linear-gradient(to left, rgba(30,41,59,0.16), transparent); }
+.status-seg-scroll-outer.fade-left::before { opacity: 1; }
+.status-seg-scroll-outer.fade-right::after { opacity: 1; }
+.status-seg-btn { position: relative; z-index: 1; border: none; background: transparent; padding: 0 14px; height: 100%; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; flex-shrink: 0; display: flex; align-items: center; gap: 5px; }
+.status-seg-btn.active { color: var(--c-accent-dark); }
+.status-seg-btn:not(.active):hover { color: var(--c-accent); }
+
+/* ── Checkbox used by createMultiSelect() dropdowns — exact pattern from
+   b-quest.css, ties into the shared theme tokens ── */
+.modern-checkbox { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border: 2px solid var(--c-border); border-radius: 6px; background: #fff; cursor: pointer; flex-shrink: 0; position: relative; transition: 0.15s; }
+.modern-checkbox:hover { border-color: var(--c-accent); }
+.modern-checkbox:checked { background: var(--c-accent-light); border-color: var(--c-accent); }
+.modern-checkbox:checked::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid var(--c-accent-dark); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 
 /* ── FAB ── */
 .fab-add { position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px; background: #1e293b; color: #bdc432; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); cursor: pointer; border: none; z-index: 1000; transition: 0.3s; }

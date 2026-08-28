@@ -5,6 +5,54 @@ function esc(s) { return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 function safeLink(url) { if (!url) return '#'; const u = url.trim(); return (u.startsWith('http://') || u.startsWith('https://')) ? u : '#'; }
 
+// Shared number formatting — was duplicated as ~6 slightly-different
+// fmtN()/fmtAmt()/fmtGP()/fNum() functions across b-account.js,
+// b-opportunity-modal.js, b-account-dashboard.html, b-opportunity-list.html,
+// b-opportunity-view.html, b-finance-list.html. Neither function ever
+// includes a currency symbol (฿, $, ...) — that's presentational and
+// always added by the caller's own HTML/template, e.g. `${fmtMoney(n)} ฿`,
+// so switching currency (or a locale needing a different one) never
+// requires touching this file.
+//
+// _fmtNum is the shared core, not meant to be called directly — fmtMoney/
+// fmtQty are the two callers actually use.
+function _fmtNum(n, { decimals = 0, allowNegative = true, fallback = '—' } = {}) {
+    if (n == null || n === '' || isNaN(+n)) return fallback;
+    let v = +n;
+    if (!allowNegative) v = Math.max(0, v);
+    return v.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+// Money amounts — 2 decimals, comma-separated. Decimal count is hardcoded
+// for now (per-project Setting planned later — when that's built, this is
+// the one place to change, every call site updates automatically).
+function fmtMoney(n) { return _fmtNum(n, { decimals: 2 }); }
+
+// Quantities — always a whole number, never negative, never has a decimal
+// point. This is a rule of the data type itself (a quantity can't be
+// fractional or negative), not a per-project preference, so it's NOT
+// wired to the future decimals Setting the way fmtMoney is.
+function fmtQty(n) { return _fmtNum(n, { decimals: 0, allowNegative: false, fallback: '0' }); }
+
+// Safety-net for infinite-scroll pages built on IntersectionObserver.
+// Reported flakiness (Safari, intermittent) on pages combining
+// IntersectionObserver with a position:sticky filter header — the
+// observer occasionally stops firing after a page or two, silently
+// halting pagination with no console error. This checks the trigger
+// element's position directly on every scroll event as a redundant
+// fallback; the caller's own guard (fetching/hasMore flags, via
+// shouldLoad()) still fully controls whether a load actually happens, so
+// this can never cause a duplicate fetch even when the observer is
+// working fine and firing normally alongside it.
+//
+// Usage: setupScrollFallback(document.getElementById('load-more-trigger'), () => !isFetching && hasMore, fetchQuests);
+function setupScrollFallback(triggerEl, shouldLoad, loadMore) {
+    if (!triggerEl) return;
+    window.addEventListener('scroll', () => {
+        if (shouldLoad() && triggerEl.getBoundingClientRect().top < window.innerHeight + 300) loadMore();
+    }, { passive: true });
+}
+
 if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') {
     supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 }
@@ -85,7 +133,7 @@ if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') 
         .swal2-styled:hover { transform: translateY(-1px); }
         .swal2-styled:active { transform: translateY(0); }
         .swal2-styled:focus-visible { box-shadow: 0 0 0 3px rgba(189,196,50,0.35) !important; }
-        .swal2-styled.swal2-confirm { background: #1e293b; color: #bdc432; }
+        .swal2-styled.swal2-confirm { background: var(--c-dark, #1e293b); color: var(--c-accent, #bdc432); }
         .swal2-styled.swal2-confirm:hover { filter: brightness(1.3); }
         .swal2-styled.swal2-cancel { background: #f1f5f9; color: #64748b; }
         .swal2-styled.swal2-cancel:hover { background: #e2e8f0; }

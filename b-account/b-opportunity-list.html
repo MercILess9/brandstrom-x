@@ -8,34 +8,68 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
+    <script src="/system/multi-select.js"></script>
+    <script src="/system/pull-refresh.js"></script>
     <script src="b-account.js"></script>
+    <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-account.css">
     <script src="b-opportunity-modal.js" defer></script>
     <style>
+        /* overscroll-behavior-y alone doesn't fully stop Safari's own
+           elastic bounce (it mostly governs scroll *chaining*, not the
+           bounce animation itself) — createPullToRefresh() (system/pull-
+           refresh.js) also calls preventDefault() on the qualifying
+           touchmove/wheel events, which is the part that actually stops
+           it. Both belt-and-suspenders — ref B-Quest, this was missing
+           here and caused the native bounce to visually fight the JS
+           pull transform (cards flashing/disappearing mid-drag). */
+        html, body { overscroll-behavior-y: none; }
         body { padding-bottom: 120px; }
+
+        /* Pull-to-refresh indicator is a shared system module — see
+           /system/pull-refresh.js (createPullToRefresh()) for markup/CSS/
+           gesture logic. #card-container/#listContainer just need to stay
+           position:relative (with listContainer above the indicator) for
+           it to slide/reveal correctly, ref B-Quest's #card-container/
+           #taskContainer pair. */
+        #listContainer { position: relative; z-index: 1; }
 
         /* ── Filter ── */
         .flt-wrapper { background: #fff; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; }
         .flt-inner { max-width: 1300px; margin: 0 auto; }
+        /* This section's .flt-inner shares the class with <main> below
+           (also max-width:1300+margin:auto) but <main> adds its own 20px
+           padding on top of that box while this one didn't — so the
+           filter row sat flush with the raw 1300px edge while the card
+           list's actual content sits 20px further in on both sides. Same
+           bug as B-Quest's filter zone (see bquest-filter-zone-reusable-
+           pattern memory), same fix — scoped to .flt-wrapper so it
+           doesn't also apply to <main>'s own .flt-inner. */
+        .flt-wrapper .flt-inner { padding: 0 20px; }
         .flt-row { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
-        .flt-btn-adv { border: 1px solid #e2e8f0; background: #fff; border-radius: 10px; padding: 0 15px; height: 38px; font-size: 0.78rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; font-family: inherit; white-space: nowrap; }
+        /* .flt-right-group base layout lives in b-account.css (shared) —
+           position:relative here only, needed so .btn-reset (below) can
+           anchor to this group specifically. */
+        .flt-right-group { position: relative; }
+        /* Advance button — icon-only circle, ref B-Quest's .flt-btn-adv
+           (was a wider labeled button here before). */
+        .flt-btn-adv { width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; font-size: 1rem; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .flt-btn-adv:hover { background: var(--c-bg); border-color: #cbd5e1; }
-        .flt-btn-adv.active { background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
+        .flt-btn-adv.active { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
+        /* Reset button — icon-only circle next to Advance, ref B-Quest's
+           .flt-btn-reset: position:absolute so it doesn't reserve layout
+           space while no filter is active (Advance stays flush at the
+           card edge at rest), floats out to the right when it appears. */
+        .btn-reset { position: absolute; left: 100%; margin-left: 10px; width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; font-size: 0.95rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; visibility: hidden; pointer-events: none; }
+        .btn-reset.has-filters { visibility: visible; pointer-events: auto; }
+        .btn-reset:hover { background: var(--c-bg); color: var(--c-accent); border-color: #cbd5e1; }
         .flt-advanced-zone { max-height: 0; overflow: hidden; transition: max-height 0.35s ease, opacity 0.3s ease; opacity: 0; border-top: 1px dashed transparent; }
         .flt-advanced-zone.show { max-height: 120px; opacity: 1; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; }
         .flt-advanced-row { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; justify-content: center; }
-        .status-seg { display: flex; border: 1.5px solid #e2e8f0; border-radius: 10px; overflow: hidden; flex-shrink: 0; height: 38px; }
-        .seg-btn { border: none; border-right: 1.5px solid #e2e8f0; background: #fff; padding: 0 13px; font-size: 0.72rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; }
-        .seg-btn:last-child { border-right: none; }
-        .seg-btn.active { background: var(--c-accent); color: #1e293b; }
-        #typePillGroup { flex-shrink: 0; }
-        #typePillGroup .seg-btn { flex: 1 1 0; }
-        #typePillGroup .seg-btn[data-type="New Business"].active { background: #eff6ff; color: #1d4ed8; }
-        #typePillGroup .seg-btn[data-type="Retention"].active    { background: #f5f3ff; color: #6d28d9; }
-        #typePillGroup .seg-btn[data-type="Up Sale"].active      { background: #f0fdfa; color: #0d7a70; }
-        .seg-btn:not(.active):hover { background: var(--c-bg); }
-        .btn-reset { border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; font-size: 0.7rem; font-weight: 800; border-radius: 8px; padding: 6px 15px; cursor: pointer; transition: 0.2s; font-family: inherit; white-space: nowrap; }
-        .btn-reset:hover { background: #f8fafc; color: var(--c-text-main); border-color: #cbd5e1; }
+        .flt-advanced-row .flt-select-box { width: 240px; flex-shrink: 0; }
+        .flt-search { flex: 0 1 340px; min-width: 140px; }
+        #wrap-filterBU { width: 160px; flex-shrink: 0; }
+        .flt-advanced-row .flt-select-input { text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
 
         /* ── Cards ── */
         .op-card { background: #fff; border: 1px solid #eef2f7; border-left: 5px solid var(--c-accent); border-radius: var(--radius-card); margin-bottom: 8px; box-shadow: 0 1px 4px -1px rgba(0,0,0,0.06); transition: box-shadow 0.2s, transform 0.2s; }
@@ -48,11 +82,13 @@
 
         /* ── ID + type col ── */
         .op-id-col { display: flex; flex-direction: column; gap: 6px; align-items: center; min-width: 100px; flex-shrink: 0; }
-        .op-badge { font-size: 0.7rem; font-weight: 700; color: #64748b; letter-spacing: 0.8px; white-space: nowrap; user-select: text; cursor: text; }
+        .op-badge { font-size: 0.68rem; font-weight: 800; color: var(--c-muted); letter-spacing: 1px; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 8px; padding: 3px 8px; display: inline-block; white-space: nowrap; user-select: text; cursor: text; }
         .op-type { font-size: 0.68rem; font-weight: 700; border-radius: 20px; padding: 4px 12px; white-space: nowrap; border: 1px solid; }
         .op-type.retention { background: #f5f3ff; color: #6d28d9; border-color: #c4b5fd; }
         .op-type.new-biz   { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
         .op-type.upsale    { background: #f0fdfa; color: #0d7a70; border-color: #5eead4; }
+        .op-tag-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 0 18px 12px; cursor: pointer; }
+        .op-qt-tag { font-size: 0.66rem; font-weight: 700; color: #475569; background: #f1f5f9; border: 1px solid var(--c-border); border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
 
         /* ── Name + sub ── */
         .op-main { flex: 1; min-width: 0; }
@@ -69,24 +105,28 @@
         .omb-val { font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
         .omb-val.amt { color: var(--c-text-main); }
         .omb-val.gp  { color: #16a34a; font-weight: 800; }
-        .omb-bar-wrap { height: 3px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-top: 2px; }
-        .omb-bar-fill { height: 100%; background: linear-gradient(90deg, #bdc432, #a3b020); border-radius: 99px; }
-        .omb-bar-pct  { font-size: 0.65rem; font-weight: 700; color: #16a34a; }
+        .omb-bar-pct  { display: inline-flex; align-items: center; margin-left: 6px; font-size: 0.62rem; font-weight: 800; color: #16a34a; background: rgba(22,163,74,0.1); border: 1px solid rgba(22,163,74,0.35); border-radius: 20px; padding: 1px 7px; }
+        .omb-bar-pct:empty { margin: 0; padding: 0; background: none; border: none; }
 
         /* ── Owner/date block ── */
-        .omb-meta { width: 148px; border-left: 2px solid #e2e8f0; padding-left: 14px; display: flex; flex-direction: column; justify-content: center; gap: 6px; flex-shrink: 0; }
+        /* Divider + weight ref B-Quest's .bqc-meta-zone/.bqc-meta-line —
+           was a 2px darker border with bold dark owner text, heavier than
+           the rest of the card's own muted/light meta styling. */
+        .omb-meta { width: 148px; border-left: 1px solid #eef2f7; padding-left: 16px; display: flex; flex-direction: column; justify-content: center; gap: 6px; flex-shrink: 0; }
         .omb-owner-row { display: flex; align-items: center; gap: 6px; }
         .omb-owner-row i, .omb-meta-date i { font-size: 0.68rem; color: #64748b; }
-        .omb-meta-owner { font-size: 0.7rem; font-weight: 700; color: var(--c-text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .omb-meta-owner { font-size: 0.7rem; font-weight: 400; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .omb-meta-date { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: #64748b; white-space: nowrap; }
 
         /* ── Hover actions ── */
         .ac-actions { display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
         .op-card:hover .ac-actions { opacity: 1; }
-        .ac-action-btn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #e2e8f0; background: #fff; border-radius: 20px; padding: 0 14px; height: 31px; font-size: 0.75rem; font-weight: 600; color: var(--c-slate); cursor: pointer; transition: 0.15s; white-space: nowrap; font-family: inherit; }
-        .ac-action-btn:hover { border-color: var(--c-accent); background: var(--c-accent); color: #1e293b; }
-        .ac-action-icon { border: none; background: transparent; border-radius: 8px; width: 31px; height: 31px; display: flex; align-items: center; justify-content: center; color: var(--c-text-muted); cursor: pointer; transition: 0.15s; font-size: 1.05rem; }
+        .ac-action-icon { border: none; background: transparent; border-radius: 50%; width: 31px; height: 31px; display: flex; align-items: center; justify-content: center; color: var(--c-text-muted); cursor: pointer; transition: 0.15s; font-size: 1.05rem; }
         .ac-action-icon:hover { background: #f1f5f9; color: var(--c-slate); }
+        /* Details ("i") is the one exception — ref B-Quest's .bqc-btn-view,
+           gets the brand light-green hover instead of the plain gray every
+           other icon action (including "...") uses. */
+        .ac-action-view:hover { background: var(--c-accent-light); color: var(--c-accent-dark); }
 
         /* ── Detail ── */
         .op-detail-body { overflow: hidden; height: 0; }
@@ -152,8 +192,9 @@
         /* ── Floating menu ── */
         .ac-floating-menu { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); min-width: 150px; overflow: hidden; }
         .ac-floating-menu button { width: 100%; border: none; background: none; padding: 10px 16px; text-align: left; font-size: 0.82rem; font-weight: 600; color: var(--c-text-main); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.12s; font-family: inherit; }
-        .ac-floating-menu button:hover { background: var(--c-accent); color: #1e293b; }
-        .ac-floating-menu button.danger:hover { background: #fff5f5; color: #ef4444; }
+        .ac-floating-menu button:hover { background: #f1f5f9; }
+        .ac-floating-menu button.danger { color: var(--c-danger); }
+        .ac-floating-menu button.danger:hover { background: #fef2f2; }
         .ac-floating-menu button.muted { color: var(--c-muted); cursor: default; opacity: 0.6; }
         .ac-floating-menu button.muted:hover { background: none; }
         .ac-floating-menu hr { border: none; border-top: 1px solid var(--c-border); margin: 4px 0; }
@@ -170,68 +211,46 @@
 <section class="flt-wrapper">
     <div class="flt-inner">
         <div class="flt-row">
-            <div class="status-seg">
-                <button id="sort-latest" class="seg-btn active" onclick="setSortFilter('latest')" title="Latest"><i class="bi bi-clock"></i></button>
-                <button id="sort-name"   class="seg-btn"        onclick="setSortFilter('name')"   title="A-Z"><i class="bi bi-sort-alpha-down"></i></button>
+            <div class="flt-sort-wrap">
+                <div class="sort-seg-wrap">
+                    <div class="sort-seg-slider" id="sortSegSlider"></div>
+                    <button class="sort-seg-btn active" id="sort-latest" onclick="setSortFilter('latest')" title="Latest"><i class="bi bi-clock-history"></i></button>
+                    <button class="sort-seg-btn" id="sort-name" onclick="setSortFilter('name')" title="A-Z"><i class="bi bi-sort-alpha-down"></i></button>
+                </div>
             </div>
             <div class="flt-search">
                 <i class="bi bi-search"></i>
                 <input type="text" class="flt-search-input" id="globalSearch" placeholder="Search">
                 <button class="flt-search-clear" id="searchClear" onclick="clearSearch()" tabindex="-1"><i class="bi bi-x-lg"></i></button>
             </div>
-            <div class="status-seg" id="typePillGroup">
-                <button class="seg-btn active" data-type="" onclick="setTypeFilter('')"><i class="bi bi-grid-fill"></i> All</button>
-                <button class="seg-btn" data-type="New Business" onclick="setTypeFilter('New Business')">New Business</button>
-                <button class="seg-btn" data-type="Retention" onclick="setTypeFilter('Retention')">Retention</button>
-                <button class="seg-btn" data-type="Up Sale" onclick="setTypeFilter('Up Sale')">Up Sale</button>
+            <div class="flt-right-group">
+                <div class="status-seg-wrap">
+                    <span class="status-seg-label">Status</span>
+                    <div class="status-seg-scroll-outer" id="statusSegOuter">
+                        <div class="status-seg-scroll" id="statusSegWrap">
+                            <div class="status-seg-slider" id="statusSegSlider"></div>
+                            <!-- Buttons rendered by statusSeg.render() (createSegControl) from b_opportunity_config -->
+                        </div>
+                    </div>
+                </div>
+                <div class="flt-select-box" id="wrap-filterBU"></div>
+                <button class="flt-btn-adv" id="toggleFilters" onclick="toggleAdvanced()" title="Advance Filters"><i class="bi bi-sliders"></i></button>
+                <button class="btn-reset" id="btnReset" onclick="resetFilters()" title="Clear all filters"><i class="bi bi-arrow-counterclockwise"></i></button>
             </div>
-            <div class="flt-select-box" id="flt-bu-wrap">
-                <span class="flt-select-tag">BU</span>
-                <select class="flt-select-input" id="filterBU" onchange="setDropFilter('bu',this.value)">
-                    <option value="">All</option>
-                </select>
-            </div>
-            <button class="flt-btn-adv" id="toggleFilters" onclick="toggleAdvanced()"><i class="bi bi-sliders"></i> Advance</button>
         </div>
         <div class="flt-advanced-zone" id="advancedFilterZone">
             <div class="flt-advanced-row">
-                <div class="flt-select-box" id="flt-status-wrap">
-                    <span class="flt-select-tag">Status</span>
-                    <select class="flt-select-input" id="filterStatus" onchange="setDropFilter('status',this.value)">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div class="flt-select-box" id="flt-owner-wrap">
-                    <span class="flt-select-tag">Owner</span>
-                    <select class="flt-select-input" id="filterOwner" onchange="setDropFilter('owner',this.value)">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div class="flt-select-box" id="flt-am-wrap">
-                    <span class="flt-select-tag">AM</span>
-                    <select class="flt-select-input" id="filterAM" onchange="setDropFilter('am',this.value)">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div class="flt-select-box" id="flt-subam-wrap">
-                    <span class="flt-select-tag">Sub AM</span>
-                    <select class="flt-select-input" id="filterSubAM" onchange="setDropFilter('subam',this.value)">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div class="flt-select-box" id="flt-lead-wrap">
-                    <span class="flt-select-tag">Lead</span>
-                    <select class="flt-select-input" id="filterLead" onchange="setDropFilter('lead',this.value)">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <button class="btn-reset" onclick="resetFilters()">RESET</button>
+                <div class="flt-select-box" id="wrap-filterType"></div>
+                <div class="flt-select-box" id="wrap-filterOwner"></div>
+                <div class="flt-select-box" id="wrap-filterAM"></div>
+                <div class="flt-select-box" id="wrap-filterSubAM"></div>
+                <div class="flt-select-box" id="wrap-filterLead"></div>
             </div>
         </div>
     </div>
 </section>
 
-<main class="flt-inner" style="padding: 24px 20px 120px;">
+<main class="flt-inner" id="card-container" style="padding: 24px 20px 120px; position: relative;">
     <div id="listContainer"></div>
     <div id="scrollTrigger" style="height:1px;"></div>
 </main>
@@ -248,7 +267,7 @@
         const [yr, mo, dy] = String(d).substring(0, 10).split('-');
         return `${+dy} ${MONTHS[+mo - 1]} ${+yr}`;
     }
-    function fmtGP(n) { return n != null && !isNaN(+n) ? Number(n).toLocaleString('en-US') + ' ฿' : '—'; }
+    function fmtGP(n) { return n != null && !isNaN(+n) ? fmtMoney(n) + ' ฿' : '—'; }
     function typeClass(t) {
         if (t === 'Retention')    return 'retention';
         if (t === 'New Business') return 'new-biz';
@@ -265,29 +284,59 @@
     var _searchIndex = new Map(); // opportunity_id → searchString (lightweight)
     var _cardData    = new Map(); // opportunity_id → full enriched record (loaded pages)
     var _accMap      = new Map(); // account_id → {account_name, company_name}
-    var _buMap       = new Map(); // opportunity_id → Set<company_qt>
-    var _cfgBU = [], _cfgStatus = [];
+    var _buMap       = new Map(); // opportunity_id → Set<bu>
+    var _companyQtMap = new Map(); // opportunity_id → Set<company_qt>
+    var _cfgBU = [], _cfgStatus = [], _cfgType = [];
+    var _ownerList = [], _amList = [], _subAmList = [], _leadList = [];
     let _canEdit = false, _canDel = false;
-    let _typeFilter = '', _statusFilter = '', _buFilter = '', _ownerFilter = '', _amFilter = '', _subAmFilter = '', _leadFilter = '', _sortFilter = 'latest';
+    // Status is the only single-select (Carousel); the rest are multi-select
+    // (arrays) — ref B-Quest's filter zone.
+    let _statusFilter = '';
+    let _typeFilters = [], _buFilters = [], _ownerFilters = [], _amFilters = [], _subAmFilters = [], _leadFilters = [];
+    let _sortFilter = 'latest';
     let _searchText = '';
     let _page = 0, _hasMore = true, _fetching = false;
 
     // ── Filters ───────────────────────────────────────────────────────────────
-    function setTypeFilter(val) {
-        _typeFilter = val;
-        document.querySelectorAll('#typePillGroup .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.type === val));
-        applyFilters();
-    }
-    function setDropFilter(key, val) {
-        if (key === 'status') _statusFilter = val;
-        else if (key === 'bu')    _buFilter = val;
-        else if (key === 'owner') _ownerFilter = val;
-        else if (key === 'am')    _amFilter = val;
-        else if (key === 'subam') _subAmFilter = val;
-        else if (key === 'lead')  _leadFilter = val;
-        document.getElementById(`flt-${key}-wrap`)?.classList.toggle('active-filter', !!val);
-        applyFilters();
-    }
+    const statusSeg = createSegControl({
+        wrapId: 'statusSegWrap', outerId: 'statusSegOuter', sliderId: 'statusSegSlider', btnClass: 'status-seg-btn',
+        getButtons: () => [{ value: '', label: 'All' }, ..._cfgStatus.map(s => ({ value: s, label: s }))],
+        getActiveValue: () => _statusFilter,
+        onSelect: val => { _statusFilter = val; statusSeg.render(); applyFilters(); }
+    });
+    document.getElementById('statusSegWrap').addEventListener('scroll', () => statusSeg.updateFade());
+
+    const buFilter = createMultiSelect({
+        trigger: document.getElementById('wrap-filterBU'), label: 'BU',
+        getOptions: () => _cfgBU.map(v => ({ value: v, label: v })),
+        onChange: values => { _buFilters = values; applyFilters(); }
+    });
+    const typeFilter = createMultiSelect({
+        trigger: document.getElementById('wrap-filterType'), label: 'Type',
+        getOptions: () => _cfgType.map(v => ({ value: v, label: v })),
+        onChange: values => { _typeFilters = values; applyFilters(); }
+    });
+    const ownerFilter = createMultiSelect({
+        trigger: document.getElementById('wrap-filterOwner'), label: 'Owner',
+        getOptions: () => _ownerList.map(v => ({ value: v, label: v })),
+        onChange: values => { _ownerFilters = values; applyFilters(); }
+    });
+    const amFilter = createMultiSelect({
+        trigger: document.getElementById('wrap-filterAM'), label: 'AM',
+        getOptions: () => _amList.map(v => ({ value: v, label: v })),
+        onChange: values => { _amFilters = values; applyFilters(); }
+    });
+    const subAmFilter = createMultiSelect({
+        trigger: document.getElementById('wrap-filterSubAM'), label: 'Sub AM',
+        getOptions: () => _subAmList.map(v => ({ value: v, label: v })),
+        onChange: values => { _subAmFilters = values; applyFilters(); }
+    });
+    const leadFilter = createMultiSelect({
+        trigger: document.getElementById('wrap-filterLead'), label: 'Lead',
+        getOptions: () => _leadList.map(v => ({ value: v, label: v })),
+        onChange: values => { _leadFilters = values; applyFilters(); }
+    });
+
     function setSortFilter(type) {
         _sortFilter = type;
         ['name','latest'].forEach(t => document.getElementById(`sort-${t}`)?.classList.toggle('active', t === type));
@@ -298,35 +347,32 @@
         document.getElementById('toggleFilters').classList.toggle('active');
     }
     function resetFilters() {
-        _statusFilter = ''; _buFilter = ''; _ownerFilter = ''; _amFilter = ''; _subAmFilter = ''; _leadFilter = '';
-        [['status','filterStatus'],['bu','filterBU'],['owner','filterOwner'],['am','filterAM'],['subam','filterSubAM'],['lead','filterLead']].forEach(([k, id]) => {
-            document.getElementById(`flt-${k}-wrap`)?.classList.remove('active-filter');
-            const sel = document.getElementById(id); if (sel) sel.value = '';
-        });
+        _statusFilter = '';
+        _typeFilters = []; _buFilters = []; _ownerFilters = []; _amFilters = []; _subAmFilters = []; _leadFilters = [];
+        statusSeg.render();
+        typeFilter.clear(); buFilter.clear(); ownerFilter.clear(); amFilter.clear(); subAmFilter.clear(); leadFilter.clear();
         applyFilters();
     }
+    function updateResetVisibility() {
+        const anyActive = _searchText || _statusFilter ||
+            _typeFilters.length || _buFilters.length || _ownerFilters.length ||
+            _amFilters.length || _subAmFilters.length || _leadFilters.length;
+        document.getElementById('btnReset')?.classList.toggle('has-filters', !!anyActive);
+    }
     function applyFilters() {
+        updateResetVisibility();
         _cardData.clear();
-        fetchPage(true);
+        return fetchPage(true);
     }
 
     // ── Master data (lightweight, one-time load) ───────────────────────────────
     function populateFilters(idx) {
-        const fill = (id, vals) => {
-            const sel = document.getElementById(id);
-            if (!sel) return;
-            const cur = sel.value;
-            while (sel.options.length > 1) sel.remove(1);
-            vals.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
-            sel.value = cur;
-        };
         const uniq = key => [...new Set(idx.map(o => o[key]).filter(Boolean))].sort((a,b) => a.localeCompare(b,'th'));
-        fill('filterOwner', uniq('owner'));
-        fill('filterAM',    uniq('am'));
-        fill('filterSubAM', uniq('sub_am'));
-        fill('filterLead',  uniq('lead_source'));
-        fill('filterBU',    _cfgBU);
-        fill('filterStatus', _cfgStatus);
+        _ownerList = uniq('owner');
+        _amList    = uniq('am');
+        _subAmList = uniq('sub_am');
+        _leadList  = uniq('lead_source');
+        statusSeg.render();
     }
 
     async function loadMasterData() {
@@ -334,22 +380,30 @@
             supabaseClient.from('b_opportunity_list')
                 .select('opportunity_id, opportunity_name, owner, am, sub_am, lead_source, business_type, status, remark, account_id'),
             supabaseClient.from('b_account_list').select('account_id, account_name, company_name'),
-            supabaseClient.from('b_opportunity_qt').select('opportunity_id, company_qt').not('company_qt', 'is', null),
-            supabaseClient.from('b_opp_config').select('type, value').in('type', ['bu', 'status']).order('value')
+            supabaseClient.from('b_opportunity_qt').select('opportunity_id, company_qt, b_opportunity_qt_item(bu)'),
+            supabaseClient.from('b_opportunity_config').select('type, value').in('type', ['bu', 'status', 'business_type']).order('value')
         ]);
         if (error) { console.error('[B-OPP]', error); return; }
 
         _accMap = new Map((accs || []).map(a => [a.account_id, a]));
 
         _buMap = new Map();
+        _companyQtMap = new Map();
         (qts || []).forEach(q => {
-            if (!q.company_qt) return;
-            if (!_buMap.has(q.opportunity_id)) _buMap.set(q.opportunity_id, new Set());
-            _buMap.get(q.opportunity_id).add(q.company_qt);
+            if (q.company_qt) {
+                if (!_companyQtMap.has(q.opportunity_id)) _companyQtMap.set(q.opportunity_id, new Set());
+                _companyQtMap.get(q.opportunity_id).add(q.company_qt);
+            }
+            (q.b_opportunity_qt_item || []).forEach(item => {
+                if (!item.bu) return;
+                if (!_buMap.has(q.opportunity_id)) _buMap.set(q.opportunity_id, new Set());
+                _buMap.get(q.opportunity_id).add(item.bu);
+            });
         });
 
         _cfgBU     = (cfg || []).filter(c => c.type === 'bu').map(c => c.value);
         _cfgStatus = (cfg || []).filter(c => c.type === 'status').map(c => c.value);
+        _cfgType   = (cfg || []).filter(c => c.type === 'business_type').map(c => c.value);
 
         _searchIndex = new Map();
         (idx || []).forEach(o => {
@@ -364,22 +418,27 @@
     }
 
     // ── Fetch page (server-side paginated) ────────────────────────────────────
-    async function fetchPage(reset = false) {
+    // render=false lets a caller (pull-to-refresh) get the fetched rows
+    // back without touching #listContainer at all — the old rows stay
+    // visible on screen for the whole fetch instead of a blank flash
+    // (innerHTML='' then repopulate), and the caller decides the exact
+    // moment to swap them in. Ref B-Quest's fetchQuests(isFirst, render).
+    async function fetchPage(reset = false, render = true) {
         if (_fetching || (!reset && !_hasMore)) return;
         _fetching = true;
 
         if (reset) {
             _page = 0;
             _hasMore = true;
-            document.getElementById('listContainer').innerHTML = '';
+            if (render) document.getElementById('listContainer').innerHTML = '';
         }
 
         // Build ID filter: intersect search index result + BU map
         let idFilter = null;
 
-        if (_buFilter) {
+        if (_buFilters.length) {
             idFilter = new Set([..._buMap.entries()]
-                .filter(([, buSet]) => buSet.has(_buFilter))
+                .filter(([, buSet]) => _buFilters.some(bu => buSet.has(bu)))
                 .map(([id]) => id));
         }
 
@@ -393,20 +452,20 @@
         }
 
         if (idFilter !== null && idFilter.size === 0) {
-            showEmpty();
+            if (render) showEmpty();
             _hasMore = false;
             _fetching = false;
-            return;
+            return [];
         }
 
         let query = supabaseClient.from('b_opportunity_list').select('*');
-        if (idFilter)      query = query.in('opportunity_id', [...idFilter]);
-        if (_typeFilter)   query = query.eq('business_type', _typeFilter);
-        if (_statusFilter) query = query.eq('status', _statusFilter);
-        if (_ownerFilter)  query = query.eq('owner', _ownerFilter);
-        if (_amFilter)     query = query.eq('am', _amFilter);
-        if (_subAmFilter)  query = query.eq('sub_am', _subAmFilter);
-        if (_leadFilter)   query = query.eq('lead_source', _leadFilter);
+        if (idFilter)              query = query.in('opportunity_id', [...idFilter]);
+        if (_typeFilters.length)   query = query.in('business_type', _typeFilters);
+        if (_statusFilter)         query = query.eq('status', _statusFilter);
+        if (_ownerFilters.length)  query = query.in('owner', _ownerFilters);
+        if (_amFilters.length)     query = query.in('am', _amFilters);
+        if (_subAmFilters.length)  query = query.in('sub_am', _subAmFilters);
+        if (_leadFilters.length)   query = query.in('lead_source', _leadFilters);
 
         query = _sortFilter === 'latest'
             ? query.order('create_date', { ascending: false, nullsFirst: false })
@@ -420,9 +479,9 @@
             if (error) throw error;
 
             if (!data || data.length === 0) {
-                if (_page === 0) showEmpty();
+                if (render && _page === 0) showEmpty();
                 _hasMore = false;
-                return;
+                return [];
             }
 
             if (data.length < 10) _hasMore = false;
@@ -433,10 +492,13 @@
             });
             enriched.forEach(o => _cardData.set(o.opportunity_id, o));
 
-            const tmp = document.createElement('div');
-            tmp.innerHTML = enriched.map(renderCard).join('');
-            document.getElementById('listContainer').append(...tmp.children);
+            if (render) {
+                const tmp = document.createElement('div');
+                tmp.innerHTML = enriched.map(renderCard).join('');
+                document.getElementById('listContainer').append(...tmp.children);
+            }
             _page++;
+            return enriched;
         } catch(e) {
             console.error('[B-OPP]', e);
         } finally {
@@ -452,17 +514,24 @@
     // ── Card render ───────────────────────────────────────────────────────────
     function cardActions(id) {
         return `<div class="ac-actions">
-            <button class="ac-action-btn" onclick="event.stopPropagation();viewOpp('${esc(id)}')"><i class="bi bi-eye"></i> View</button>
+            <button class="ac-action-icon ac-action-view" onclick="event.stopPropagation();viewOpp('${esc(id)}')" title="Details"><i class="bi bi-info-lg"></i></button>
             <button class="ac-action-icon" onclick="event.stopPropagation();showMenu(this,'${esc(id)}')" title="More"><i class="bi bi-three-dots-vertical"></i></button>
         </div>`;
     }
 
-    function renderAmtBlock(o, hasAmt, hasGP, pct, pctNum) {
+    function renderTagRow(o) {
+        const companies = _companyQtMap.get(o.opportunity_id);
+        const typeTag = o.business_type ? `<span class="op-type ${typeClass(o.business_type)}">${esc(o.business_type)}</span>` : '';
+        const coTags  = companies ? [...companies].map(c => `<span class="op-qt-tag">${esc(c)}</span>`).join('') : '';
+        if (!typeTag && !coTags) return '';
+        return `<div class="op-tag-row" onclick="toggleCard(this.closest('.op-card'))">${typeTag}${coTags}</div>`;
+    }
+
+    function renderAmtBlock(o, hasAmt, hasGP, pct) {
         if (!hasAmt) return '';
         return `<div class="omb-amt" data-amt-block>
             <div class="omb-amt-row"><span class="omb-lbl amt">Amount</span><span class="omb-val amt" data-amt-val>${fmtAmt(o.total_amount)}</span></div>
-            ${hasGP ? `<div class="omb-amt-row"><span class="omb-lbl gp">GP<span class="omb-bar-pct" data-gp-pct>${pct || ''}</span></span><span class="omb-val gp" data-gp-val>${fmtGP(o.total_gp)}</span></div>
-            <div class="omb-bar-wrap"><div class="omb-bar-fill" data-bar-fill style="width:${pctNum}%"></div></div>` : ''}
+            ${hasGP ? `<div class="omb-amt-row"><span class="omb-lbl gp">GP<span class="omb-bar-pct" data-gp-pct>${pct || ''}</span></span><span class="omb-val gp" data-gp-val>${fmtGP(o.total_gp)}</span></div>` : ''}
         </div>`;
     }
 
@@ -478,7 +547,6 @@
         const hasAmt = +o.total_amount > 0;
         const hasGP  = o.total_gp != null;
         const pct    = gpPct(o.total_gp, o.total_amount);
-        const pctNum = hasGP && hasAmt ? Math.min(+o.total_gp / +o.total_amount * 100, 100).toFixed(1) : 0;
         const sub    = o._company_name
             ? `${esc(o._account_name)} <span style="color:#e2e8f0">|</span> ${esc(o._company_name)}`
             : esc(o._account_name);
@@ -486,18 +554,18 @@
             <div class="op-header" onclick="toggleCard(this.closest('.op-card'))">
                 <div class="op-id-col">
                     <span class="op-badge">${esc(o.opportunity_id)}</span>
-                    ${o.business_type ? `<span class="op-type ${typeClass(o.business_type)}">${esc(o.business_type)}</span>` : ''}
                 </div>
                 <div class="op-main">
                     <div class="op-name">${esc(o.opportunity_name || '')}</div>
                     <div class="op-sub">${sub}</div>
                 </div>
                 <div class="op-meta-badges">
-                    ${renderAmtBlock(o, hasAmt, hasGP, pct, pctNum)}
+                    ${renderAmtBlock(o, hasAmt, hasGP, pct)}
                     ${renderMetaBlock(o)}
                 </div>
                 ${cardActions(o.opportunity_id)}
             </div>
+            ${renderTagRow(o)}
             <div class="op-detail-body"></div>
         </div>`;
     }
@@ -642,15 +710,12 @@
                     const cAmt = allItems.reduce((s, i) => s + (+i.amount || 0), 0);
                     const cGP  = allItems.reduce((s, i) => s + (+i.gp  || 0), 0);
                     const cPct = cAmt > 0 && cGP > 0 ? `${(cGP / cAmt * 100).toFixed(1)}%` : '';
-                    const cPctNum = cAmt > 0 && cGP > 0 ? Math.min(cGP / cAmt * 100, 100).toFixed(1) : 0;
                     const amtEl  = card.querySelector('[data-amt-val]');
                     const gpEl   = card.querySelector('[data-gp-val]');
                     const pctEl  = card.querySelector('[data-gp-pct]');
-                    const barEl  = card.querySelector('[data-bar-fill]');
                     if (amtEl) amtEl.textContent = fmtAmt(cAmt);
                     if (gpEl)  gpEl.textContent  = fmtGP(cGP);
                     if (pctEl) pctEl.textContent = cPct;
-                    if (barEl) barEl.style.width = cPctNum + '%';
                 }
             } else {
                 zone.innerHTML = data.map(renderQT).join('');
@@ -735,7 +800,7 @@
         });
         if (!result.isConfirmed) return;
         const { error } = await supabaseClient.from('b_opportunity_list').delete().eq('opportunity_id', id);
-        if (error) { notify('error', 'Delete failed'); return; }
+        if (error) { notify('', 'Delete failed', 'error'); return; }
         notify('success', 'Deleted');
         _searchIndex.delete(id);
         applyFilters();
@@ -776,8 +841,38 @@
         if (entries[0].isIntersecting) fetchPage();
     }, { rootMargin: '200px' });
 
+    // setupScrollFallback (system/system.js) — safety net for the real (if
+    // rare/browser-specific) IntersectionObserver flakiness one user hit
+    // here (infinite scroll silently stopping after the first page or two).
+    setupScrollFallback(document.getElementById('scrollTrigger'), () => !_fetching && _hasMore, fetchPage);
+
     initPage().then(() => {
         _observer.observe(document.getElementById('scrollTrigger'));
+        createPullToRefresh({
+            container: document.getElementById('card-container'),
+            track: document.getElementById('listContainer'),
+            // render:false — fetch with the old cards still on screen for
+            // the whole round-trip, then swap old→new in one step once
+            // data is actually in hand, instead of fetchPage(true)'s normal
+            // innerHTML='' *before* the query even runs (fine for a filter
+            // change, but on a wheel-driven pull that fires mid-gesture —
+            // no release event exists for wheel input — it left the list
+            // empty for the whole network wait, seen as a flash).
+            onRefresh: async () => {
+                _cardData.clear();
+                const data = await fetchPage(true, false);
+                const container = document.getElementById('listContainer');
+                container.innerHTML = '';
+                if (data && data.length) {
+                    const tmp = document.createElement('div');
+                    tmp.innerHTML = data.map(renderCard).join('');
+                    container.append(...tmp.children);
+                } else {
+                    showEmpty();
+                }
+                updateResetVisibility();
+            }
+        });
     });
 </script>
 </body>

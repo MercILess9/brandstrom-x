@@ -29,7 +29,7 @@
                 opacity: 0; z-index: 0; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
                 pointer-events: none; transition: opacity 0.15s, transform 0.15s, top 0.15s; }
             .bx-pull-refresh-glow {
-                --pg-size: 34px; --pg-speed: 1.2s; --pg-color: var(--c-accent, #bdc432); --pg-glow: rgba(189, 196, 50, 0.45);
+                --pg-size: 34px; --pg-speed: 1.2s; --pg-color: var(--c-accent); --pg-glow: rgba(var(--c-accent-rgb), 0.45);
                 width: calc(var(--pg-size) * 0.5); height: calc(var(--pg-size) * 0.5);
                 border-radius: 50%; background: var(--pg-color); margin: auto;
                 animation: bx-pull-refresh-pulse var(--pg-speed) ease-in-out infinite; animation-play-state: paused;

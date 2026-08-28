@@ -9,6 +9,7 @@
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="b-account.js"></script>
+    <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-account.css">
     <style>
         body { padding-bottom: 120px; }
@@ -16,17 +17,15 @@
         /* ── Filter ── */
         .flt-wrapper { background: #fff; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; }
         .flt-inner { max-width: 1300px; margin: 0 auto; }
+        /* Shares .flt-inner with <main> below, which adds its own 20px
+           padding on top of that box — same fix as Opportunity's filter
+           zone (see bquest-filter-zone-reusable-pattern memory). */
+        .flt-wrapper .flt-inner { padding: 0 20px; }
         .flt-row { display: flex; align-items: center; gap: 12px; }
-        .status-seg { display: flex; border: 1.5px solid #e2e8f0; border-radius: 10px; overflow: hidden; flex-shrink: 0; height: 38px; }
-        .seg-btn { border: none; border-right: 1.5px solid #e2e8f0; background: #fff; padding: 0 18px; font-size: 0.78rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; flex: 1; min-width: 80px; }
-        .seg-btn:last-child { border-right: none; }
-        .seg-btn.active { background: var(--c-accent); color: #1e293b; }
-        .seg-btn:not(.active):hover { background: var(--c-bg); }
-        .seg-sm { display: flex; border: 1.5px solid #e2e8f0; border-radius: 10px; overflow: hidden; flex-shrink: 0; height: 38px; }
-        .seg-sm .seg-btn { min-width: 0; padding: 0 13px; font-size: 0.72rem; }
-        .type-btn { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid #e2e8f0; background: #fff; border-radius: 20px; padding: 6px 16px; font-size: 0.78rem; font-weight: 700; color: #64748b; cursor: pointer; transition: all 0.2s; white-space: nowrap; font-family: inherit; }
-        .type-btn:hover:not(.active) { border-color: #cbd5e1; background: var(--c-bg); }
-        .type-btn.active { background: #eff6ff; border-color: #93c5fd; color: #2563eb; }
+        /* Shared .flt-search defaults to flex:1 (no cap) — fine for pages
+           with no right-group to leave a gap against, but this page now
+           has one, so cap it same as Opportunity/B-Quest. */
+        .flt-search { flex: 0 1 340px; min-width: 140px; }
 
         /* ── Card ── */
         .ac-card { background: #fff; border: 1px solid #eef2f7; border-left: 5px solid var(--c-accent); border-radius: var(--radius-card); margin-bottom: 10px; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.05); transition: box-shadow 0.2s; }
@@ -46,10 +45,12 @@
         .ac-actions { display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
         .ac-card:hover .ac-actions,
         .ac-sub-card:hover .ac-actions { opacity: 1; }
-        .ac-action-btn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #e2e8f0; background: #fff; border-radius: 20px; padding: 0 14px; height: 31px; font-size: 0.75rem; font-weight: 600; color: var(--c-slate); cursor: pointer; transition: 0.15s; white-space: nowrap; font-family: inherit; }
-        .ac-action-btn:hover { border-color: var(--c-accent); background: var(--c-accent); color: #1e293b; }
-        .ac-action-icon { border: none; background: transparent; border-radius: 8px; width: 31px; height: 31px; display: flex; align-items: center; justify-content: center; color: var(--c-text-muted); cursor: pointer; transition: 0.15s; font-size: 1.05rem; }
+        .ac-action-icon { border: none; background: transparent; border-radius: 50%; width: 31px; height: 31px; display: flex; align-items: center; justify-content: center; color: var(--c-text-muted); cursor: pointer; transition: 0.15s; font-size: 1.05rem; }
         .ac-action-icon:hover { background: #f1f5f9; color: var(--c-slate); }
+        /* Edit is the one exception — ref B-Quest/Opportunity's "Details"
+           treatment, gets the brand light-green hover instead of the plain
+           gray every other icon action (including "...") uses. */
+        .ac-action-edit:hover { background: var(--c-accent-light); color: var(--c-accent-dark); }
 
         /* ── Detail ── */
         .ac-detail-body { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
@@ -112,22 +113,36 @@
 <section class="flt-wrapper">
     <div class="flt-inner">
         <div class="flt-row">
-            <div class="status-seg seg-sm">
-                <button id="sort-latest" class="seg-btn active" onclick="setSortFilter('latest')" title="Sort by Latest"><i class="bi bi-clock"></i></button>
-                <button id="sort-name"   class="seg-btn"        onclick="setSortFilter('name')"   title="Sort A-Z"><i class="bi bi-sort-alpha-down"></i></button>
+            <div class="flt-sort-wrap">
+                <div class="sort-seg-wrap">
+                    <div class="sort-seg-slider" id="sortSegSlider"></div>
+                    <button class="sort-seg-btn active" id="sort-latest" onclick="setSortFilter('latest')" title="Latest"><i class="bi bi-clock-history"></i></button>
+                    <button class="sort-seg-btn" id="sort-name" onclick="setSortFilter('name')" title="A-Z"><i class="bi bi-sort-alpha-down"></i></button>
+                </div>
             </div>
             <div class="flt-search">
                 <i class="bi bi-search"></i>
                 <input type="text" class="flt-search-input" id="globalSearch" placeholder="Search">
                 <button class="flt-search-clear" id="searchClear" onclick="clearSearch()" tabindex="-1"><i class="bi bi-x-lg"></i></button>
             </div>
-            <div class="status-seg seg-sm">
-                <button id="seg-all"      class="seg-btn"        onclick="setStatusFilter('all')">All</button>
-                <button id="seg-active"   class="seg-btn active" onclick="setStatusFilter('active')"><i class="bi bi-circle-fill" style="font-size:0.55rem;"></i> Active</button>
-                <button id="seg-inactive" class="seg-btn"        onclick="setStatusFilter('inactive')"><i class="bi bi-circle" style="font-size:0.55rem;"></i> Inactive</button>
+            <div class="flt-right-group">
+                <div class="status-seg-wrap">
+                    <span class="status-seg-label">Status</span>
+                    <div class="status-seg-scroll-outer" id="statusSegOuter">
+                        <div class="status-seg-scroll" id="statusSegWrap">
+                            <div class="status-seg-slider" id="statusSegSlider"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="status-seg-wrap">
+                    <span class="status-seg-label">Type</span>
+                    <div class="status-seg-scroll-outer" id="typeSegOuter">
+                        <div class="status-seg-scroll" id="typeSegWrap">
+                            <div class="status-seg-slider" id="typeSegSlider"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <button id="type-single" class="type-btn" onclick="setTypeFilter('single')"><i class="bi bi-person-fill"></i> Single</button>
-            <button id="type-group"  class="type-btn" onclick="setTypeFilter('group')"><i class="bi bi-people-fill"></i> Group</button>
         </div>
     </div>
 </section>
@@ -150,19 +165,24 @@
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const isActive = a => (a.status || 'Active').toLowerCase() === 'active';
 
-    // ── Filters ──────────────────────────────────────────
-    function setStatusFilter(type) {
-        _statusFilter = type;
-        ['all','active','inactive'].forEach(t => document.getElementById(`seg-${t}`)?.classList.toggle('active', t === type));
-        renderList();
-    }
-    function setTypeFilter(type) {
-        const wasActive = document.getElementById(`type-${type}`)?.classList.contains('active');
-        ['single','group'].forEach(t => document.getElementById(`type-${t}`)?.classList.remove('active'));
-        _typeFilter = wasActive ? 'all' : type;
-        if (!wasActive) document.getElementById(`type-${type}`)?.classList.add('active');
-        renderList();
-    }
+    // ── Filters — Status/Type carousels, ref B-Quest via createSegControl()
+    // (shared factory in b-account.js, same one Opportunity's Status uses) ──
+    const statusSeg = createSegControl({
+        wrapId: 'statusSegWrap', outerId: 'statusSegOuter', sliderId: 'statusSegSlider', btnClass: 'status-seg-btn',
+        getButtons: () => [{ value: 'all', label: 'All' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }],
+        getActiveValue: () => _statusFilter,
+        onSelect: val => { _statusFilter = val; statusSeg.render(); renderList(); }
+    });
+    document.getElementById('statusSegWrap').addEventListener('scroll', () => statusSeg.updateFade());
+
+    const typeSeg = createSegControl({
+        wrapId: 'typeSegWrap', outerId: 'typeSegOuter', sliderId: 'typeSegSlider', btnClass: 'status-seg-btn',
+        getButtons: () => [{ value: 'all', label: 'All' }, { value: 'single', label: 'Single' }, { value: 'group', label: 'Group' }],
+        getActiveValue: () => _typeFilter,
+        onSelect: val => { _typeFilter = val; typeSeg.render(); renderList(); }
+    });
+    document.getElementById('typeSegWrap').addEventListener('scroll', () => typeSeg.updateFade());
+
     function setSortFilter(type) {
         _sortFilter = type;
         ['name','latest'].forEach(t => document.getElementById(`sort-${t}`)?.classList.toggle('active', t === type));
@@ -240,7 +260,7 @@
         const id = esc(accountId);
         const hasMenu = _canEdit || _canDel;
         return `<div class="ac-actions">
-            ${_canEdit ? `<button class="ac-action-btn" onclick="event.stopPropagation();editAccount('${id}')"><i class="bi bi-pencil"></i> Edit</button>` : ''}
+            ${_canEdit ? `<button class="ac-action-icon ac-action-edit" onclick="event.stopPropagation();editAccount('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>` : ''}
             ${hasMenu  ? `<button class="ac-action-icon" onclick="event.stopPropagation();showMenu(this,'${id}')" title="More"><i class="bi bi-three-dots-vertical"></i></button>` : ''}
         </div>`;
     }
@@ -343,7 +363,7 @@
         });
         if (!result.isConfirmed) return;
         const { error } = await supabaseClient.from('b_account_list').delete().eq('account_id', id);
-        if (error) { notify('error', 'Delete failed'); return; }
+        if (error) { notify('', 'Delete failed', 'error'); return; }
         notify('success', 'Deleted');
         allAccounts = allAccounts.filter(a => a.account_id !== id);
         renderList();
@@ -385,6 +405,8 @@
             fab.onclick = () => BAccountApp.openNew();
         }
         await loadAllAccounts();
+        statusSeg.render();
+        typeSeg.render();
     }
 
     initPage();

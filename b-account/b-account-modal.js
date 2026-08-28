@@ -6,15 +6,15 @@ const B_ACCOUNT_MODAL_HTML = `
     /* ── Header ── */
     .bac-header { background: #fff; padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; gap: 12px; }
     .bac-owner-wrap { display: flex; align-items: center; gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 7px 14px 7px 8px; }
-    .bac-owner-icon { width: 28px; height: 28px; background: #f4f7a1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: #7a8500; flex-shrink: 0; }
+    .bac-owner-icon { width: 28px; height: 28px; background: var(--c-accent-light); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: var(--c-accent-dark); flex-shrink: 0; }
     .bac-owner-label { font-size: 0.52rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; line-height: 1; margin-bottom: 2px; }
     .bac-owner-name { font-size: 0.82rem; font-weight: 700; color: #1e293b; line-height: 1; }
     .bac-header-right { display: flex; align-items: center; gap: 12px; }
     .bac-status-wrap { display: none; align-items: center; }
     .bac-status-wrap.visible { display: flex; }
     #bac-header-status { border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 0.8rem; font-weight: 700; padding: 0 14px; background: #fff; color: #334155; cursor: pointer; font-family: inherit; height: 36px; outline: none; transition: 0.2s; }
-    #bac-header-status:focus { border-color: #bdc432; box-shadow: 0 0 0 3px rgba(189,196,50,0.12); }
-    #bac-header-status.status-active   { background: #f4f7a1; color: #7a8500; border-color: #bdc432; }
+    #bac-header-status:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
+    #bac-header-status.status-active   { background: var(--c-accent-light); color: var(--c-accent-dark); border-color: var(--c-accent); }
     #bac-header-status.status-inactive { background: #f8fafc; color: #94a3b8; border-color: #e2e8f0; }
 
     /* ── Body ── */
@@ -31,12 +31,12 @@ const B_ACCOUNT_MODAL_HTML = `
     /* Inputs */
     .bq-label-modern { font-size: 0.6rem; font-weight: 800; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.8px; display: block; }
     .bq-input-modern { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 12px; font-size: 0.85rem; color: #334155; height: 35px; transition: 0.2s; font-family: inherit; box-sizing: border-box; }
-    .bq-input-modern:focus { outline: none; border-color: #bdc432; background: #fff; box-shadow: 0 0 0 3px rgba(189,196,50,0.12); }
+    .bq-input-modern:focus { outline: none; border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
     .was-validated .bq-input-modern:invalid { border-color: #dc3545 !important; background-color: #fff8f8; }
 
     /* Search button */
-    .bq-search-btn { width: 44px; height: 35px; flex-shrink: 0; border: 1px solid #bdc432; border-left: none; border-radius: 0 10px 10px 0; background: #f4f7a1; color: #7a8500; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: 0.2s; }
-    .bq-search-btn:hover { background: #bdc432; color: #fff; }
+    .bq-search-btn { width: 44px; height: 35px; flex-shrink: 0; border: 1px solid var(--c-accent); border-left: none; border-radius: 0 10px 10px 0; background: var(--c-accent-light); color: var(--c-accent-dark); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: 0.2s; }
+    .bq-search-btn:hover { background: var(--c-accent); color: var(--c-on-accent); }
 
     /* Duplicate warning — absolute so it doesn't shift layout */
     .bac-company-wrap { position: relative; }
@@ -57,13 +57,16 @@ const B_ACCOUNT_MODAL_HTML = `
     .bac-overlay-card { background: #fff; width: 480px; max-height: 80vh; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.15); }
     .bac-overlay-list { overflow-y: auto; flex: 1; padding-right: 4px; }
     .bac-item { border: 1px solid #f1f5f9; background: #fff; border-radius: 12px; margin-bottom: 5px; padding: 11px 16px; font-size: 0.85rem; font-weight: 600; text-align: left; cursor: pointer; transition: 0.15s; color: #334155; width: 100%; }
-    .bac-item:hover { background: #f4f7a1; border-color: #bdc432; color: #7a8500; }
+    /* Pick-from-list hover — ref B-Quest's assign-picker (.bx-ap-item):
+       gray, not the brand green, or a long search list reads as "ลายตา"
+       (visually busy) with every row lighting up green as you scan it. */
+    .bac-item:hover { background: #f1f5f9; }
 
     /* ── Footer ── */
     .bac-footer { padding: 14px 28px; display: flex; justify-content: flex-end; gap: 10px; background: #fff; border-top: 1px solid #f1f5f9; }
     .btn-bac-del { background: #fee2e2; color: #ef4444; border: none; padding: 0 20px; border-radius: 10px; font-weight: 700; height: 40px; font-size: 0.85rem; display: none; cursor: pointer; transition: 0.2s; font-family: inherit; align-items: center; gap: 6px; }
     .btn-bac-del:hover { background: #fecaca; }
-    .btn-bac-save { background: #1e293b; color: #bdc432; border: none; padding: 0 26px; border-radius: 10px; font-weight: 800; height: 40px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); font-family: inherit; }
+    .btn-bac-save { background: var(--c-dark); color: var(--c-accent); border: none; padding: 0 26px; border-radius: 10px; font-weight: 800; height: 40px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); font-family: inherit; }
     .btn-bac-save i { font-size: 0.9rem; }
     .btn-bac-save:hover { background: #0f172a; transform: translateY(-2px) scale(1.04); box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
     .btn-bac-save:active { transform: translateY(0) scale(0.97); box-shadow: none; transition-duration: 0.1s; }
@@ -362,7 +365,7 @@ const BAccountApp = (() => {
             if (typeof loadAllAccounts === 'function') await loadAllAccounts();
         } catch (err) {
             console.error('[B-ACCOUNT modal]', err);
-            notify('error', 'Save failed');
+            notify('', 'Save failed', 'error');
         } finally {
             saveBtn.disabled = false;
         }
@@ -379,7 +382,7 @@ const BAccountApp = (() => {
         });
         if (!result.isConfirmed) return;
         const { error } = await supabaseClient.from('b_account_list').delete().eq('account_id', _editingId);
-        if (error) { notify('error', 'Delete failed'); return; }
+        if (error) { notify('', 'Delete failed', 'error'); return; }
         getBsModal().hide();
         notify('success', 'Deleted');
         if (typeof loadAllAccounts === 'function') await loadAllAccounts();

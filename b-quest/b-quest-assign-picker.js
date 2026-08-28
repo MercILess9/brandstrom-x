@@ -45,8 +45,8 @@
             .bx-ap-clear-icon:hover { color: #94a3b8; }
             .bx-ap-list { min-height: 280px; overflow-y: auto; flex: 1; padding-right: 5px; }
             .bx-ap-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: background 0.15s; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
-            .bx-ap-item:hover { background: var(--c-bg); }
-            .bx-ap-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--c-accent-light); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: #7a8500; flex-shrink: 0; }
+            .bx-ap-item:hover { background: #f1f5f9; }
+            .bx-ap-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--c-accent-light); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: var(--c-accent-dark); flex-shrink: 0; }
             .bx-ap-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
             .bx-ap-nick { font-size: 0.85rem; font-weight: 700; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             .bx-ap-line2 { font-size: 0.72rem; color: var(--c-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

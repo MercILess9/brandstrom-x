@@ -10,6 +10,7 @@
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="b-account.js"></script>
+    <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-account.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -178,7 +179,7 @@
         const [yr, mo, dy] = String(d).substring(0, 10).split('-');
         return `${+dy} ${MONTHS[+mo - 1]} ${+yr}`;
     }
-    function fmtGP(n) { return n != null && !isNaN(+n) ? Number(n).toLocaleString('en-US') + ' ฿' : '—'; }
+    function fmtGP(n) { return n != null && !isNaN(+n) ? fmtMoney(n) + ' ฿' : '—'; }
     function typeClass(t) {
         if (t === 'Retention')    return 'retention';
         if (t === 'New Business') return 'new-biz';

@@ -1,6 +1,6 @@
 const B_QUEST_CONFIG = {
     projectName: "B-QUEST",
-    version: "1.0.4",
+    version: "3.1.2",
     accessKey: 'bquest',
     itemsPerPage_List: 10,
     itemsPerPage_Assign: 10,
@@ -20,7 +20,7 @@ async function loadBquestPerms() {
     if (!user) return null;
 
     if (user.level === 'god') {
-        const { data: allRoles } = await supabaseClient.from('b-quest-role').select('id, name').eq('active', true);
+        const { data: allRoles } = await supabaseClient.from('b_quest_role').select('id, name').eq('active', true);
         const roles = {};
         (allRoles || []).forEach(r => { roles[r.name] = { role_id: r.id, new: true, edit: true, delete: true, accept: true, assign: true }; });
         // "setting"/"assign"/"dashboard" flat fields are also kept alongside
@@ -36,8 +36,8 @@ async function loadBquestPerms() {
     if (cached) return JSON.parse(cached);
 
     const [{ data: member }, { data: memberRoles }] = await Promise.all([
-        supabaseClient.from('b-quest-member').select('codename, permissions').eq('codename', user.codename).single(),
-        supabaseClient.from('b-quest-member-role').select('role_id, new, edit, delete, accept, assign, edit_scope, delete_scope, role:"b-quest-role"(name)').eq('codename', user.codename)
+        supabaseClient.from('b_quest_member').select('codename, permissions').eq('codename', user.codename).single(),
+        supabaseClient.from('b_quest_member_role').select('role_id, new, edit, delete, accept, assign, edit_scope, delete_scope, role:"b_quest_role"(name)').eq('codename', user.codename)
     ]);
 
     let perms = null;
@@ -271,7 +271,7 @@ async function handleDeleteTask(id) {
         confirmButtonColor: '#ef4444'
     });
     if (res.isConfirmed) {
-        await supabaseClient.from('b-quest-list').delete().eq('id', id);
+        await supabaseClient.from('b_quest_list').delete().eq('id', id);
         location.reload();
     }
 }

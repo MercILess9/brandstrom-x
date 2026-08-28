@@ -13,6 +13,7 @@
     <script src="/system/multi-select.js"></script>
     <script src="b-quest.js"></script>
     <script src="b-quest-assign-picker.js"></script>
+    <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-quest.css">
 
     <style>
@@ -46,9 +47,9 @@
         /* ── Page header ── */
         .page-header { margin: 0 0 20px; display: flex; align-items: center; gap: 10px; }
         .page-header h1 { font-size: 1.4rem; font-weight: 800; color: var(--c-dark); margin: 0; }
-        .page-header .count-badge { background: var(--c-accent); color: var(--c-dark); border-radius: 20px; padding: 2px 12px; font-size: 0.78rem; font-weight: 800; }
+        .page-header .count-badge { background: var(--c-accent-light); color: var(--c-accent-dark); border-radius: 20px; padding: 2px 12px; font-size: 0.78rem; font-weight: 800; }
         .btn-refresh { margin-left: auto; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; color: var(--c-slate); font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
-        .btn-refresh:hover:not(:disabled) { border-color: var(--c-accent); color: #7a8500; background: var(--c-accent-light); }
+        .btn-refresh:hover:not(:disabled) { border-color: var(--c-accent); color: var(--c-accent-dark); background: var(--c-accent-light); }
         .btn-refresh:disabled { opacity: 0.6; cursor: default; }
         .btn-refresh.spinning i { animation: btn-refresh-spin 0.6s linear; }
         @keyframes btn-refresh-spin { to { transform: rotate(360deg); } }
@@ -70,7 +71,7 @@
            its own deadline (that's why Role also drives the segmented
            filter up top, not Status). */
         .role-badge { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; padding: 6px 10px; border-radius: 10px; width: 100%; box-sizing: border-box; }
-        .quest-id-label { font-size: 0.62rem; font-weight: 700; color: var(--c-muted); letter-spacing: 1px; text-align: center; }
+        .quest-id-label { font-size: 0.7rem; font-weight: 700; color: var(--c-muted); letter-spacing: 1px; text-align: center; }
 
         .ac-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
         .task-tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -106,13 +107,13 @@
            doesn't disappear the moment the mouse leaves the row. */
         .ac-btn-view { width: 32px; height: 32px; padding: 0; border: none; background: transparent; cursor: pointer; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: 0.15s, opacity 0.2s; flex-shrink: 0; color: var(--c-slate); opacity: 0; }
         .assign-card-wrap:hover .ac-btn-view { opacity: 1; }
-        .ac-btn-view:hover { background: var(--c-accent); color: #1e293b; }
-        .ac-btn-assign { opacity: 0; max-width: 190px; border: 1px solid transparent; background: var(--c-accent); color: #1e293b; border-radius: 20px; padding: 7px 14px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; transition: filter 0.15s, opacity 0.2s; }
+        .ac-btn-view:hover { background: var(--c-accent-light); color: var(--c-accent-dark); }
+        .ac-btn-assign { opacity: 0; max-width: 190px; border: 1px solid var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); border-radius: 20px; padding: 7px 14px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; transition: filter 0.15s, opacity 0.2s; }
         .assign-card-wrap:hover .ac-btn-assign,
         .assign-card-wrap:has(.ac-btn-assign.is-pending) .ac-btn-assign { opacity: 1; }
         .ac-btn-assign:hover, .ac-btn-assign:focus { filter: brightness(1.06); }
         .ac-btn-assign .assign-btn-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-        .ac-btn-assign.is-pending { background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
+        .ac-btn-assign.is-pending { background: var(--c-accent); border-color: var(--c-accent); color: var(--c-on-accent); }
 
         .ac-detail { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; width: 100%; }
         .ac-detail.open { max-height: 200px; }
@@ -289,7 +290,7 @@
     // (Future: Settings will let the default selected tab be configured
     // per-member instead of always starting on "All".)
     async function loadRoles() {
-        const { data } = await supabaseClient.from('b-quest-role').select('id, name, color, icon').eq('active', true).order('sort_order');
+        const { data } = await supabaseClient.from('b_quest_role').select('id, name, color, icon').eq('active', true).order('sort_order');
         const all = data || [];
         roleList = all.filter(r => typeof canBquestEditRole !== 'function' || canBquestEditRole(r.name, 'assign'));
         roleNameMap = Object.fromEntries(all.map(r => [r.id, r.name]));
@@ -300,7 +301,7 @@
     // role (same rule as the Modal's Assign picker), not everyone who
     // merely has some permission on it.
     async function loadAssignCandidates() {
-        const { data: memberRoles } = await supabaseClient.from('b-quest-member-role').select('codename, role_id').eq('accept', true);
+        const { data: memberRoles } = await supabaseClient.from('b_quest_member_role').select('codename, role_id').eq('accept', true);
         const codenames = [...new Set((memberRoles || []).map(r => r.codename))];
         const { data: profiles } = codenames.length
             ? await supabaseClient.from('profiles').select('codename, full_name, department').in('codename', codenames)
@@ -314,12 +315,12 @@
     }
 
     async function loadWorkList() {
-        const { data } = await supabaseClient.from('b-quest-work').select('work, role_id').order('work');
+        const { data } = await supabaseClient.from('b_quest_work').select('work, role_id').order('work');
         workList = data || [];
     }
 
     async function loadStatusList() {
-        const { data } = await supabaseClient.from('b-quest-status').select('id, name, color').eq('active', true).order('sort_order');
+        const { data } = await supabaseClient.from('b_quest_status').select('id, name, color').eq('active', true).order('sort_order');
         statusList = data || [];
         statusNameMap = Object.fromEntries(statusList.map(s => [s.id, s.name]));
         statusColorMap = Object.fromEntries(statusList.map(s => [s.id, s.color || '#94a3b8']));
@@ -329,7 +330,7 @@
     }
 
     async function loadTypeList() {
-        const { data } = await supabaseClient.from('b-quest-type').select('name').eq('active', true).order('sort_order');
+        const { data } = await supabaseClient.from('b_quest_type').select('name').eq('active', true).order('sort_order');
         typeList = data || [];
         if (typeFilter) typeFilter.setValues(typeFilter.getValues().filter(v => typeList.some(t => t.name === v)));
     }
@@ -367,7 +368,7 @@
         const qInput = document.getElementById('filterSearch').value.trim();
         if (!owners.length && !qInput) return null;
 
-        let q = supabaseClient.from('b-quest-list').select('id');
+        let q = supabaseClient.from('b_quest_list').select('id');
         if (owners.length) q = q.in('owner', owners);
         if (qInput) q = q.or(['task_name', 'account_name', 'opportunity_name'].map(col => `${col}.ilike.%${qInput}%`).join(','));
         const { data } = await q;
@@ -399,8 +400,8 @@
         }
 
         let query = supabaseClient
-            .from('b-quest-task-role')
-            .select('id, quest_id, role_id, work, type, deadline, status_id, weight, assign, quest:"b-quest-list"(id, task_name, account_name, opportunity_name, detail, link, publish_date, owner, last_update)', { count: 'exact' })
+            .from('b_quest_task_role')
+            .select('id, quest_id, role_id, work, type, deadline, status_id, weight, assign, quest:"b_quest_list"(id, task_name, account_name, opportunity_name, detail, link, publish_date, owner, last_update)', { count: 'exact' })
             .or('assign.is.null,assign.eq.-')
             .not('quest_id', 'is', null);
 
@@ -454,7 +455,7 @@
     // pagination) so the dropdown always reflects every possible owner,
     // not just whatever happened to already be loaded.
     async function loadOwnerList() {
-        const { data } = await supabaseClient.from('b-quest-list').select('owner').not('owner', 'is', null).neq('owner', '-');
+        const { data } = await supabaseClient.from('b_quest_list').select('owner').not('owner', 'is', null).neq('owner', '-');
         ownerList = [...new Set((data || []).map(r => r.owner).filter(Boolean))].sort();
         populateFilterOwner();
     }
@@ -466,6 +467,12 @@
             if (entries[0].isIntersecting && !assignFetching && assignHasMore) loadRows();
         }, { rootMargin: '100px' });
         observer.observe(trigger);
+
+        // setupScrollFallback (system/system.js) — safety net for the real
+        // (if rare/browser-specific) IntersectionObserver flakiness reported
+        // on b-opportunity-list.html; same pattern here (IntersectionObserver
+        // + a position:sticky filter bar via .flt-wrapper, b-quest.css).
+        setupScrollFallback(trigger, () => !assignFetching && assignHasMore, loadRows);
     }
 
     // ── Filters ──
@@ -606,7 +613,7 @@
                     </div>
 
                     <div class="ac-actions">
-                        <button class="ac-btn-view" onclick="handleViewAssignTask('${r.quest_id}')" title="View"><i class="bi bi-eye"></i></button>
+                        <button class="ac-btn-view" onclick="handleViewAssignTask('${r.quest_id}')" title="Details"><i class="bi bi-info-lg"></i></button>
                         <button class="ac-btn-assign ${pending ? 'is-pending' : ''}" type="button" onclick="openAssignPickerForRow('${r.id}','${r.quest_id}','${r.role_id}')">
                             <i class="bi ${pending ? 'bi-person-check' : 'bi-person-plus'}"></i><span class="assign-btn-label">${pending ? esc(pending.value) : 'Assign'}</span>
                         </button>
@@ -704,9 +711,9 @@
         let saved = 0, failed = 0;
 
         for (const [taskRoleId, { questId, value }] of entries) {
-            const { error } = await supabaseClient.from('b-quest-task-role').update({ assign: value }).eq('id', taskRoleId);
+            const { error } = await supabaseClient.from('b_quest_task_role').update({ assign: value }).eq('id', taskRoleId);
             if (error) { failed++; continue; }
-            await supabaseClient.from('b-quest-list').update({ last_update: new Date().toISOString() }).eq('id', questId);
+            await supabaseClient.from('b_quest_list').update({ last_update: new Date().toISOString() }).eq('id', questId);
             delete pendingAssign[taskRoleId];
             saved++;
         }

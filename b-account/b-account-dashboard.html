@@ -10,6 +10,7 @@
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="b-account.js"></script>
+    <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-account.css">
     <style>
         body { padding-bottom: 80px; }
@@ -232,7 +233,7 @@ function fmtK(n) {
 }
 function fmtN(n) {
     if (!n || isNaN(+n) || +n === 0) return '—';
-    return Number(n).toLocaleString('en-US');
+    return fmtMoney(n);
 }
 function pctStr(a, b) {
     if (!a || !b || +b === 0) return null;
@@ -288,7 +289,7 @@ async function loadData() {
         supabaseClient.from('b_opportunity_qt_item')
             .select('qt_id, bu, qty, price, discount, gp')
             .limit(20000),
-        supabaseClient.from('b_opp_config')
+        supabaseClient.from('b_opportunity_config')
             .select('value').eq('type','status').order('value')
     ]);
 

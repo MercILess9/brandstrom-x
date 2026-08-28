@@ -10,6 +10,7 @@
     <script src="/system/system.js"></script>
     <script src="b-finance.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-finance.css">
     <style>
         body { overflow: auto; }
@@ -203,7 +204,7 @@ async function saveAll() {
         notify('success', 'Settings saved');
         await loadSettings();
     } catch (err) {
-        notify('error', err.message || 'Save failed');
+        notify('', err.message || 'Save failed', 'error');
     }
 }
 

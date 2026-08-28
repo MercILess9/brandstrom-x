@@ -15,7 +15,7 @@ const B_QUEST_MODAL_HTML = `
     /* Circular, matching the person-avatar convention used elsewhere
        (e.g. Add Member modal) — a rounded square here read as a generic
        icon badge rather than "this represents a person". */
-    .bq-owner-icon { width: 28px; height: 28px; background: #f4f7a1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: #7a8500; flex-shrink: 0; }
+    .bq-owner-icon { width: 28px; height: 28px; background: var(--c-accent-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: var(--c-accent-dark); flex-shrink: 0; }
     .bq-owner-label { font-size: 0.52rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; line-height: 1; margin-bottom: 2px; }
     .bq-owner-name { font-size: 0.82rem; font-weight: 700; color: #1e293b; line-height: 1; }
 
@@ -40,7 +40,7 @@ const B_QUEST_MODAL_HTML = `
     .bq-glass-card { background: #fff; border-radius: 18px; padding: 20px; border: 1px solid #eef2f7; height: 100%; display: flex; flex-direction: column; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.04); }
     .bq-label-modern { font-size: 0.6rem; font-weight: 800; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.8px; display: block; }
     .bq-input-modern { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 12px; font-size: 0.85rem; color: #334155; margin-bottom: 10px; text-align-last: center; height: 35px; transition: 0.2s; font-family: inherit; }
-    .bq-input-modern:focus { outline: none; border-color: #bdc432; background: #fff; box-shadow: 0 0 0 3px rgba(189,196,50,0.12); }
+    .bq-input-modern:focus { outline: none; border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
     .was-validated .bq-input-modern:invalid { border-color: #dc3545 !important; background-color: #fff8f8; }
     .bq-input-detail { flex-grow: 1; min-height: 100px; text-align: left !important; text-align-last: left !important; resize: none; padding-top: 10px; }
 
@@ -48,8 +48,8 @@ const B_QUEST_MODAL_HTML = `
        at a glance (unlike a fully gray/quiet icon button), but restrained
        rather than the old solid lime-highlighter block — blooms into the
        full accent color with a soft glow on hover for a bit of polish. */
-    .bq-search-btn { width: 44px; height: 35px; flex-shrink: 0; border: 1px solid var(--c-accent-light); border-left: none; border-radius: 0 10px 10px 0; background: var(--c-accent-light); color: #7a8500; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: 0.2s; }
-    .bq-search-btn:hover { background: var(--c-accent); color: #1e293b; border-color: var(--c-accent); box-shadow: 0 4px 14px rgba(189,196,50,0.35); }
+    .bq-search-btn { width: 44px; height: 35px; flex-shrink: 0; border: 1px solid var(--c-accent-light); border-left: none; border-radius: 0 10px 10px 0; background: var(--c-accent-light); color: var(--c-accent-dark); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: 0.2s; }
+    .bq-search-btn:hover { background: var(--c-accent); color: var(--c-on-accent); border-color: var(--c-accent); box-shadow: 0 4px 14px rgba(var(--c-accent-rgb), 0.35); }
 
     /* ── Role Cards ── */
     .role-card { background: #fff; border-radius: 18px; border: 1.5px solid #eef2f7; margin-bottom: 16px; overflow: hidden; transition: border-color 0.25s, box-shadow 0.25s; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
@@ -150,7 +150,7 @@ const B_QUEST_MODAL_HTML = `
        already shaped to drop in a real profile photo later. */
     .bq-am-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: background 0.15s; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
     .bq-am-item:hover { background: var(--c-bg); }
-    .bq-am-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--c-accent-light); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: #7a8500; flex-shrink: 0; }
+    .bq-am-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--c-accent-light); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: var(--c-accent-dark); flex-shrink: 0; }
     .bq-am-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
     .bq-am-nick { font-size: 0.85rem; font-weight: 700; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .bq-am-line2 { font-size: 0.72rem; color: var(--c-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -167,7 +167,7 @@ const B_QUEST_MODAL_HTML = `
     .btn-bq-delete:active { transform: translateY(0); box-shadow: none; transition-duration: 0.1s; }
 
     /* Create/Save — spring hover effect */
-    .btn-bq-create { background: #1e293b; color: #bdc432; border: none; padding: 0 26px; border-radius: 10px; font-weight: 800; height: 40px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .btn-bq-create { background: var(--c-dark); color: var(--c-accent); border: none; padding: 0 26px; border-radius: 10px; font-weight: 800; height: 40px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
     .btn-bq-create i { font-size: 0.9rem; }
     .btn-bq-create:hover { background: #0f172a; transform: translateY(-2px) scale(1.04); box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
     .btn-bq-create:active { transform: translateY(0) scale(0.97); box-shadow: none; transition-duration: 0.1s; }
@@ -270,11 +270,11 @@ const BQuestApp = (() => {
 
     const BQuestService = {
         async getQuestById(id) {
-            const { data, error } = await supabaseClient.from('b-quest-list').select('*').eq('id', id).single();
+            const { data, error } = await supabaseClient.from('b_quest_list').select('*').eq('id', id).single();
             return error ? null : data;
         },
         async getTaskRoles(questId) {
-            const { data } = await supabaseClient.from('b-quest-task-role').select('*').eq('quest_id', questId);
+            const { data } = await supabaseClient.from('b_quest_task_role').select('*').eq('quest_id', questId);
             return data || [];
         },
         async loadProfiles() {
@@ -283,7 +283,7 @@ const BQuestApp = (() => {
             // work in that role, not everyone who merely has a row for it
             // (e.g. someone with only Edit/Delete on a role isn't
             // necessarily willing/able to take on new work in it).
-            const { data: memberRoles } = await supabaseClient.from('b-quest-member-role').select('codename, role_id').eq('accept', true);
+            const { data: memberRoles } = await supabaseClient.from('b_quest_member_role').select('codename, role_id').eq('accept', true);
             const codenames = [...new Set((memberRoles || []).map(r => r.codename))];
             const { data: profiles } = codenames.length
                 ? await supabaseClient.from('profiles').select('codename, full_name, department').in('codename', codenames)
@@ -297,14 +297,14 @@ const BQuestApp = (() => {
         },
         async loadTypes() {
             if (State.typeList.length) return;
-            const { data } = await supabaseClient.from('b-quest-type').select('name').eq('active', true).order('sort_order');
+            const { data } = await supabaseClient.from('b_quest_type').select('name').eq('active', true).order('sort_order');
             State.typeList = data || [];
         },
         async loadStatuses() {
             if (State.statusList.length) return;
             const [{ data }, { data: cfg }] = await Promise.all([
-                supabaseClient.from('b-quest-status').select('id, name, color').eq('active', true).order('sort_order'),
-                supabaseClient.from('b-quest-config').select('value').eq('rule', 'default_status_id').maybeSingle()
+                supabaseClient.from('b_quest_status').select('id, name, color').eq('active', true).order('sort_order'),
+                supabaseClient.from('b_quest_config').select('value').eq('rule', 'default_status_id').maybeSingle()
             ]);
             State.statusList = data || [];
             State.defaultStatusId = cfg?.value || null;
@@ -314,7 +314,7 @@ const BQuestApp = (() => {
         // 100% (full capacity), same default the Settings page itself uses.
         async loadWorkdayWeight() {
             if (State.workdayWeight) return;
-            const { data } = await supabaseClient.from('b-quest-config').select('value').eq('rule', 'workday_weight').maybeSingle();
+            const { data } = await supabaseClient.from('b_quest_config').select('value').eq('rule', 'workday_weight').maybeSingle();
             State.workdayWeight = { mon: 100, tue: 100, wed: 100, thu: 100, fri: 100, sat: 100, sun: 100, ...(data?.value || {}) };
         }
     };
@@ -329,7 +329,7 @@ const BQuestApp = (() => {
         // 'new'-permission filtering only applies to which roles get an
         // actual CARD in this modal (State.visibleRoles), not to the name
         // lookup itself.
-        const { data } = await supabaseClient.from('b-quest-role').select('id, name, color, icon, max_capacity, active').order('sort_order');
+        const { data } = await supabaseClient.from('b_quest_role').select('id, name, color, icon, max_capacity, active').order('sort_order');
         State.roleNameById = Object.fromEntries((data || []).map(r => [r.id, r.name]));
         State.visibleRoles = (data || []).filter(r => r.active !== false && (typeof canBquestEditRole !== 'function' || canBquestEditRole(r.name, 'new')));
         State.visibleRoles.forEach(r => { State.maxCap[r.id] = r.max_capacity ?? 10; });
@@ -643,7 +643,7 @@ const BQuestApp = (() => {
             // ("same day" + "later deadline reaching back") only because it
             // filtered per-field instead of with a single >= comparison.
             const { data: rows } = await supabaseClient
-                .from('b-quest-task-role')
+                .from('b_quest_task_role')
                 .select('quest_id, weight, day, deadline, work')
                 .eq('role_id', roleId)
                 .gte('deadline', dl);
@@ -736,7 +736,7 @@ const BQuestApp = (() => {
         el('uni-search-clear').style.display = 'none';
 
         try {
-            const { data } = await supabaseClient.from('b-quest-list').select(fieldName);
+            const { data } = await supabaseClient.from('b_quest_list').select(fieldName);
             // A newer openSearchOverlay/openAssignPicker call already took
             // over the shared overlay while this fetch was in flight —
             // don't clobber whatever it wired up.
@@ -966,8 +966,8 @@ const BQuestApp = (() => {
             payload.last_update = new Date().toISOString();
 
             const { data: savedTask, error: taskErr } = isEdit
-                ? await supabaseClient.from('b-quest-list').update(payload).eq('id', currentId).select().single()
-                : await supabaseClient.from('b-quest-list').insert([payload]).select().single();
+                ? await supabaseClient.from('b_quest_list').update(payload).eq('id', currentId).select().single()
+                : await supabaseClient.from('b_quest_list').insert([payload]).select().single();
 
             if (taskErr) return Swal.fire('Error', taskErr.message, 'error');
             const questId = savedTask.id;
@@ -981,7 +981,7 @@ const BQuestApp = (() => {
                 const existingRow = State.currentRoleRows[role.id];
                 if (!enabledIds.has(role.id)) {
                     if (existingRow) {
-                        const { error } = await supabaseClient.from('b-quest-task-role').delete().eq('id', existingRow.id);
+                        const { error } = await supabaseClient.from('b_quest_task_role').delete().eq('id', existingRow.id);
                         if (error) errors.push(error.message);
                     }
                     continue;
@@ -1008,8 +1008,8 @@ const BQuestApp = (() => {
                 };
 
                 const { error } = existingRow
-                    ? await supabaseClient.from('b-quest-task-role').update(rolePayload).eq('id', existingRow.id)
-                    : await supabaseClient.from('b-quest-task-role').insert([rolePayload]);
+                    ? await supabaseClient.from('b_quest_task_role').update(rolePayload).eq('id', existingRow.id)
+                    : await supabaseClient.from('b_quest_task_role').insert([rolePayload]);
                 if (error) errors.push(error.message);
                 else roleSaveSuccessCount++;
             }
@@ -1024,7 +1024,7 @@ const BQuestApp = (() => {
                 // failure mode seen in practice (a role column missing
                 // before its migration was applied).
                 if (!isEdit && roleSaveSuccessCount === 0) {
-                    await supabaseClient.from('b-quest-list').delete().eq('id', questId);
+                    await supabaseClient.from('b_quest_list').delete().eq('id', questId);
                     return Swal.fire('Error', 'Nothing was saved — the task was rolled back.\n' + errors.join('\n'), 'error');
                 }
                 return Swal.fire('Some errors occurred', errors.join('\n'), 'error');

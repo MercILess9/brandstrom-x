@@ -360,7 +360,8 @@ const BOppApp = (() => {
     const el = id => document.getElementById(id);
     const escA = s => s ? String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;') : '';
     const escH = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
-    const fmtN = n => (!isNaN(+n) && n != null) ? (+n).toLocaleString('en-US') : '0';
+    const fmtN = n => (!isNaN(+n) && n != null) ? fmtMoney(+n) : '0';
+    const parseAmt = s => { const n = parseFloat(String(s).replace(/,/g,'')); return isNaN(n) ? 0 : n; };
     const getBxUser = () => { try { return JSON.parse(sessionStorage.getItem('bx_user')); } catch { return null; } };
 
     let _bsModal = null, _editingId = null, _loaded = false;
@@ -379,7 +380,7 @@ const BOppApp = (() => {
         const [{ data: accs }, { data: profs }, { data: cfg }] = await Promise.all([
             supabaseClient.from('b_account_list').select('account_id, account_name, company_name').order('account_name'),
             supabaseClient.from('profiles').select('codename').neq('level','god').order('codename'),
-            supabaseClient.from('b_opp_config').select('type, value').in('type',['bu','company','status','lead_source']).order('value')
+            supabaseClient.from('b_opportunity_config').select('type, value').in('type',['bu','company','status','lead_source']).order('value')
         ]);
         _accounts     = accs || [];
         _profiles     = (profs || []).map(p => p.codename).filter(Boolean);
@@ -470,11 +471,11 @@ const BOppApp = (() => {
             <td class="bopp-item-no c">${idx+1}</td>
             <td class="c"><select class="bopp-item-sel" data-field="bu"${da}>${buOpts}</select></td>
             <td><textarea class="bopp-item-inp bopp-item-ta" data-field="detail" placeholder="Description..." rows="3"${da}>${escH(item.detail||'')}</textarea></td>
-            <td><input type="number" class="bopp-item-inp r" data-field="qty" value="${item.qty||1}" min="0" step="1" inputmode="numeric"${da}></td>
-            <td><input type="number" class="bopp-item-inp r" data-field="price" value="${item.price||''}" min="0" step="any" placeholder="0"${da}></td>
-            <td><input type="number" class="bopp-item-inp r bopp-item-disc-inp" data-field="discount" value="${item.discount||''}" min="0" step="any" placeholder="0"${da}></td>
+            <td><input type="text" class="bopp-item-inp r" data-field="qty" value="${item.qty ? fmtQty(item.qty) : ''}" inputmode="numeric" placeholder="0"${da}></td>
+            <td><input type="text" class="bopp-item-inp r" data-field="price" value="${item.price ? fmtN(item.price) : ''}" inputmode="decimal" placeholder="0"${da}></td>
+            <td><input type="text" class="bopp-item-inp r bopp-item-disc-inp" data-field="discount" value="${item.discount ? fmtN(item.discount) : ''}" inputmode="decimal" placeholder="0"${da}></td>
             <td class="bopp-item-amt" data-amt>${amt > 0 ? fmtN(amt) : '0'}</td>
-            <td><input type="number" class="bopp-item-inp r bopp-item-gp-inp" data-field="gp" value="${item.gp||''}" min="0" step="any" placeholder="0" style="color:${gp>0?'#16a34a':'#cbd5e1'}; font-weight:700;"${da}></td>
+            <td><input type="text" class="bopp-item-inp r bopp-item-gp-inp" data-field="gp" value="${item.gp ? fmtN(item.gp) : ''}" inputmode="decimal" placeholder="0" style="color:${gp>0?'#16a34a':'#cbd5e1'}; font-weight:700;"${da}></td>
             <td class="c">${disabled ? '' : `<button type="button" class="bopp-item-rm" onclick="BOppApp.removeItem('${escA(qtTmpId)}',${idx})" title="Delete row"><i class="bi bi-trash3"></i></button>`}</td>
         </tr>`;
     }
@@ -621,10 +622,10 @@ const BOppApp = (() => {
             const qt = findQT(row.dataset.qt), idx = +row.dataset.item;
             if (!qt || idx >= qt.items.length) return;
             const item = qt.items[idx];
-            if      (field === 'qty')      { item.qty = Math.floor(+inp.value) || 0; inp.value = item.qty || ''; }
-            else if (field === 'price')    item.price    = +inp.value || 0;
-            else if (field === 'discount') item.discount = +inp.value || 0;
-            else if (field === 'gp')       item.gp       = +inp.value || 0;
+            if      (field === 'qty')      item.qty      = Math.max(0, Math.floor(parseAmt(inp.value)));
+            else if (field === 'price')    item.price    = parseAmt(inp.value);
+            else if (field === 'discount') item.discount = parseAmt(inp.value);
+            else if (field === 'gp')       item.gp       = parseAmt(inp.value);
             else if (field === 'detail')   item.detail   = inp.value;
 
             if (['qty','price','discount'].includes(field)) {
@@ -661,6 +662,12 @@ const BOppApp = (() => {
             if (qt) qt.company_qt = inp.value;
             inp.classList.remove('is-invalid');
         }
+    });
+
+    el('bopp-qt-container').addEventListener('focusout', e => {
+        const inp = e.target, field = inp.dataset.field;
+        if (field === 'qty')      inp.value = inp.value ? fmtQty(parseAmt(inp.value)) : '';
+        else if (['price','discount','gp'].includes(field)) inp.value = inp.value ? fmtN(parseAmt(inp.value)) : '';
     });
 
     // ── UI state ──────────────────────────────────────────────────────────────
@@ -1016,8 +1023,12 @@ const BOppApp = (() => {
         }
         if (qtType === 'original') {
             const saleAmt = qt.items.reduce((s,i) => s + (+i.amount||0), 0);
+            // quotation_sub left blank — matches b-finance-list.html's own
+            // Add Sub behavior (no auto-generated label), user fills it in
+            // themselves. Previously defaulted to the QT's own number,
+            // which just showed the same code twice (QT header + this row).
             supabaseClient.from('b_finance_qt')
-                .insert({ qt_id: qtRow.qt_id, sub_index: 1, quotation_sub: qt.qt_number.trim() || qtRow.qt_id, actual_amount: saleAmt || null })
+                .insert({ qt_id: qtRow.qt_id, sub_index: 1, quotation_sub: null, actual_amount: saleAmt || null })
                 .then(({ error }) => { if (error) console.warn('[finance auto-create]', error); });
         }
     }

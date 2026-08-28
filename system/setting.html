@@ -9,11 +9,12 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
+    <link rel="stylesheet" href="/system/theme.css">
 
     <style>
+        /* --c-accent / --c-accent-light / --c-accent-dark come from
+           /system/theme.css (linked above) — don't redeclare here. */
         :root {
-            --c-accent: #bdc432;
-            --c-accent-light: #f4f7a1;
             --c-dark: #1e293b;
             --c-bg: #f8fafc;
             --c-muted: #94a3b8;
@@ -85,7 +86,7 @@
             padding: 4px 0; border-radius: 6px; margin: 0 3px;
         }
         .group-access { background: #eff6ff; color: #2563eb; }
-        .group-sys    { background: var(--c-accent-light); color: #7a8500; }
+        .group-sys    { background: var(--c-accent-light); color: var(--c-accent-dark); }
 
         .usr-col-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; text-align: center; line-height: 1.3; }
         .usr-col-name  { font-size: 0.68rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.8px; padding-left: 8px; }

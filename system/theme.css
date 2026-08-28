@@ -1,0 +1,34 @@
+/* Shared brand theme tokens — the platform's single accent-color family.
+   Every project's own <project>.css (or inline <style> for standalone
+   pages) loads this before declaring its own :root, so switching the
+   theme color means editing these values here instead of in every
+   project's CSS. --c-accent/-light/-dark must change together as a set:
+   --c-accent is the full-strength color, --c-accent-light is a pale tint
+   for active/hover backgrounds, and --c-accent-dark is the text/icon
+   color that stays readable on top of that light background — 2 alone
+   isn't enough because reusing --c-accent as text on --c-accent-light
+   fails contrast (both are near-identical lightness).
+
+   --c-on-accent is a separate 4th token: text placed directly on top of
+   full-strength --c-accent (badges, solid buttons — not --c-accent-light).
+   It's kept apart from the platform's general dark-text color (--c-dark,
+   declared per-project) on purpose — today they're both #1e293b, but
+   that's a coincidence of this specific green being light enough for
+   dark text to read on it. A future theme whose accent is itself dark
+   would need --c-on-accent to become white while every other dark-text
+   use in the app (headings, body copy) stays untouched. When the future
+   theme-color Setting ships, this is the token it must recompute (pick
+   whichever of black/white wins WCAG contrast against the chosen accent)
+   — --c-dark is not part of that computation. */
+:root {
+    --c-accent: #bdc432;
+    --c-accent-light: #f4f7a1;
+    --c-accent-dark: #7a8500;
+    --c-on-accent: #1e293b;
+    /* R,G,B components of --c-accent, for rgba() glows/shadows that need
+       an alpha channel CSS custom properties can't add on their own
+       (e.g. box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12)). Must
+       stay in sync with --c-accent by hand — no way to derive one from
+       the other in plain CSS. */
+    --c-accent-rgb: 189, 196, 50;
+}

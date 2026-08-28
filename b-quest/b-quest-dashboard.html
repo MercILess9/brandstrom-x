@@ -11,11 +11,12 @@
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="b-quest.js"></script>
+    <link rel="stylesheet" href="/system/theme.css">
 
     <style>
+        /* --c-accent / --c-accent-light / --c-accent-dark come from
+           /system/theme.css (linked above) — don't redeclare here. */
         :root {
-            --c-accent: #bdc432;
-            --c-accent-light: #f4f7a1;
             --c-dark: #1e293b;
             --c-bg: #f8fafc;
             --c-muted: #94a3b8;
@@ -33,14 +34,20 @@
 
         /* ── Control Bar ── */
         .ctrl-bar { background: #fff; border-bottom: 1px solid var(--c-border); padding: 10px 20px; position: sticky; top: 0; z-index: 200; }
-        .ctrl-inner { max-width: 1300px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+        /* .dash-wrapper below (max-width:1300+margin:auto) adds its own
+           20px horizontal padding on top of that box; this one didn't, so
+           its content sat flush with the raw 1300px box edge while the
+           dashboard content sits 20px further in — same bug as B-Quest
+           List's filter zone (see bquest-filter-zone-reusable-pattern
+           memory), same fix. */
+        .ctrl-inner { max-width: 1300px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; gap: 12px; }
         .month-nav { display: flex; align-items: center; gap: 6px; position: relative; }
         .month-nav-btn { border: 1px solid var(--c-border); background: #fff; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--c-slate); transition: 0.15s; font-size: 0.82rem; }
         .month-nav-btn:hover { background: var(--c-bg); border-color: #cbd5e1; }
 
         .month-label-btn { border: 1px solid var(--c-border); background: #fff; border-radius: 10px; padding: 0 14px; height: 32px; font-size: 0.88rem; font-weight: 800; color: var(--c-dark); cursor: pointer; min-width: 148px; display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.15s; font-family: inherit; }
         .month-label-btn:hover { background: var(--c-bg); border-color: #cbd5e1; }
-        .month-label-btn.open { background: var(--c-accent-light); border-color: var(--c-accent); color: #5a6400; }
+        .month-label-btn.open { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
 
         /* ── Month Picker Popover ── */
         .month-picker {
@@ -57,12 +64,28 @@
         .mp-month { border: 1px solid transparent; background: transparent; border-radius: 8px; padding: 7px 4px; font-size: 0.75rem; font-weight: 700; color: var(--c-slate); cursor: pointer; text-align: center; transition: 0.15s; font-family: inherit; }
         .mp-month:hover { background: var(--c-bg); border-color: var(--c-border); color: var(--c-dark); }
         .mp-month.active { background: var(--c-dark); color: var(--c-accent); border-color: var(--c-dark); }
-        .mp-month.today { border-color: var(--c-accent); color: #5a6400; }
+        .mp-month.today { border-color: var(--c-accent); color: var(--c-accent-dark); }
         .mp-month.active.today { background: var(--c-dark); color: var(--c-accent); }
 
         .ctrl-sep { width: 1px; height: 22px; background: var(--c-border); }
         .btn-today { border: 1px solid var(--c-border); background: #fff; border-radius: 8px; padding: 0 14px; height: 32px; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.15s; font-family: inherit; }
         .btn-today:hover { background: var(--c-bg); border-color: #cbd5e1; }
+
+        /* ── Role toggle row — multi-select (independent on/off per role,
+           unlike List/Assignment's single-select sliding segment), same
+           horizontal-scroll+fade-edge affordance as .role-seg-scroll-outer
+           in b-quest.css for when there isn't room for every role. */
+        .role-toggle-outer { position: relative; flex: 1; min-width: 0; }
+        .role-toggle-scroll { display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
+        .role-toggle-scroll::-webkit-scrollbar { display: none; }
+        .role-toggle-outer::before, .role-toggle-outer::after { content: ''; position: absolute; top: 0; bottom: 0; width: 28px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s; }
+        .role-toggle-outer::before { left: 0; background: linear-gradient(to right, #fff, transparent); }
+        .role-toggle-outer::after { right: 0; background: linear-gradient(to left, #fff, transparent); }
+        .role-toggle-outer.fade-left::before { opacity: 1; }
+        .role-toggle-outer.fade-right::after { opacity: 1; }
+        .role-toggle-btn { flex-shrink: 0; border: 1px solid var(--c-border); background: #fff; border-radius: 20px; padding: 0 14px; height: 32px; font-size: 0.8rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.15s; white-space: nowrap; font-family: inherit; }
+        .role-toggle-btn:hover { border-color: #cbd5e1; }
+        .role-toggle-btn.active { border-color: var(--role-color, var(--c-accent)); background: var(--role-bg, var(--c-accent-light)); color: var(--role-color, var(--c-accent-dark)); }
 
         /* ── Wrapper ── */
         .dash-wrapper { max-width: 1300px; margin: 0 auto; padding: 24px 20px 60px; display: flex; flex-direction: column; gap: 20px; }
@@ -79,7 +102,7 @@
         .ov-val { font-size: 2rem; font-weight: 900; color: var(--c-dark); line-height: 1; }
         .ov-label { font-size: 0.68rem; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 7px; }
         .ov-card.ov-active { border-color: var(--c-accent); background: var(--c-accent-light); }
-        .ov-card.ov-active .ov-val { color: #5a6400; }
+        .ov-card.ov-active .ov-val { color: var(--c-accent-dark); }
         .ov-card.ov-des { border-color: var(--c-des-border); background: var(--c-des-bg); }
         .ov-card.ov-des .ov-val { color: var(--c-des); }
         .ov-card.ov-cre { border-color: var(--c-cre-border); background: var(--c-cre-bg); }
@@ -150,7 +173,7 @@
         }
         .cal-day:hover { border-color: #cbd5e1; }
         .cal-day.cal-empty { background: transparent; cursor: default; pointer-events: none; }
-        .cal-day.cal-today { border-color: var(--c-accent) !important; color: #5a6400; }
+        .cal-day.cal-today { border-color: var(--c-accent) !important; color: var(--c-accent-dark); }
         .cal-day.cal-selected { border-color: var(--c-dark) !important; box-shadow: 0 0 0 2px var(--c-dark); }
         .cal-day.cal-selected.cal-today { border-color: var(--c-accent) !important; box-shadow: 0 0 0 2px var(--c-accent); }
         .cal-day-num { line-height: 1; font-size: 0.75rem; }
@@ -234,7 +257,7 @@
         .day-task-name { font-size: 0.84rem; font-weight: 700; color: var(--c-dark); line-height: 1.3; flex: 1; }
         .day-task-status { font-size: 0.63rem; font-weight: 800; padding: 2px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; letter-spacing: 0.2px; }
         .status-done { background: #dcfce7; color: #15803d; }
-        .status-progress { background: var(--c-accent-light); color: #5a6400; }
+        .status-progress { background: var(--c-accent-light); color: var(--c-accent-dark); }
         .status-pending { background: #f1f5f9; color: var(--c-slate); }
 
         /* Row 2: Account | Opp */
@@ -288,6 +311,10 @@
         </div>
         <div class="ctrl-sep"></div>
         <button class="btn-today" id="btn-today">This Month</button>
+        <div class="ctrl-sep"></div>
+        <div class="role-toggle-outer" id="roleToggleOuter">
+            <div class="role-toggle-scroll" id="roleToggleScroll"></div>
+        </div>
     </div>
 </div>
 
@@ -448,6 +475,10 @@
     let capDes = 0, capCre = 0;
     let pickerYear;
     let workList = [];
+    let roleList = [];
+    // Empty = no restriction (show every role) — same convention as List's
+    // multi-selects (getValues() returning [] means "no filter").
+    let selectedRoleIds = new Set();
 
     // ── Month helpers ──
     function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
@@ -525,23 +556,114 @@
     };
 
     // ── Load ──
+    // Reads live per-role rows from b-quest-task-role (the schema
+    // b-quest-modal.js has written to since the task-role cutover) and
+    // synthesizes the legacy flat designer_*/creative_* properties every
+    // render*() function below still expects, keyed by matching each
+    // task-role row's denormalized `role` name. This is a data-layer-only
+    // fix — render*() functions are unchanged and still only look at
+    // Designer/Creative, so a 3rd+ role (e.g. IT) is fetched but not yet
+    // shown; that's the next phase, not this one.
+    function synthesizeLegacyFields(task) {
+        const roles = task.roles || [];
+        // A role's data only counts if it's actually selected in the
+        // toggle filter (or nothing is selected, meaning "show every
+        // role") — otherwise a task that qualified because its *other*
+        // role's deadline is in range would still leak this role's
+        // numbers into Designer/Creative sections even when toggled off.
+        const roleAllowed = r => selectedRoleIds.size === 0 || selectedRoleIds.has(r.role_id);
+        const des = roles.find(r => r.role === 'Designer' && roleAllowed(r));
+        const cre = roles.find(r => r.role === 'Creative' && roleAllowed(r));
+        return {
+            ...task,
+            designer_deadline: des?.deadline || null,
+            designer_assign: des?.assign || null,
+            designer_weight: des?.weight || null,
+            designer_type: des?.type || null,
+            designer_status: des?.status || null,
+            designer_day: des?.day || null,
+            creative_deadline: cre?.deadline || null,
+            creative_assign: cre?.assign || null,
+            creative_weight: cre?.weight || null,
+            creative_day: cre?.day || null,
+            creative_type: cre?.type || null,
+            creative_status: cre?.status || null,
+        };
+    }
+
+    // ── Role toggle filter ──
+    // Multi-select: each button is independently on/off, unlike List's
+    // single-select role segment. Renders one button per active role from
+    // b-quest-role, so adding/removing a role there adds/removes a button
+    // here automatically — no hardcoded role names.
+    async function loadRoleList() {
+        const { data } = await supabaseClient.from('b_quest_role').select('id, name, color, active').order('name');
+        roleList = (data || []).filter(r => r.active !== false);
+        renderRoleToggles();
+    }
+
+    function renderRoleToggles() {
+        const scroll = document.getElementById('roleToggleScroll');
+        if (!scroll) return;
+        const allBtn = `<button class="role-toggle-btn${selectedRoleIds.size === 0 ? ' active' : ''}" data-role="">All</button>`;
+        const roleBtns = roleList.map(r => {
+            const active = selectedRoleIds.has(r.id);
+            const style = active ? ` style="--role-color:${esc(r.color || '')};--role-bg:${esc(hexToRgba(r.color, 0.15))}"` : '';
+            return `<button class="role-toggle-btn${active ? ' active' : ''}" data-role="${esc(r.id)}"${style}>${esc(r.name)}</button>`;
+        }).join('');
+        scroll.innerHTML = allBtn + roleBtns;
+        updateRoleToggleFade();
+    }
+
+    function updateRoleToggleFade() {
+        const scroll = document.getElementById('roleToggleScroll');
+        const outer = document.getElementById('roleToggleOuter');
+        if (!scroll || !outer) return;
+        outer.classList.toggle('fade-left', scroll.scrollLeft > 2);
+        outer.classList.toggle('fade-right', scroll.scrollLeft + scroll.clientWidth < scroll.scrollWidth - 2);
+    }
+
+    document.getElementById('roleToggleScroll').addEventListener('click', e => {
+        const btn = e.target.closest('.role-toggle-btn');
+        if (!btn) return;
+        const roleId = btn.dataset.role;
+        if (!roleId) selectedRoleIds.clear();
+        else if (selectedRoleIds.has(roleId)) selectedRoleIds.delete(roleId);
+        else selectedRoleIds.add(roleId);
+        renderRoleToggles();
+        loadData();
+    });
+    document.getElementById('roleToggleScroll').addEventListener('scroll', updateRoleToggleFade);
+
     async function loadData() {
         calSelectedDate = null;
 
         const { start, end } = monthRange();
 
-        const [tasksRes, capRes, workRes] = await Promise.all([
-            supabaseClient.from('b-quest-list').select('*')
-                .or(`and(designer_deadline.gte.${start},designer_deadline.lte.${end}),and(creative_deadline.gte.${start},creative_deadline.lte.${end})`),
-            supabaseClient.from('b_quest_capacity').select('*'),
-            supabaseClient.from('b-quest-work').select('*').order('work')
+        let roleQuery = supabaseClient
+            .from('b_quest_task_role')
+            .select('quest_id')
+            .gte('deadline', start).lte('deadline', end);
+        if (selectedRoleIds.size) roleQuery = roleQuery.in('role_id', [...selectedRoleIds]);
+        const { data: roleRows } = await roleQuery;
+        const questIds = [...new Set((roleRows || []).map(r => r.quest_id))];
+
+        // Capacity now lives on b-quest-role.max_capacity (same source
+        // b-quest-modal.js's effectiveMaxCap() reads) — b_quest_capacity
+        // was the old standalone table this used to read, now dead.
+        const [tasksRes, roleRes, workRes] = await Promise.all([
+            questIds.length
+                ? supabaseClient.from('b_quest_list').select('*, roles:"b_quest_task_role"(*)').in('id', questIds)
+                : Promise.resolve({ data: [] }),
+            supabaseClient.from('b_quest_role').select('name, max_capacity'),
+            supabaseClient.from('b_quest_work').select('*').order('work')
         ]);
 
-        const tasks = tasksRes.data || [];
-        const caps  = capRes.data  || [];
+        const tasks = (tasksRes.data || []).map(synthesizeLegacyFields);
+        const roleCaps = roleRes.data || [];
         workList    = workRes.data  || [];
-        capDes = caps.find(c => c.role === 'Designer')?.max_capacity || 0;
-        capCre = caps.find(c => c.role === 'Creative')?.max_capacity || 0;
+        capDes = roleCaps.find(r => r.name === 'Designer')?.max_capacity || 0;
+        capCre = roleCaps.find(r => r.name === 'Creative')?.max_capacity || 0;
 
         renderOverview(tasks);
         renderWorkTypes(tasks);
@@ -1070,6 +1192,7 @@ if (chartKey === 'des' && chartWtDes) { chartWtDes.destroy(); chartWtDes = null;
     // ── Init ──
     initMonth();
     initLayout(B_QUEST_CONFIG);
+    loadRoleList();
     loadData();
 </script>
 </body>

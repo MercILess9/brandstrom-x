@@ -10,34 +10,28 @@
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="/system/pull-refresh.js"></script>
+    <script src="/system/multi-select.js"></script>
     <script src="b-account.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-account.css">
     <style>
         body { padding-bottom: 80px; }
 
-        /* ── Header ── */
-        .dash-header { max-width: 1320px; margin: 0 auto; padding: 20px 20px 4px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-        .dash-title { font-size: 1.25rem; font-weight: 800; color: var(--c-dark); margin: 0; display: flex; align-items: center; gap: 8px; }
-
         /* ── Filter bar ── */
-        .dash-ctrl { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 10px 20px; position: sticky; top: 0; z-index: 100; }
+        /* top:64px, not 0 — the shared system header (system/header.html)
+           is position:fixed, 64px tall, z-index:1000. A sticky top:0 bar
+           would end up stuck at the exact same screen position once
+           scrolled, and the header's much higher z-index paints over it
+           completely (looks like the filter bar just vanishes). */
+        .dash-ctrl { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 10px 20px; position: sticky; top: 64px; z-index: 100; }
         .dash-ctrl-inner { max-width: 1320px; margin: 0 auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .year-tabs { display: flex; border: 1.5px solid #e2e8f0; border-radius: 10px; overflow: hidden; flex-shrink: 0; }
-        .year-tab { border: none; border-right: 1.5px solid #e2e8f0; background: #fff; padding: 0 14px; height: 34px; font-size: 0.75rem; font-weight: 700; color: #64748b; cursor: pointer; transition: 0.2s; font-family: inherit; white-space: nowrap; }
-        .year-tab:last-child { border-right: none; }
-        .year-tab.active { background: #1e293b; color: #bdc432; }
-        .dash-sep { width: 1px; height: 20px; background: #e2e8f0; flex-shrink: 0; }
-        .dash-sel { border: 1.5px solid #e2e8f0; border-radius: 10px; background: #fff; color: #475569; font-size: 0.75rem; font-weight: 700; padding: 0 12px; height: 34px; font-family: inherit; cursor: pointer; transition: 0.2s; }
-        .dash-sel:focus { outline: none; border-color: #bdc432; }
-        .dash-sel.active-filter { border-color: #bdc432; background: #fffef0; color: #7a8500; }
-        .dash-updated { font-size: 0.7rem; color: #94a3b8; white-space: nowrap; flex-shrink: 0; margin-left: auto; }
+        .dash-updated { font-size: 0.7rem; color: #94a3b8; white-space: nowrap; flex-shrink: 0; margin-left: auto; display: inline-flex; align-items: center; gap: 5px; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ── BU chips ── */
-        .bu-chip-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .bu-chip-all { border: 1.5px dashed #cbd5e1; background: #fff; color: #94a3b8; border-radius: 20px; padding: 0 12px; height: 34px; font-size: 0.72rem; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; transition: 0.2s; }
-        .bu-chip-all:hover { border-color: #94a3b8; color: #64748b; }
+        /* ── BU chips — pushed to the opposite edge from Year/Month ── */
+        .bu-chip-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+        .bu-chip-reset { border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; border-radius: 50%; width: 34px; height: 34px; font-size: 0.95rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .bu-chip-reset:hover { background: var(--c-bg); color: var(--c-accent-dark); border-color: #cbd5e1; }
         .bu-chip { border: 1.5px solid; border-radius: 20px; padding: 0 14px; height: 34px; font-size: 0.75rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap; transition: 0.2s; background: #fff; opacity: 0.45; }
         .bu-chip.active { opacity: 1; }
 
@@ -72,8 +66,11 @@
         .sec-hd-bar { width: 4px; height: 18px; background: #bdc432; border-radius: 2px; flex-shrink: 0; }
         .sec-hd-bar.c-red { background: #ef4444; }
         .sec-hd-title { font-size: 0.75rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* The page's own name/identity, not just a section label — allowed
+           to stand out a bit more than the plain section headers below it. */
+        .sec-hd-title-main { font-size: 1.05rem; display: inline-flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: normal; }
         .sec-hd-sub { font-size: 0.68rem; color: #94a3b8; margin-left: auto; }
-        .sec-block { margin-bottom: 18px; }
+        .sec-block { margin-bottom: 34px; }
 
         /* ── Cards ── */
         .dash-card { background: #fff; border: 1px solid #eef2f7; border-radius: 16px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
@@ -120,7 +117,7 @@
         #buChartLegend .leg-pct { width: auto; margin-left: 8px; font-size: 0.85rem; font-weight: 800; color: #1e293b; }
 
         /* ── Monthly chart ── */
-        .monthly-wrap { height: 210px; }
+        .monthly-wrap { height: 320px; }
         .lead-chart-wrap { height: 280px; }
         /* Own header variant — wraps to a 2nd line instead of overflowing
            when By BU mode's legend has too many items (up to 7 BUs) to sit
@@ -131,10 +128,16 @@
         .trend-legend-item:hover { opacity: 0.75; }
         .trend-legend-item.is-hidden { opacity: 0.4; text-decoration: line-through; }
         .trend-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-        .trend-mode-toggle { display: flex; border: 1.5px solid #e2e8f0; border-radius: 10px; overflow: hidden; flex-shrink: 0; }
-        .trend-mode-btn { border: none; border-right: 1.5px solid #e2e8f0; background: #fff; padding: 0 12px; height: 30px; font-size: 0.72rem; font-weight: 700; color: #64748b; cursor: pointer; transition: 0.2s; font-family: inherit; white-space: nowrap; }
-        .trend-mode-btn:last-child { border-right: none; }
-        .trend-mode-btn.active { background: #1e293b; color: #bdc432; }
+        /* Sliding-pill toggle — exact recipe as .sort-seg-wrap/-slider above
+           (2-way, fixed 50/50 split via flex:1 + translateX(100%)), not a
+           hand-rolled bordered-box segmented control. */
+        .trend-mode-toggle { display: flex; flex-shrink: 0; }
+        .trend-toggle-group { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; padding: 3px; }
+        .trend-toggle-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: transform 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
+        .trend-toggle-group:has(.trend-mode-btn:last-child.active) .trend-toggle-slider { transform: translateX(100%); }
+        .trend-mode-btn { position: relative; z-index: 1; flex: 1; height: 100%; border: none; background: transparent; padding: 0 16px; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; font-family: inherit; outline: none; }
+        .trend-mode-btn.active { color: var(--c-accent-dark); }
+        .trend-mode-btn:not(.active):hover { color: var(--c-accent); }
 
         /* ── Churn KPIs ── */
         .churn-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
@@ -172,15 +175,6 @@
         .cell-bar-fill { height: 100%; border-radius: 99px; background: #1e293b; }
         .cell-bar-pct { font-size: 0.7rem; color: #94a3b8; width: 36px; text-align: right; flex-shrink: 0; }
 
-        /* ── Bar rows (type/owner legacy — kept for reuse pattern) ── */
-        .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-        .bar-row:last-child { margin-bottom: 0; }
-        .bar-name { font-size: 0.74rem; font-weight: 700; color: #475569; width: 100px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .bar-track { flex: 1; height: 6px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
-        .bar-fill  { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
-        .bar-amt   { font-size: 0.72rem; font-weight: 700; color: #1e293b; width: 80px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-        .bar-cnt   { font-size: 0.64rem; color: #94a3b8; width: 50px; text-align: right; flex-shrink: 0; }
-
         /* ── Empty / loading ── */
         .dash-empty { display: flex; align-items: center; justify-content: center; height: 100px; color: #94a3b8; font-size: 0.78rem; gap: 7px; }
         .dash-spinner { animation: spin 1s linear infinite; }
@@ -188,31 +182,11 @@
 </head>
 <body>
 
-<div class="dash-header">
-    <h1 class="dash-title"><i class="bi bi-bar-chart-fill" style="color:var(--c-accent)"></i> B-ACCOUNT Dashboard</h1>
-</div>
-
 <div class="dash-ctrl">
     <div class="dash-ctrl-inner">
-        <div class="year-tabs" id="yearTabs"></div>
-        <select class="dash-sel" id="dashMonth" onchange="onFilterChange()">
-            <option value="">All Months</option>
-            <option value="01">Jan</option>
-            <option value="02">Feb</option>
-            <option value="03">Mar</option>
-            <option value="04">Apr</option>
-            <option value="05">May</option>
-            <option value="06">Jun</option>
-            <option value="07">Jul</option>
-            <option value="08">Aug</option>
-            <option value="09">Sep</option>
-            <option value="10">Oct</option>
-            <option value="11">Nov</option>
-            <option value="12">Dec</option>
-        </select>
-        <div class="dash-sep"></div>
+        <div class="flt-select-box" id="wrap-filterYear" style="width:150px"></div>
+        <div class="flt-select-box" id="wrap-filterMonth" style="width:160px"></div>
         <div class="bu-chip-row" id="buChipRow"></div>
-        <span class="dash-updated" id="dashUpdated"></span>
     </div>
 </div>
 
@@ -220,6 +194,10 @@
 <div class="dash-wrap">
 
     <!-- KPIs -->
+    <div class="sec-hd">
+        <span class="sec-hd-title sec-hd-title-main"><i class="bi bi-bar-chart-fill" style="color:var(--c-accent)"></i> B-ACCOUNT Dashboard</span>
+        <span class="dash-updated" id="dashUpdated"></span>
+    </div>
     <div class="kpi-row" id="kpiRow">
         <div class="kpi-card"><div class="dash-empty dash-spinner" style="height:50px"><i class="bi bi-arrow-repeat"></i></div></div>
         <div class="kpi-card"></div>
@@ -234,11 +212,24 @@
             <span class="sec-hd-title">Sales Trend</span>
             <div class="trend-legend" id="trendLegend"></div>
             <div class="trend-mode-toggle">
-                <button class="trend-mode-btn active" data-mode="amtgp" onclick="setTrendMode('amtgp')">Amount/GP</button>
-                <button class="trend-mode-btn" data-mode="bu" onclick="setTrendMode('bu')">By BU</button>
+                <div class="trend-toggle-group" id="trendBreakdownGroup">
+                    <div class="trend-toggle-slider"></div>
+                    <button class="trend-mode-btn active" data-bd="amtgp" onclick="setTrendBreakdown('amtgp')">Amount/GP</button>
+                    <button class="trend-mode-btn" data-bd="bu" onclick="setTrendBreakdown('bu')">By BU</button>
+                </div>
             </div>
         </div>
-        <div class="monthly-wrap"><canvas id="monthlyChart"></canvas></div>
+        <div class="monthly-wrap" id="monthlyWrap"><canvas id="monthlyChart"></canvas></div>
+    </div>
+
+    <!-- Sales Trend — plain values table, its own card so the chart card
+         above doesn't grow tall/scrollable when there's 12+ rows to show. -->
+    <div class="dash-card sec-block">
+        <div class="sec-hd">
+            <div class="sec-hd-bar"></div>
+            <span class="sec-hd-title">Trend Detail</span>
+        </div>
+        <div id="trendTableWrap"></div>
     </div>
 
     <!-- BU Breakdown -->
@@ -338,16 +329,19 @@
 // ── State ─────────────────────────────────────────────────────────────────────
 let _opps  = [];
 let _qtMap = new Map(); // oppId → [{qt_type, b_opportunity_qt_item:[{bu,qty,price,discount,gp}]}]
-let _accMap = new Map(); // account_id → {account_name, company_name}
+let _accMap = new Map(); // account_id → {account_name}
 let _cfgBU  = []; // ordered list of BU values from config — drives chip order + stable color assignment
 let _yearFilters  = new Set(); // empty = default (current year); multi-select supported
-let _monthFilter  = ''; // '01'..'12'
+let _monthFilters = new Set(); // '01'..'12', empty = all months
 let _buFilters    = new Set(); // empty = all BUs
 let _chartMonthly = null;
 let _chartType    = null;
 let _chartBU      = null;
 let _chartLead    = null;
-let _trendMode    = 'amtgp'; // 'amtgp' | 'bu'
+let _trendBreakdown = 'amtgp'; // 'amtgp' | 'bu'
+// A year-over-year Compare mode (MoM/QoQ, with its own Normal/Compare and
+// granularity toggles) was built and rolled back for being confusing —
+// keeping this section to the plain trend only, on purpose, for now.
 
 const TYPE_CLR = { 'New Business': '#1d4ed8', 'Retention': '#6d28d9', 'Up Sale': '#0d7a70' }; // ref .op-type badge colors in b-opportunity-list.html
 const STATUS_CLR = { 'Churn': '#f97316', 'End Contact': '#64748b' }; // ref .op-card.churn/.ended — everything else uses the brand accent
@@ -378,54 +372,50 @@ function pctStr(a, b) {
 }
 
 // ── Year tabs ─────────────────────────────────────────────────────────────────
-function initYearTabs() {
+// Dropdown-checkbox popovers (system/multi-select.js) — same component the
+// Opportunity/Account List filter bars already use, instead of a fixed row
+// of year-tab buttons (doesn't scale) or a native single-select <select>
+// (can't multi-select at all).
+let _yearMS = null, _monthMS = null;
+
+function initFilterDropdowns() {
     const cur = new Date().getFullYear();
     const years = [];
-    for (let y = 2024; y <= cur; y++) years.push(y);
-    const allBtn = `<button class="year-tab${_yearFilters.size === 0 ? ' active' : ''}" onclick="resetYearFilter()">All</button>`;
-    const yearBtns = years.map(y =>
-        `<button class="year-tab${_yearFilters.has(y) ? ' active' : ''}" onclick="toggleYear(${y})">${y}</button>`
-    ).join('');
-    document.getElementById('yearTabs').innerHTML = allBtn + yearBtns;
-}
+    for (let y = cur; y >= 2024; y--) years.push(y); // newest first in the checklist
 
-// Multi-select — picking 2+ years lets Sales Trend chain their Jan-Dec
-// ranges into one overview instead of only ever showing a single year.
-function toggleYear(y) {
-    if (_yearFilters.has(y)) _yearFilters.delete(y);
-    else _yearFilters.add(y);
-    renderYearTabsActive();
-    render();
-}
-
-function resetYearFilter() {
-    _yearFilters.clear();
-    renderYearTabsActive();
-    render();
-}
-
-function renderYearTabsActive() {
-    document.querySelectorAll('.year-tab').forEach(b => {
-        const val = b.textContent.trim();
-        b.classList.toggle('active', val === 'All' ? _yearFilters.size === 0 : _yearFilters.has(+val));
+    _yearMS = createMultiSelect({
+        trigger: document.getElementById('wrap-filterYear'),
+        label: 'Year',
+        getOptions: () => years.map(y => ({ value: String(y), label: String(y) })),
+        onChange: values => { _yearFilters = new Set(values.map(Number)); render(); }
     });
-}
 
-function onFilterChange() {
-    _monthFilter = document.getElementById('dashMonth').value;
-    document.getElementById('dashMonth').classList.toggle('active-filter', !!_monthFilter);
-    render();
+    _monthMS = createMultiSelect({
+        trigger: document.getElementById('wrap-filterMonth'),
+        label: 'Month',
+        getOptions: () => MONTHS.map((m, i) => ({ value: String(i + 1).padStart(2, '0'), label: m })),
+        onChange: values => { _monthFilters = new Set(values); render(); }
+    });
+
+    // Default to "this month, this year" on first load — same as what the
+    // Reset button snaps back to — instead of an all-time view. setValues()
+    // doesn't fire onChange, so the app-state Sets are set directly here too.
+    const now = new Date();
+    _yearFilters = new Set([now.getFullYear()]);
+    _monthFilters = new Set([String(now.getMonth() + 1).padStart(2, '0')]);
+    _yearMS.setValues([String(now.getFullYear())]);
+    _monthMS.setValues([String(now.getMonth() + 1).padStart(2, '0')]);
 }
 
 // ── BU chips ──────────────────────────────────────────────────────────────────
 function renderBuChips() {
-    const all = `<button class="bu-chip-all" onclick="resetBuFilter()">All</button>`;
+    const resetBtn = `<button class="bu-chip-reset" onclick="resetAllFilters()" title="Reset to this month, all BUs"><i class="bi bi-arrow-counterclockwise"></i></button>`;
     const chips = _cfgBU.map(bu => {
         const active = _buFilters.size === 0 || _buFilters.has(bu);
         const c = buColor(bu);
         return `<button class="bu-chip${active ? ' active' : ''}" style="border-color:${c};color:${c}" onclick="toggleBuChip('${esc(bu)}')">${esc(bu)}</button>`;
     }).join('');
-    document.getElementById('buChipRow').innerHTML = all + chips;
+    document.getElementById('buChipRow').innerHTML = chips + resetBtn;
 }
 
 function toggleBuChip(bu) {
@@ -436,6 +426,11 @@ function toggleBuChip(bu) {
     if (_buFilters.size === 0) {
         _cfgBU.forEach(b => { if (b !== bu) _buFilters.add(b); });
     } else if (_buFilters.has(bu)) {
+        // Refuse to shrink to zero — an empty Set is the sentinel for "all
+        // included" (see buPasses), so deleting the last remaining BU would
+        // silently flip back to showing everything instead of showing
+        // nothing, the opposite of what turning off the last chip should do.
+        if (_buFilters.size === 1) return;
         _buFilters.delete(bu);
     } else {
         _buFilters.add(bu);
@@ -446,8 +441,15 @@ function toggleBuChip(bu) {
     render();
 }
 
-function resetBuFilter() {
+// Reset icon — not just BU: snaps the whole filter bar back to "this
+// month, every BU" (the sensible default view), not just clearing BU alone.
+function resetAllFilters() {
     _buFilters.clear();
+    const now = new Date();
+    _yearFilters = new Set([now.getFullYear()]);
+    _monthFilters = new Set([String(now.getMonth() + 1).padStart(2, '0')]);
+    _yearMS?.setValues([String(now.getFullYear())]);
+    _monthMS?.setValues([String(now.getMonth() + 1).padStart(2, '0')]);
     renderBuChips();
     render();
 }
@@ -466,7 +468,9 @@ async function loadData() {
         { data: cfgBU }
     ] = await Promise.all([
         supabaseClient.from('b_opportunity_list')
-            .select('opportunity_id, opportunity_name, account_id, status, business_type, lead_source, total_amount, total_gp, create_date, churn_date, owner')
+            // total_amount/total_gp not selected — every aggregate on this page
+            // is derived from b_opportunity_qt_item line items instead.
+            .select('opportunity_id, opportunity_name, account_id, status, business_type, lead_source, create_date, churn_date, owner')
             .limit(3000),
         supabaseClient.from('b_opportunity_qt')
             .select('qt_id, opportunity_id, qt_type')
@@ -474,7 +478,7 @@ async function loadData() {
         supabaseClient.from('b_opportunity_qt_item')
             .select('qt_id, bu, qty, price, discount, gp')
             .limit(20000),
-        supabaseClient.from('b_account_list').select('account_id, account_name, company_name'),
+        supabaseClient.from('b_account_list').select('account_id, account_name'),
         supabaseClient.from('b_opportunity_config').select('value').eq('type','bu').order('value')
     ]);
 
@@ -502,8 +506,10 @@ async function loadData() {
         });
     });
 
-    document.getElementById('dashUpdated').textContent =
-        'Last Update : ' + new Date().toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+    const _now = new Date();
+    document.getElementById('dashUpdated').innerHTML = `<i class="bi bi-clock-history"></i> Last Update : `
+        + _now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        + ' ' + _now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
     render();
 }
@@ -517,11 +523,11 @@ function yearPasses(createDate) {
 function computeData() {
     const filtered = _opps.filter(o => {
         if (!yearPasses(o.create_date)) return false;
-        if (_monthFilter && (o.create_date || '').slice(5,7) !== _monthFilter) return false;
+        if (_monthFilters.size && !_monthFilters.has((o.create_date || '').slice(5,7))) return false;
         return true;
     });
 
-    let totalDeals = filtered.length;
+    let totalDeals = 0;
     let grandOrigAmt = 0, grandOrigGP = 0, grandChurnAmt = 0, grandChurnGP = 0;
 
     const buMap      = new Map(); // bu     → { deals:Set, origAmt, origGP, churnAmt }
@@ -533,6 +539,17 @@ function computeData() {
     const churnRows  = []; // { account, opportunity, bu, amt, owner, date }
 
     for (const opp of filtered) {
+        const qts = _qtMap.get(opp.opportunity_id) || [];
+        // Opportunity/Status now respect the BU filter too — an opportunity
+        // only counts here if it has at least one line item in a BU that's
+        // currently included (an opportunity can span multiple BUs across
+        // its QT items, so "included" means "has any", not "only"). When no
+        // BU filter is active (_buFilters empty) every opportunity counts,
+        // same as before.
+        const hasPassingBU = _buFilters.size === 0 || qts.some(qt => (qt.b_opportunity_qt_item || []).some(i => buPasses(i.bu || 'Other')));
+        if (!hasPassingBU) continue;
+
+        totalDeals++;
         const st = opp.status || 'Unknown';
         statusMap.set(st, (statusMap.get(st) || 0) + 1);
 
@@ -542,7 +559,6 @@ function computeData() {
         const accKey = opp.account_id || 'Unknown';
         const accName = _accMap.get(opp.account_id)?.account_name || 'Unknown';
 
-        const qts = _qtMap.get(opp.opportunity_id) || [];
         for (const qt of qts) {
             const rawItems = (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other'));
             if (!rawItems.length) continue;
@@ -658,9 +674,13 @@ function computeTrendBUMap() {
             for (const item of items) {
                 const bu  = item.bu || 'Other';
                 const amt = Math.max(0, (+(item.qty) || 0) * (+(item.price) || 0) - (+(item.discount) || 0));
+                const gp  = +(item.gp) || 0;
                 if (!map.has(month)) map.set(month, new Map());
                 const byBu = map.get(month);
-                byBu.set(bu, (byBu.get(bu) || 0) + amt);
+                if (!byBu.has(bu)) byBu.set(bu, { amt: 0, gp: 0 });
+                const rec = byBu.get(bu);
+                rec.amt += amt;
+                rec.gp  += gp;
             }
         }
     }
@@ -783,35 +803,48 @@ function trend12MonthKeys() {
     return keys;
 }
 
-function momGrowth(arr, i) {
-    if (i === 0) return null;
-    const cur = arr[i], prev = arr[i - 1];
-    if (cur == null || prev == null || prev === 0) return null;
-    return (cur - prev) / prev * 100;
+// 'YYYY-MM' → 'Mon YY' — shared by the chart and the detail table below it
+// so both read the exact same labels off the exact same keys.
+function trendLabels(keys) {
+    return keys.map(m => {
+        const [y, mo] = m.split('-');
+        return MONTHS[+mo - 1] + ' ' + y.slice(2);
+    });
 }
 
-function setTrendMode(mode) {
-    _trendMode = mode;
-    document.querySelectorAll('.trend-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+function setTrendBreakdown(bd) {
+    _trendBreakdown = bd;
+    document.querySelectorAll('#trendBreakdownGroup .trend-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.bd === bd));
     renderTrendChart();
 }
 
+// Computes each mode's month map exactly once per render cycle and hands it
+// to both the chart and the detail table below — they used to each call
+// computeTrendMonthMap()/computeTrendBUMap() independently, silently
+// running the same full scan over _opps/_qtMap/items twice per render.
 function renderTrendChart() {
     renderTrendLegend();
-    if (_trendMode === 'bu') renderTrendByBU();
-    else renderTrendAmtGP();
+    if (_trendBreakdown === 'bu') {
+        const buMonthMap = computeTrendBUMap();
+        renderTrendByBU(buMonthMap);
+        renderTrendRawTable('bu', buMonthMap);
+    } else {
+        const monthMap = computeTrendMonthMap();
+        renderTrendAmtGP(monthMap);
+        renderTrendRawTable('amtgp', monthMap);
+    }
 }
 
 // Custom HTML legend living in the section header (next to the mode
-// toggle) — replaces Chart.js's own built-in legend so both can share
-// one row and wrap together when By BU's up-to-7 items don't fit.
+// toggle) — replaces Chart.js's own built-in legend so both can share one
+// row. By BU's own color key already lives in the top Filter Bar's BU
+// chips (that's the one place BU gets filtered from), so no second
+// interactive legend here — it would just be a redundant, confusing
+// duplicate "filter BU" control living in two different rows.
 function renderTrendLegend() {
     const el = document.getElementById('trendLegend');
-    if (_trendMode === 'bu') {
-        const activeBUs = _cfgBU.filter(bu => buPasses(bu));
-        el.innerHTML = activeBUs.map((bu, i) =>
-            `<span class="trend-legend-item" onclick="toggleTrendSeries(${i}, this)"><span class="trend-legend-dot" style="background:${buColor(bu)}"></span>${esc(bu)}</span>`
-        ).join('');
+    if (_trendBreakdown === 'bu') {
+        el.innerHTML = '';
     } else {
         el.innerHTML = `
             <span class="trend-legend-item" onclick="toggleTrendSeries(0, this)"><span class="trend-legend-dot" style="background:#3b82f6"></span>Amount</span>
@@ -830,13 +863,9 @@ function toggleTrendSeries(index, el) {
     el.classList.toggle('is-hidden', wasVisible);
 }
 
-function renderTrendAmtGP() {
-    const monthMap = computeTrendMonthMap();
+function renderTrendAmtGP(monthMap) {
     const keys = trend12MonthKeys();
-    const labels = keys.map(m => {
-        const [y, mo] = m.split('-');
-        return MONTHS[+mo-1] + ' ' + y.slice(2);
-    });
+    const labels = trendLabels(keys);
     // Months that haven't happened yet get a null value (a real gap in the
     // line, not a misleading zero) but their label still shows on the axis.
     const now = new Date();
@@ -886,18 +915,36 @@ function renderTrendAmtGP() {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    bodyAlign: 'right',
-                    displayColors: false,
+                    backgroundColor: '#1e293b',
+                    cornerRadius: 10,
                     padding: 12,
-                    bodySpacing: 5,
+                    boxPadding: 4,
+                    bodySpacing: 6,
+                    bodyAlign: 'right',
+                    displayColors: true,
+                    titleColor: '#fff',
+                    titleFont: { size: 13, weight: '700' },
+                    bodyColor: '#e2e8f0',
                     bodyFont: { size: 12 },
                     callbacks: {
+                        // Solid swatch colors — the datasets' own backgroundColor
+                        // is a near-transparent area fill (for the chart itself),
+                        // which would render as an invisible tooltip color box.
+                        labelColor: c => ({
+                            borderColor: c.datasetIndex === 0 ? '#3b82f6' : '#16a34a',
+                            backgroundColor: c.datasetIndex === 0 ? '#3b82f6' : '#16a34a',
+                            borderRadius: 3
+                        }),
                         label: c => c.raw == null ? null : ` ${c.dataset.label}: ${Math.round(c.raw).toLocaleString('en-US')} ฿`,
-                        afterLabel: c => {
-                            if (c.raw == null) return '';
-                            const gr = momGrowth(c.datasetIndex === 0 ? amts : gps, c.dataIndex);
-                            if (gr == null) return '';
-                            return `${gr >= 0 ? '▲' : '▼'} ${gr >= 0 ? '+' : ''}${gr.toFixed(1)}% MoM`;
+                        // GP% as its own plain line under Amount/GP — kept
+                        // separate from momGrowth's period-over-period % (which
+                        // read as noisy/hard to parse and was dropped) so the
+                        // tooltip is just the 3 numbers: Amount, GP, GP%.
+                        afterBody: items => {
+                            const i = items[0]?.dataIndex;
+                            if (i == null) return [];
+                            const pct = pctStr(gps[i], amts[i]);
+                            return pct ? [` GP%: ${pct}`] : [];
                         }
                     }
                 }
@@ -917,18 +964,14 @@ function renderTrendAmtGP() {
 // Stacked bar: one bar per month, one colored segment per BU. Only stacks
 // whichever BUs currently pass the BU chip filter (buPasses), same colors
 // as the BU cards/chips (buColor) so the two views read as one system.
-function renderTrendByBU() {
+function renderTrendByBU(buMonthMap) {
     const keys = trend12MonthKeys();
-    const labels = keys.map(m => {
-        const [y, mo] = m.split('-');
-        return MONTHS[+mo-1] + ' ' + y.slice(2);
-    });
-    const buMonthMap = computeTrendBUMap();
+    const labels = trendLabels(keys);
     const activeBUs = _cfgBU.filter(bu => buPasses(bu));
 
     const datasets = activeBUs.map(bu => ({
         label: bu,
-        data: keys.map(m => buMonthMap.get(m)?.get(bu) || 0),
+        data: keys.map(m => buMonthMap.get(m)?.get(bu)?.amt || 0),
         backgroundColor: buColor(bu),
         borderRadius: 3,
         stack: 'trend'
@@ -942,15 +985,38 @@ function renderTrendByBU() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            // 'index' so hovering anywhere on a bar shows every BU stacked
+            // into it at once, not just the single segment under the
+            // cursor — that's what made the old tooltip look incomplete.
+            interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    bodyAlign: 'right',
+                    backgroundColor: '#1e293b',
+                    cornerRadius: 10,
                     padding: 12,
+                    boxPadding: 4,
                     bodySpacing: 5,
+                    bodyAlign: 'right',
+                    titleColor: '#fff',
+                    titleFont: { size: 13, weight: '700' },
+                    bodyColor: '#e2e8f0',
                     bodyFont: { size: 12 },
+                    footerColor: '#bdc432',
+                    footerFont: { size: 12, weight: '700' },
+                    footerMarginTop: 6,
+                    itemSort: (a, b) => b.raw - a.raw, // biggest BU first, regardless of stack order
                     callbacks: {
-                        label: c => c.raw === 0 ? null : ` ${c.dataset.label}: ${Math.round(c.raw).toLocaleString('en-US')} ฿`
+                        label: c => c.raw === 0 ? null : ` ${c.dataset.label}: ${Math.round(c.raw).toLocaleString('en-US')} ฿`,
+                        // The "All BUs" total the old single-segment tooltip
+                        // was missing — per-BU Amount/GP/GP% breakdown lives in
+                        // the Trend Detail table below instead of being crammed
+                        // into the hover tooltip (up to 7 BUs × 3 lines each
+                        // would be unreadable there).
+                        footer: items => {
+                            const total = items.reduce((s, it) => s + (it.raw || 0), 0);
+                            return total ? `Total: ${Math.round(total).toLocaleString('en-US')} ฿` : '';
+                        }
                     }
                 }
             },
@@ -965,6 +1031,91 @@ function renderTrendByBU() {
             }
         }
     });
+}
+
+// Plain values table under the Amount/GP and By BU charts — same months
+// (and future-month "—") as whichever chart is showing, just laid out so
+// exact numbers are readable without hovering every point.
+function renderTrendRawTable(kind, monthMap) {
+    const keys = trend12MonthKeys();
+    const now = new Date();
+    const nowKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const labels = trendLabels(keys);
+
+    // Fixed per-column widths (table-layout:fixed) instead of the browser's
+    // auto layout stretching sparse "—" columns to fill 100% — that made
+    // columns land at wildly uneven widths depending on which months had
+    // real numbers. A predictable grid that overflows into its own
+    // horizontal scrollbar (see wrapper below) reads far more organized
+    // than a full-width table with awkward gaps.
+    const MONTH_COL = 90;
+    let thead, rows, colWidths;
+    if (kind === 'bu') {
+        const buMonthMap = monthMap;
+        const activeBUs = _cfgBU.filter(bu => buPasses(bu));
+        // Each BU gets its own Amount/GP/GP% trio, not just a bare amount —
+        // a grouped 2-row header (BU name spanning 3, then the sub-labels)
+        // makes clear which three columns belong to which BU.
+        const AMT_COL = 120, GP_COL = 120, PCT_COL = 70;
+        const groupWidth = AMT_COL + GP_COL + PCT_COL;
+        colWidths = MONTH_COL + activeBUs.length * groupWidth;
+
+        thead = `
+            <tr>
+                <th rowspan="2" style="width:${MONTH_COL}px">Month</th>
+                ${activeBUs.map(bu => `<th colspan="3" class="c" style="border-left:2px solid #e2e8f0">${esc(bu)}</th>`).join('')}
+            </tr>
+            <tr>
+                ${activeBUs.map(() => `
+                    <th class="r" style="width:${AMT_COL}px;border-left:2px solid #e2e8f0">Amount</th>
+                    <th class="r" style="width:${GP_COL}px">GP</th>
+                    <th class="r" style="width:${PCT_COL}px">GP%</th>
+                `).join('')}
+            </tr>
+        `;
+        rows = keys.map((m, i) => {
+            const future = m > nowKey;
+            const cells = activeBUs.map(bu => {
+                const rec = future ? null : buMonthMap.get(m)?.get(bu);
+                const pct = rec && rec.amt ? pctStr(rec.gp, rec.amt) : null;
+                return `
+                    <td class="r" style="border-left:2px solid #f1f5f9">${rec?.amt ? fmtN(rec.amt) + ' ฿' : '—'}</td>
+                    <td class="r amt-green">${rec?.gp ? fmtN(rec.gp) + ' ฿' : '—'}</td>
+                    <td class="r">${pct || '—'}</td>
+                `;
+            }).join('');
+            return `<tr><td class="strong">${esc(labels[i])}</td>${cells}</tr>`;
+        }).join('');
+    } else {
+        const VAL_COL = 170, PCT_COL = 90;
+        colWidths = MONTH_COL + VAL_COL * 2 + PCT_COL;
+        thead = `<tr>
+            <th style="width:${MONTH_COL}px">Month</th>
+            <th class="r" style="width:${VAL_COL}px">Amount</th>
+            <th class="r" style="width:${VAL_COL}px">GP</th>
+            <th class="r" style="width:${PCT_COL}px">GP%</th>
+        </tr>`;
+        rows = keys.map((m, i) => {
+            const future = m > nowKey;
+            const amt = future ? null : (monthMap.get(m)?.amt ?? 0);
+            const gp  = future ? null : (monthMap.get(m)?.gp ?? 0);
+            return `<tr>
+                <td class="strong">${esc(labels[i])}</td>
+                <td class="r">${amt == null ? '—' : fmtN(amt) + ' ฿'}</td>
+                <td class="r amt-green">${gp == null ? '—' : fmtN(gp) + ' ฿'}</td>
+                <td class="r">${amt == null || gp == null ? '—' : (pctStr(gp, amt) || '—')}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    document.getElementById('trendTableWrap').innerHTML = `
+        <div style="overflow-x:auto">
+            <table class="dash-tbl" style="width:${colWidths}px;table-layout:fixed">
+                <thead>${thead}</thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
 }
 
 // ── Sales by Business Unit: donut + legend, self-contained in one card ────────
@@ -1088,7 +1239,7 @@ function renderChurnSection({ churnRows, grandChurnAmt, grandOrigAmt, grandChurn
                     <td><span class="bu-mini-badge">${esc(r.bu || '—')}</span></td>
                     <td class="r amt-red">${fmtN(r.amt)} ฿</td>
                     <td>${esc(r.owner)}</td>
-                    <td>${r.date || '—'}</td>
+                    <td>${esc(r.date) || '—'}</td>
                 </tr>`).join('')}
             </tbody>
         </table>
@@ -1210,8 +1361,13 @@ function renderClientTable({ accountMap }) {
 async function initPage() {
     sessionStorage.removeItem('bx_perms_baccount');
     await initLayout(B_ACCOUNT_CONFIG);
-    initYearTabs();
+    initFilterDropdowns();
     await loadData();
+    createPullToRefresh({
+        container: document.getElementById('dashContainer'),
+        track: document.querySelector('.dash-wrap'),
+        onRefresh: loadData
+    });
 }
 initPage();
 </script>

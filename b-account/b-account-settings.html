@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
+    <script src="/system/save-bar.js"></script>
     <script src="b-account.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-account.css">
@@ -22,23 +23,34 @@
         .section-title { font-size: 0.82rem; font-weight: 800; color: var(--c-dark); text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 8px; }
         .section-body { padding: 20px 24px; }
 
-        /* ── Config cards (Dropdown) ── */
-        .cfg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
-        .cfg-card { border: 1px solid var(--c-border); border-radius: 16px; overflow: hidden; }
-        .cfg-card.is-dirty { border-color: #fde68a; }
-        .cfg-card-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid var(--c-border); }
-        .cfg-card-title { font-size: 0.72rem; font-weight: 800; color: var(--c-slate); text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 7px; }
-        .cfg-dirty-dot { width: 7px; height: 7px; background: #f59e0b; border-radius: 50%; display: none; }
-        .cfg-card.is-dirty .cfg-dirty-dot { display: inline-block; }
-        .btn-cfg-save { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 8px; padding: 5px 14px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: 0.2s; display: none; align-items: center; gap: 5px; }
-        .cfg-card.is-dirty .btn-cfg-save { display: inline-flex; }
-        .btn-cfg-save:hover { background: #0f172a; }
+        /* ── Config boxes (Dropdown) — horizontal-scroll carousel, exact
+           pattern from B-Quest's Role/Status/Type section: fixed-width
+           .section boxes in a row instead of a squeezed 2-col grid, with
+           edge-fade hints when there's more to scroll to. ── */
+        .cfg-carousel-wrap { position: relative; margin-bottom: 20px; }
+        .cfg-carousel-wrap::before, .cfg-carousel-wrap::after {
+            content: ''; position: absolute; top: 0; bottom: 6px; width: 48px;
+            pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s;
+        }
+        .cfg-carousel-wrap::before { left: 0; background: linear-gradient(to right, rgba(30,41,59,0.14), transparent); }
+        .cfg-carousel-wrap::after { right: 0; background: linear-gradient(to left, rgba(30,41,59,0.14), transparent); }
+        .cfg-carousel-wrap.fade-left::before { opacity: 1; }
+        .cfg-carousel-wrap.fade-right::after { opacity: 1; }
+        .cfg-carousel-grid { display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 6px; }
+        .cfg-carousel-grid .section { margin-bottom: 0; flex: 0 0 380px; scroll-snap-align: start; }
+        @media (max-width: 600px) { .cfg-carousel-grid .section { flex-basis: 90vw; } }
+
+        .cfg-count-badge { font-size: 0.66rem; font-weight: 700; color: var(--c-slate); background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 1px 8px; }
+        .dirty-dot { width: 7px; height: 7px; background: #f59e0b; border-radius: 50%; display: none; }
+        .section.is-dirty .dirty-dot { display: inline-block; }
+        .section.is-dirty { border-color: #fde68a; }
+        .cfg-header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
         /* list rows */
         .cfg-list { padding: 6px 0; min-height: 40px; }
-        .cfg-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 18px; border-bottom: 1px solid #f1f5f9; transition: background 0.12s; }
+        .cfg-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 4px; border-bottom: 1px solid #f1f5f9; border-radius: 8px; transition: background 0.12s; }
         .cfg-row:last-child { border-bottom: none; }
-        .cfg-row:hover { background: #f8fafc; }
+        .cfg-row:hover { background: var(--c-bg); }
         .cfg-row.is-new { background: #f0fdf4; }
         .cfg-row.is-new .cfg-row-val { color: #166534; }
         .cfg-row.is-del { background: #fff5f5; opacity: 0.6; }
@@ -50,11 +62,9 @@
         .cfg-row.is-del .cfg-row-del:hover { background: #f0fdf4; color: #16a34a; }
         .cfg-empty { padding: 16px 18px; font-size: 0.78rem; color: #cbd5e1; font-weight: 600; }
         .cfg-list--grid { display: grid; grid-template-columns: 1fr 1fr; }
+        .cfg-name-input { flex: 1; border: 1px solid var(--c-accent); border-radius: 8px; padding: 6px 10px; font-size: 0.83rem; font-weight: 700; color: var(--c-dark); background: #fff; outline: none; font-family: inherit; }
 
-        .cfg-add-row { display: flex; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--c-border); background: #fafbfc; }
-        .cfg-add-input { flex: 1; border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 12px; font-size: 0.82rem; outline: none; font-family: inherit; transition: 0.2s; background: #fff; }
-        .cfg-add-input:focus { border-color: var(--c-accent); }
-        .btn-cfg-add { background: #1e293b; color: #bdc432; border: none; border-radius: 10px; padding: 7px 14px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
+        .btn-cfg-add { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 8px; padding: 5px 14px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
         .btn-cfg-add:hover { background: #0f172a; }
 
         /* ── Members ── */
@@ -125,17 +135,6 @@
         .btn-am-confirm { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 9px 22px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: 0.15s; }
         .btn-am-confirm:hover:not(:disabled) { background: #0f172a; }
         .btn-am-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
-
-        /* ── Floating Save Bar ── */
-        .save-bar { position: fixed; bottom: -120px; left: 50%; transform: translateX(-50%); width: calc(100% - 48px); max-width: 560px; background: #1e293b; border-radius: 16px; padding: 14px 22px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.25); transition: bottom 0.4s cubic-bezier(0.34,1.56,0.64,1); z-index: 999; }
-        .save-bar.visible { bottom: 24px; }
-        .save-bar-left { display: flex; align-items: center; gap: 12px; }
-        .save-bar-left i { font-size: 1.3rem; color: var(--c-accent); }
-        .save-bar-label { font-size: 0.78rem; font-weight: 800; color: #fff; }
-        .save-bar-sub   { font-size: 0.72rem; color: rgba(255,255,255,0.5); margin-top: 2px; font-weight: 600; }
-        .btn-save-main { background: var(--c-accent); color: var(--c-dark); border: none; border-radius: 10px; padding: 9px 26px; cursor: pointer; font-size: 0.84rem; font-weight: 800; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; transition: 0.15s; }
-        .btn-save-main:hover { filter: brightness(1.08); }
-        .btn-save-main:disabled { opacity: 0.55; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -145,14 +144,9 @@
         <h1><i class="bi bi-gear-fill me-2" style="color:var(--c-accent)"></i>B-ACCOUNT Settings</h1>
     </div>
 
-    <!-- Section 1: Dropdown Config -->
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title"><i class="bi bi-menu-button-wide-fill"></i> Dropdown Config</div>
-        </div>
-        <div class="section-body">
-            <div class="cfg-grid" id="cfgGrid"></div>
-        </div>
+    <!-- Section 1: Dropdown Config — 5 separate boxes, side by side (ref B-Quest's Role/Status/Type carousel) -->
+    <div class="cfg-carousel-wrap" id="cfgCarouselWrap">
+        <div class="cfg-carousel-grid" id="cfgGrid"></div>
     </div>
 
     <!-- Section 2: Member Access -->
@@ -201,27 +195,15 @@
     </div>
 </div>
 
-<!-- Floating Save Bar (Members) -->
-<div class="save-bar" id="saveBar">
-    <div class="save-bar-left">
-        <i class="bi bi-pencil-square"></i>
-        <div>
-            <div class="save-bar-label">Unsaved changes</div>
-            <div class="save-bar-sub" id="saveBarSub"></div>
-        </div>
-    </div>
-    <button class="btn-save-main" id="btnSaveMembers" onclick="saveMembers()"><i class="bi bi-check2"></i> Save</button>
-</div>
-
 <script>
 
     // ── Config State ──────────────────────────────────────────────
     const CFG_TYPES = [
-        { key: 'status',        label: 'Status',             icon: 'bi-circle-fill',    bg: '#1e293b', fg: '#bdc432' },
-        { key: 'business_type', label: 'Business Type',      icon: 'bi-briefcase-fill', bg: '#4f46e5', fg: '#fff' },
-        { key: 'company',       label: 'Company QT',         icon: 'bi-building-fill',  bg: '#0891b2', fg: '#fff' },
-        { key: 'bu',            label: 'Business Unit (BU)', icon: 'bi-grid-fill',      bg: '#059669', fg: '#fff' },
-        { key: 'lead_source',   label: 'Lead Source',        icon: 'bi-funnel-fill',    bg: '#d97706', fg: '#fff', full: true },
+        { key: 'status',        label: 'Status',             icon: 'bi-circle-fill' },
+        { key: 'business_type', label: 'Business Type',      icon: 'bi-briefcase-fill' },
+        { key: 'company',       label: 'Company QT',         icon: 'bi-building-fill' },
+        { key: 'bu',            label: 'Business Unit (BU)', icon: 'bi-grid-fill' },
+        { key: 'lead_source',   label: 'Lead Source',        icon: 'bi-funnel-fill', full: true },
     ];
 
     const _cfg = {};  // _cfg[key] = { original: [], toAdd: [], toDelete: Set }
@@ -230,19 +212,23 @@
         return _cfg[key].toAdd.length > 0 || _cfg[key].toDelete.size > 0;
     }
 
+    function cfgCount(key) {
+        const state = _cfg[key];
+        return state.original.filter(v => !state.toDelete.has(v)).length + state.toAdd.length;
+    }
+
     function renderCfgCard(type, values) {
         _cfg[type.key] = { original: [...values], toAdd: [], toDelete: new Set() };
-        const spanStyle = type.full ? ' style="grid-column:span 2"' : '';
         const listClass = type.full ? 'cfg-list cfg-list--grid' : 'cfg-list';
-        return `<div class="cfg-card" id="cfgCard-${type.key}"${spanStyle}>
-            <div class="cfg-card-head" style="background:${type.bg}">
-                <div class="cfg-card-title" style="color:${type.fg}"><i class="bi ${type.icon}"></i>${type.label} <span class="cfg-dirty-dot" style="background:#f59e0b"></span></div>
-                <button class="btn-cfg-save" style="background:rgba(255,255,255,0.15);color:${type.fg};border:1px solid rgba(255,255,255,0.25)" onclick="saveCfg('${type.key}')"><i class="bi bi-check2"></i> Save</button>
+        return `<div class="section" id="cfgCard-${type.key}">
+            <div class="section-header">
+                <div class="section-title"><i class="bi ${type.icon}"></i> ${type.label} <span class="cfg-count-badge" id="cfgCount-${type.key}"></span> <span class="dirty-dot"></span></div>
+                <div class="cfg-header-actions">
+                    <button class="btn-cfg-add" onclick="addCfgTag('${type.key}')"><i class="bi bi-plus-lg"></i> Add</button>
+                </div>
             </div>
-            <div class="${listClass}" id="cfgTags-${type.key}"></div>
-            <div class="cfg-add-row">
-                <input type="text" class="cfg-add-input" id="cfgInput-${type.key}" placeholder="Add new value..." onkeydown="if(event.key==='Enter')addCfgTag('${type.key}')">
-                <button class="btn-cfg-add" onclick="addCfgTag('${type.key}')"><i class="bi bi-plus-lg"></i> Add</button>
+            <div class="section-body">
+                <div class="${listClass}" id="cfgTags-${type.key}"></div>
             </div>
         </div>`;
     }
@@ -268,21 +254,31 @@
                     <span class="cfg-row-val">${esc(v)}</span>
                     <button class="cfg-row-del" onclick="undoDeleteCfgTag('${key}','${esc(v)}')" title="Undo"><i class="bi bi-arrow-counterclockwise"></i></button>
                 </div>`
-            ))
+            )),
+            ...(state.drafting ? [`<div class="cfg-row is-new">
+                <input type="text" class="cfg-name-input" id="cfgDraft-${key}" placeholder="New value..." onkeydown="if(event.key==='Enter')this.blur()" onblur="commitCfgDraft('${key}', this.value)">
+            </div>`] : [])
         ].join('');
         container.innerHTML = rows || '<div class="cfg-empty">No values</div>';
+        document.getElementById(`cfgCount-${key}`).textContent = cfgCount(key);
         document.getElementById(`cfgCard-${key}`).classList.toggle('is-dirty', cfgIsDirty(key));
+        if (state.drafting) document.getElementById(`cfgDraft-${key}`)?.focus();
+        recomputeSaveBarCount();
     }
 
     function addCfgTag(key) {
-        const input = document.getElementById(`cfgInput-${key}`);
-        const val = input.value.trim();
-        if (!val) return;
+        _cfg[key].drafting = true;
+        refreshCfgTags(key);
+    }
+
+    function commitCfgDraft(key, rawVal) {
         const state = _cfg[key];
-        const exists = [...state.original, ...state.toAdd].some(v => v.toLowerCase() === val.toLowerCase());
-        if (exists) { input.select(); return; }
-        state.toAdd.push(val);
-        input.value = '';
+        state.drafting = false;
+        const val = rawVal.trim();
+        if (val) {
+            const exists = [...state.original, ...state.toAdd].some(v => v.toLowerCase() === val.toLowerCase());
+            if (!exists) state.toAdd.push(val);
+        }
         refreshCfgTags(key);
     }
 
@@ -301,34 +297,22 @@
         refreshCfgTags(key);
     }
 
-    async function saveCfg(key) {
+    function cfgOps(key) {
         const state = _cfg[key];
-        const btn = document.querySelector(`#cfgCard-${key} .btn-cfg-save`);
-        btn.disabled = true;
-        btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Saving...';
-
         const toDelete = [...state.toDelete];
         const toInsert = state.toAdd.map(v => ({ type: key, value: v }));
-
         const ops = [];
         if (toDelete.length) ops.push(supabaseClient.from('b_opportunity_config').delete().eq('type', key).in('value', toDelete));
         if (toInsert.length) ops.push(supabaseClient.from('b_opportunity_config').insert(toInsert));
-        const results = await Promise.all(ops);
+        return ops;
+    }
 
-        const hasError = results.some(r => r.error);
-        if (hasError) {
-            notify('', 'Save failed', 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-check2"></i> Save';
-            return;
-        }
-
-        // Commit state
+    function commitCfgState(key) {
+        const state = _cfg[key];
         state.original = [...state.original.filter(v => !state.toDelete.has(v)), ...state.toAdd];
         state.toDelete.clear();
         state.toAdd = [];
         refreshCfgTags(key);
-        notify('success', `${CFG_TYPES.find(t => t.key === key)?.label} saved`);
     }
 
     async function loadConfig() {
@@ -340,6 +324,21 @@
         const grid = document.getElementById('cfgGrid');
         grid.innerHTML = CFG_TYPES.map(t => renderCfgCard(t, grouped[t.key])).join('');
         CFG_TYPES.forEach(t => refreshCfgTags(t.key));
+        setupCarouselFade('cfgGrid', 'cfgCarouselWrap');
+    }
+
+    // Generic left/right scroll-fade hint — ref B-Quest's own settings carousel.
+    function setupCarouselFade(scrollerId, wrapId) {
+        const scroller = document.getElementById(scrollerId);
+        const wrap = document.getElementById(wrapId);
+        if (!scroller || !wrap) return;
+        const update = () => {
+            wrap.classList.toggle('fade-left', scroller.scrollLeft > 2);
+            wrap.classList.toggle('fade-right', scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 2);
+        };
+        scroller.addEventListener('scroll', update);
+        update();
+        setTimeout(update, 300);
     }
 
     // ── Members State ─────────────────────────────────────────────
@@ -348,24 +347,17 @@
     let _amSelected = new Set();
     let _memberSearch = '';
 
-    function membersDirty() {
-        return _members.some(m => m._state !== 'existing' || m._changed);
-    }
+    let saveBar = null;
 
-    function updateSaveBar() {
-        const bar = document.getElementById('saveBar');
-        const dirty = membersDirty();
-        bar.classList.toggle('visible', dirty);
-        if (dirty) {
-            const changed = _members.filter(m => m._state === 'new').length;
-            const deleted = _members.filter(m => m._state === 'deleted').length;
-            const parts = [];
-            if (changed) parts.push(`${changed} new`);
-            if (deleted) parts.push(`${deleted} removed`);
-            const edited = _members.filter(m => m._state === 'existing' && m._changed).length;
-            if (edited) parts.push(`${edited} edited`);
-            document.getElementById('saveBarSub').textContent = parts.join(' · ');
-        }
+    // Total pending change count across both Dropdown Config and Member
+    // Access — shared save-bar module (system/save-bar.js) just wants a
+    // number, ref B-Quest Settings' own recomputeSaveBarCount().
+    function recomputeSaveBarCount() {
+        if (!saveBar) return;
+        let total = 0;
+        CFG_TYPES.forEach(t => { const s = _cfg[t.key]; total += s.toAdd.length + s.toDelete.size; });
+        total += _members.filter(m => m._state === 'new' || m._state === 'deleted' || (m._state === 'existing' && m._changed)).length;
+        saveBar.setCount(total);
     }
 
     function toggle(codename, perm) {
@@ -373,7 +365,7 @@
         if (!m) return;
         m[perm] = !m[perm];
         if (m._state === 'existing') m._changed = true;
-        updateSaveBar();
+        recomputeSaveBarCount();
     }
 
     function removeMember(codename) {
@@ -382,7 +374,7 @@
         if (m._state === 'new') { _members = _members.filter(x => x.codename !== codename); }
         else { m._state = 'deleted'; }
         renderPermTable();
-        updateSaveBar();
+        recomputeSaveBarCount();
     }
 
     function renderPermRow(m) {
@@ -482,32 +474,47 @@
         });
         closeAddMember();
         renderPermTable();
-        updateSaveBar();
+        recomputeSaveBarCount();
     }
 
-    async function saveMembers() {
-        const btn = document.getElementById('btnSaveMembers');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Saving...';
+    // onSave for the shared save bar — button disable/spinner is handled
+    // by the module itself, this just does the writes + local commit.
+    async function saveAll() {
+        const dirtyKeys = CFG_TYPES.map(t => t.key).filter(cfgIsDirty);
+        const ops = dirtyKeys.flatMap(cfgOps);
 
         const toUpsert = _members.filter(m => m._state === 'new' || (m._state === 'existing' && m._changed))
             .map(({ codename, ae, new: n, edit, delete: d, setting }) => ({ codename, ae, new: n, edit, delete: d, setting }));
         const toDelete = _members.filter(m => m._state === 'deleted').map(m => m.codename);
-
-        const ops = [];
         if (toUpsert.length) ops.push(supabaseClient.from('b_account_setting').upsert(toUpsert, { onConflict: 'codename' }));
         if (toDelete.length) ops.push(supabaseClient.from('b_account_setting').delete().in('codename', toDelete));
+
         const results = await Promise.all(ops);
 
         const hasError = results.some(r => r.error);
-        if (hasError) { notify('', 'Save failed', 'error'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2"></i> Save'; return; }
+        if (hasError) { notify('', 'Save failed', 'error'); return; }
 
+        dirtyKeys.forEach(commitCfgState);
         _members = _members.filter(m => m._state !== 'deleted').map(m => ({ ...m, _state: 'existing', _changed: false }));
         renderPermTable();
-        updateSaveBar();
-        notify('success', 'Members saved');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-check2"></i> Save';
+        saveBar.clear();
+        notify('success', 'Settings saved');
+    }
+
+    // Cancel button on the shared save bar — discard every staged edit
+    // without touching the server. Config just clears its local draft
+    // buffers; Members re-fetches from DB since toggled permissions are
+    // mutated in place with no separate "original" copy to roll back to.
+    async function cancelAllChanges() {
+        CFG_TYPES.forEach(t => {
+            const state = _cfg[t.key];
+            state.toAdd = [];
+            state.toDelete = new Set();
+            state.drafting = false;
+            refreshCfgTags(t.key);
+        });
+        await loadMembers();
+        recomputeSaveBarCount();
     }
 
     async function loadProfiles() {
@@ -519,6 +526,7 @@
         sessionStorage.removeItem('bx_perms_baccount');
         await initLayout(B_ACCOUNT_CONFIG);
         if (!canBaccount('setting')) window.location.replace('b-opportunity-list.html');
+        saveBar = createSaveBar({ label: 'B-Account Settings', onSave: saveAll, onCancel: cancelAllChanges });
         await Promise.all([loadConfig(), loadMembers(), loadProfiles()]);
     }
 

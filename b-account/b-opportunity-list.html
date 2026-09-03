@@ -78,25 +78,25 @@
         .op-card.ended { border-left-color: #64748b; }
 
         /* ── Header layout ── */
-        .op-header { display: flex; align-items: center; gap: 14px; padding: 12px 18px; cursor: pointer; user-select: none; }
+        .op-header { display: flex; align-items: center; gap: 22px; padding: 12px 18px; cursor: pointer; user-select: none; }
 
         /* ── ID + type col ── */
         .op-id-col { display: flex; flex-direction: column; gap: 6px; align-items: center; min-width: 100px; flex-shrink: 0; }
-        .op-badge { font-size: 0.68rem; font-weight: 800; color: var(--c-muted); letter-spacing: 1px; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 8px; padding: 3px 8px; display: inline-block; white-space: nowrap; user-select: text; cursor: text; }
+        .op-badge { font-size: 0.7rem; font-weight: 700; color: #64748b; letter-spacing: 0.8px; white-space: nowrap; user-select: text; cursor: text; }
         .op-type { font-size: 0.68rem; font-weight: 700; border-radius: 20px; padding: 4px 12px; white-space: nowrap; border: 1px solid; }
         .op-type.retention { background: #f5f3ff; color: #6d28d9; border-color: #c4b5fd; }
         .op-type.new-biz   { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
         .op-type.upsale    { background: #f0fdfa; color: #0d7a70; border-color: #5eead4; }
-        .op-tag-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 0 18px 12px; cursor: pointer; }
-        .op-qt-tag { font-size: 0.66rem; font-weight: 700; color: #475569; background: #f1f5f9; border: 1px solid var(--c-border); border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
+        .op-co-tags { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 4px; }
+        .op-qt-tag { font-size: 0.62rem; font-weight: 700; color: #475569; background: #f1f5f9; border: 1px solid var(--c-border); border-radius: 20px; padding: 2px 8px; white-space: nowrap; }
 
         /* ── Name + sub ── */
-        .op-main { flex: 1; min-width: 0; }
+        .op-main { flex: 1; min-width: 0; max-width: 600px; }
         .op-name { font-size: 0.95rem; font-weight: 700; color: var(--c-text-main); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; user-select: text; line-height: 1.3; }
-        .op-sub  { font-size: 0.8rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; user-select: text; }
+        .op-sub  { font-size: 0.8rem; color: var(--c-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; user-select: text; }
 
         /* ── Amount/GP block ── */
-        .op-meta-badges { display: flex; gap: 28px; align-items: center; flex-shrink: 0; }
+        .op-meta-badges { display: flex; gap: 28px; align-items: center; flex-shrink: 0; margin-left: auto; }
         .omb-amt { width: 190px; display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
         .omb-amt-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
         .omb-lbl { font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
@@ -144,8 +144,8 @@
         .od-val.nil { color: #cbd5e1; font-weight: 400; }
 
         /* ── Links ── */
-        .op-link-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--c-border); background: #fff; border-radius: 10px; padding: 7px 14px; font-size: 0.78rem; font-weight: 700; color: var(--c-slate); text-decoration: none; transition: 0.15s; }
-        .op-link-btn:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: #6b7200; }
+        .op-link-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--c-accent); background: #fff; border-radius: 10px; padding: 7px 14px; font-size: 0.78rem; font-weight: 700; color: var(--c-accent-dark); text-decoration: none; transition: 0.15s; }
+        .op-link-btn:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
         .op-link-btn.disabled { opacity: 1; pointer-events: none; border: 1px dashed #d1d5db; background: #f8fafc; color: #cbd5e1; }
 
         /* ── Remark ── */
@@ -153,7 +153,7 @@
 
         /* ── QT section ── */
         .op-qt-section { margin-top: 4px; }
-        .op-qt-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #94a3b8; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .op-qt-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--c-slate); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
         .op-qt-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
         .op-qt-card:last-child { margin-bottom: 0; }
         .op-qt-group { border-radius: 12px; padding: 10px 12px 12px; position: relative; margin-bottom: 12px; }
@@ -175,7 +175,7 @@
         .op-qt-stat-val.gp { color: #16a34a; }
         .op-qt-stat-lbl { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; }
         .op-qt-stat-div { width: 1px; height: 28px; background: #e2e8f0; }
-        .op-qt-pct-badge { background: #dcfce7; color: #16a34a; border-radius: 100px; padding: 3px 9px; font-size: 0.72rem; font-weight: 800; white-space: nowrap; line-height: 1.4; }
+        .op-qt-pct-badge { display: inline-flex; align-items: center; margin-left: 5px; background: #dcfce7; color: #16a34a; border-radius: 100px; padding: 1px 7px; font-size: 0.62rem; font-weight: 800; letter-spacing: normal; white-space: nowrap; line-height: 1.4; vertical-align: middle; }
 
         /* ── QT Table ── */
         .op-qt-wrap { overflow-x: auto; }
@@ -519,12 +519,15 @@
         </div>`;
     }
 
-    function renderTagRow(o) {
+    function renderIdCol(o) {
         const companies = _companyQtMap.get(o.opportunity_id);
         const typeTag = o.business_type ? `<span class="op-type ${typeClass(o.business_type)}">${esc(o.business_type)}</span>` : '';
         const coTags  = companies ? [...companies].map(c => `<span class="op-qt-tag">${esc(c)}</span>`).join('') : '';
-        if (!typeTag && !coTags) return '';
-        return `<div class="op-tag-row" onclick="toggleCard(this.closest('.op-card'))">${typeTag}${coTags}</div>`;
+        return `<div class="op-id-col">
+            <span class="op-badge">${esc(o.opportunity_id)}</span>
+            ${typeTag}
+            ${coTags ? `<div class="op-co-tags">${coTags}</div>` : ''}
+        </div>`;
     }
 
     function renderAmtBlock(o, hasAmt, hasGP, pct) {
@@ -552,9 +555,7 @@
             : esc(o._account_name);
         return `<div class="op-card${cardClass(o.status)}" data-id="${esc(o.opportunity_id)}">
             <div class="op-header" onclick="toggleCard(this.closest('.op-card'))">
-                <div class="op-id-col">
-                    <span class="op-badge">${esc(o.opportunity_id)}</span>
-                </div>
+                ${renderIdCol(o)}
                 <div class="op-main">
                     <div class="op-name">${esc(o.opportunity_name || '')}</div>
                     <div class="op-sub">${sub}</div>
@@ -565,7 +566,6 @@
                 </div>
                 ${cardActions(o.opportunity_id)}
             </div>
-            ${renderTagRow(o)}
             <div class="op-detail-body"></div>
         </div>`;
     }
@@ -649,8 +649,8 @@
                     ${totGP > 0 ? `<div class="op-qt-stat-div"></div>
                     <div class="op-qt-stat">
                         <span class="op-qt-stat-val gp">${fmtAmt(totGP)}</span>
-                        <span class="op-qt-stat-lbl">GP</span>
-                    </div>${pct ? `<span class="op-qt-pct-badge">${pct}</span>` : ''}` : ''}
+                        <span class="op-qt-stat-lbl">GP${pct ? `<span class="op-qt-pct-badge">${pct}</span>` : ''}</span>
+                    </div>` : ''}
                 </div>
             </div>
             <div class="op-qt-wrap">

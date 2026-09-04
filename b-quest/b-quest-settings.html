@@ -2219,7 +2219,7 @@
     async function saveAll() {
         try {
             const errors = [];
-            const roleIdMap = await saveTable('b-quest-role', roleChanges, roleDeletes, 'name', errors, 'Role');
+            const roleIdMap = await saveTable('b_quest_role', roleChanges, roleDeletes, 'name', errors, 'Role');
             // A brand-new Role's Work items / Member grants staged in this
             // SAME save still reference its temp 'new-N' id — swap in the
             // real one now that saveTable above actually inserted it,
@@ -2232,9 +2232,9 @@
             Object.values(workChanges).forEach(ch => { if (ch.role_id?.startsWith?.('new-')) ch.role_id = roleIdMap[ch.role_id] || ch.role_id; });
             Object.keys(roleIdMap).forEach(tempId => delete roleChanges[tempId]);
 
-            const statusIdMap = await saveTable('b-quest-status', statusChanges, statusDeletes, 'name', errors, 'Status');
-            await saveTable('b-quest-type', typeChanges, typeDeletes, 'name', errors, 'Type');
-            await saveTable('b-quest-work', workChanges, workDeletes, 'work', errors, 'Work');
+            const statusIdMap = await saveTable('b_quest_status', statusChanges, statusDeletes, 'name', errors, 'Status');
+            await saveTable('b_quest_type', typeChanges, typeDeletes, 'name', errors, 'Type');
+            await saveTable('b_quest_work', workChanges, workDeletes, 'work', errors, 'Work');
 
             // Force exactly one Default — if the configured one is no
             // longer valid (deleted/deactivated this session) or was never

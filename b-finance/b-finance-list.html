@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
+    <script src="/system/multi-select.js"></script>
     <script src="b-finance.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="/system/theme.css">
@@ -19,38 +20,46 @@
 
     <!-- Toolbar -->
     <div class="fin-toolbar">
-        <button class="fin-sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="Pin sidebar open">
-            <i class="bi bi-layout-sidebar"></i>
-        </button>
-        <div class="fin-search-wrap">
-            <i class="bi bi-search fin-search-icon"></i>
-            <input type="text" id="acctSearch" class="fin-search-input" placeholder="Search...">
-            <button class="flt-search-clear" id="acctSearchClear" onclick="clearAcctSearch()" tabindex="-1"><i class="bi bi-x-lg"></i></button>
+        <div class="fin-toolbar-inner">
+            <div class="fin-toolbar-row">
+                <button class="fin-sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="Pin sidebar open">
+                    <i class="bi bi-layout-sidebar"></i>
+                </button>
+                <div class="fin-search-wrap">
+                    <i class="bi bi-search fin-search-icon"></i>
+                    <input type="text" id="acctSearch" class="fin-search-input" placeholder="Search...">
+                    <button class="flt-search-clear" id="acctSearchClear" onclick="clearAcctSearch()" tabindex="-1"><i class="bi bi-x-lg"></i></button>
+                </div>
+                <div class="fin-toolbar-spacer"></div>
+                <div class="fin-toolbar-right">
+                    <div class="flt-date-today-wrap" id="fltDateGroup">
+                        <div class="flt-date-group">
+                            <input type="date" class="flt-date-input" id="filterDateFrom" onchange="onFilterChange()">
+                            <span style="color:#cbd5e1;padding:0 4px">—</span>
+                            <input type="date" class="flt-date-input" id="filterDateTo" onchange="onFilterChange()">
+                        </div>
+                        <button class="flt-btn-today" id="btnMonth" onclick="setQuickDate('month')">This Month</button>
+                    </div>
+                    <div class="status-seg-wrap" id="billingSegWrap">
+                        <div class="status-seg-slider" id="billingSegSlider"></div>
+                        <button class="status-seg-btn active" data-bs="all" onclick="setBillingStatus('all')">All</button>
+                        <button class="status-seg-btn" data-bs="pending" onclick="setBillingStatus('pending')">Pending</button>
+                        <button class="status-seg-btn" data-bs="billed" onclick="setBillingStatus('billed')">Billed</button>
+                    </div>
+                    <button class="flt-btn-adv" id="toggleAdvBtn" onclick="toggleAdvanced()" title="Advance Filters"><i class="bi bi-sliders"></i></button>
+                    <button class="btn-reset" id="btnReset" onclick="resetAllFilters()" title="Clear all filters"><i class="bi bi-arrow-counterclockwise"></i></button>
+                </div>
+            </div>
+            <div class="flt-advanced-zone" id="advancedFilterZone">
+                <div class="flt-advanced-row">
+                    <div class="flt-select-box" id="fltCompanyBox"></div>
+                    <div class="flt-select-box" id="fltStatusBox"></div>
+                    <button class="flt-btn-quick active" id="btnQtDetail" onclick="toggleQtDetail()" title="Show / hide QT detail">
+                        <i class="bi bi-table"></i> QT Detail
+                    </button>
+                </div>
+            </div>
         </div>
-        <div class="fin-filter-divider"></div>
-        <div class="flt-date-group">
-            <input type="date" class="flt-date-input" id="filterDateFrom" onchange="onFilterChange()">
-            <span style="color:#cbd5e1;padding:0 4px">—</span>
-            <input type="date" class="flt-date-input" id="filterDateTo" onchange="onFilterChange()">
-        </div>
-        <button class="flt-btn-quick" id="btnMonth" onclick="setQuickDate('month')"><i class="bi bi-calendar-range"></i> This Month</button>
-        <div class="fin-filter-divider"></div>
-        <div class="flt-select-box" id="fltBuBox">
-            <span class="flt-select-tag">BU</span>
-            <select class="flt-select-input" id="filterBU" onchange="onFilterChange()">
-                <option value="">All</option>
-            </select>
-        </div>
-        <div class="flt-select-box" id="fltStatusBox">
-            <span class="flt-select-tag">Status</span>
-            <select class="flt-select-input" id="filterStatus" onchange="onFilterChange()">
-                <option value="">All</option>
-            </select>
-        </div>
-        <div class="fin-toolbar-spacer"></div>
-        <button class="flt-btn-quick active" id="btnQtDetail" onclick="toggleQtDetail()" title="Show / hide QT detail">
-            <i class="bi bi-table"></i> QT Detail
-        </button>
     </div>
 
     <div class="finance-layout sidebar-forced" id="financeLayout">
@@ -106,12 +115,16 @@ let _selectedAccId  = null;
 
 let _filterDateFrom = '';
 let _filterDateTo   = '';
-let _filterBU       = '';
-let _filterStatus   = '';
+let _filterBillingStatus = 'all'; // 'all' | 'pending' (no receipt_date yet) | 'billed' (has one)
+let _filterCompanyQt = new Set();
+let _filterStatus   = new Set();
+let _allCompanies   = []; // options for the Company QT multi-select, refreshed by loadLeftPanel()
+let _allStatuses    = []; // options for the Status multi-select, refreshed by loadLeftPanel()
+let _companyMS = null, _statusMS = null;
 let _qtDetailOpen   = true;
 let _cachedOpps     = [];
 let _cachedQtByOpp  = new Map();
-let _cachedBuByOpp  = new Map();
+let _cachedCompanyByOpp = new Map();
 let _selectedCoName = '';
 let _selectedAcName = '';
 let _changes        = new Map();  // id → { field: value }
@@ -170,6 +183,27 @@ document.addEventListener('click', e => {
     shakeSaveBar();
 }, true);
 
+// Detail textareas auto-grow to fit their content between a 2-line floor
+// and an 8-line ceiling (see .fin-textarea in b-finance.css) — resetting to
+// 'auto' first lets scrollHeight measure the content's real height instead
+// of whatever height was previously forced on the element.
+const FIN_TEXTAREA_MAX = 160; // px, ~8 lines at this font-size/line-height
+function autoResizeTextarea(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, FIN_TEXTAREA_MAX) + 'px';
+}
+// Delegated so newly-rendered rows (re-render, Add Sub) are covered without
+// re-attaching a listener per textarea every time the table is rebuilt.
+document.addEventListener('input', e => {
+    if (e.target.classList.contains('fin-textarea')) autoResizeTextarea(e.target);
+});
+// One-time sizing pass for whatever .fin-textarea elements a render just
+// introduced — needed because scrollHeight can only be measured once the
+// element is actually laid out in the DOM, not from the HTML string alone.
+function syncTextareaHeights(container) {
+    (container || document).querySelectorAll('.fin-textarea').forEach(autoResizeTextarea);
+}
+
 function trackChange(rowId, field, value) {
     if (!_changes.has(rowId)) _changes.set(rowId, {});
     _changes.get(rowId)[field] = value === '' ? null : value;
@@ -196,12 +230,15 @@ async function loadLeftPanel() {
 
         const finQtIds = [...new Set((finRows||[]).map(r => r.qt_id).filter(Boolean))];
 
-        // Map qt_id → Set<bill_date>
-        const finDatesByQt = new Map();
+        // Map qt_id → [{bill_date, receipt_date}] — keeping receipt_date
+        // alongside bill_date (not just a flat Set<bill_date>) is what lets
+        // the Billing Status filter below check, per entry, whether it's
+        // still pending (no receipt_date) or already billed.
+        const finRowsByQt = new Map();
         (finRows||[]).forEach(r => {
             if (!r.bill_date) return;
-            if (!finDatesByQt.has(r.qt_id)) finDatesByQt.set(r.qt_id, new Set());
-            finDatesByQt.get(r.qt_id).add(r.bill_date);
+            if (!finRowsByQt.has(r.qt_id)) finRowsByQt.set(r.qt_id, []);
+            finRowsByQt.get(r.qt_id).push({ bill_date: r.bill_date, receipt_date: r.receipt_date });
         });
         if (!finQtIds.length) {
             treeEl.innerHTML = '<div style="padding:16px;color:#94a3b8;font-size:0.82rem;text-align:center">No finance data found</div>';
@@ -209,9 +246,12 @@ async function loadLeftPanel() {
         }
 
         // Step 2: Get qt_id + opportunity_ids for those qt_ids (original QTs only)
+        // — company_qt lives directly on the QT itself (one per QT, unlike bu
+        // which is per line-item), so it comes along for free here with no
+        // extra query needed.
         const { data: bqts, error: e2 } = await supabaseClient
             .from('b_opportunity_qt')
-            .select('qt_id, opportunity_id, qt_number')
+            .select('qt_id, opportunity_id, qt_number, company_qt')
             .in('qt_id', finQtIds)
             .eq('qt_type', 'original');
         if (e2) throw e2;
@@ -222,11 +262,9 @@ async function loadLeftPanel() {
             return;
         }
 
-        // Step 3: Get account_ids + status + BU items in parallel
-        const [{ data: opps, error: e3 }, { data: buItems }] = await Promise.all([
-            supabaseClient.from('b_opportunity_list').select('opportunity_id, account_id, status, opportunity_name, owner').in('opportunity_id', oppIds),
-            supabaseClient.from('b_opportunity_qt_item').select('qt_id, bu').in('qt_id', finQtIds),
-        ]);
+        // Step 3: Get account_ids + status
+        const { data: opps, error: e3 } = await supabaseClient
+            .from('b_opportunity_list').select('opportunity_id, account_id, status, opportunity_name, owner').in('opportunity_id', oppIds);
         if (e3) throw e3;
 
         const accIds = [...new Set((opps||[]).map(o => o.account_id).filter(Boolean))];
@@ -235,38 +273,36 @@ async function loadLeftPanel() {
             return;
         }
 
-        // Build opportunity_id → Set<bu> and Set<bill_date>
+        // Build opportunity_id → Set<company_qt> and [{bill_date, receipt_date}]
         const qtToOpp = new Map((bqts||[]).map(q => [q.qt_id, q.opportunity_id]));
-        const buByOpp   = new Map();
-        const datesByOpp = new Map();
-        (buItems||[]).forEach(i => {
-            if (!i.bu) return;
-            const oppId = qtToOpp.get(i.qt_id);
-            if (!oppId) return;
-            if (!buByOpp.has(oppId)) buByOpp.set(oppId, new Set());
-            buByOpp.get(oppId).add(i.bu);
+        const companyByOpp   = new Map();
+        const finEntriesByOpp = new Map();
+        (bqts||[]).forEach(q => {
+            if (!q.company_qt || !q.opportunity_id) return;
+            if (!companyByOpp.has(q.opportunity_id)) companyByOpp.set(q.opportunity_id, new Set());
+            companyByOpp.get(q.opportunity_id).add(q.company_qt);
         });
-        finDatesByQt.forEach((dates, qtId) => {
+        finRowsByQt.forEach((entries, qtId) => {
             const oppId = qtToOpp.get(qtId);
             if (!oppId) return;
-            if (!datesByOpp.has(oppId)) datesByOpp.set(oppId, new Set());
-            dates.forEach(d => datesByOpp.get(oppId).add(d));
+            if (!finEntriesByOpp.has(oppId)) finEntriesByOpp.set(oppId, []);
+            finEntriesByOpp.get(oppId).push(...entries);
         });
 
         // Build opportunity_id → account_id map
         const oppToAcct = new Map((opps||[]).map(o => [o.opportunity_id, o.account_id]));
 
-        // Build account → {statuses, buses, billdates, oppNames, oppIds, searchTerms} map
+        // Build account → {statuses, companies, finEntries, oppNames, oppIds, searchTerms} map
         const acctMeta = new Map();
-        const initMeta = () => ({ statuses: new Set(), buses: new Set(), billdates: new Set(), oppNames: new Set(), oppIds: new Set(), searchTerms: new Set() });
+        const initMeta = () => ({ statuses: new Set(), companies: new Set(), finEntries: [], oppNames: new Set(), oppIds: new Set(), searchTerms: new Set() });
         (opps||[]).forEach(o => {
             if (!acctMeta.has(o.account_id)) acctMeta.set(o.account_id, initMeta());
             if (o.status)           acctMeta.get(o.account_id).statuses.add(o.status);
             if (o.opportunity_name) acctMeta.get(o.account_id).oppNames.add(o.opportunity_name.toLowerCase());
             if (o.opportunity_id)   acctMeta.get(o.account_id).oppIds.add(o.opportunity_id.toLowerCase());
             if (o.owner)            acctMeta.get(o.account_id).searchTerms.add(o.owner.toLowerCase());
-            buByOpp.get(o.opportunity_id)?.forEach(bu => acctMeta.get(o.account_id).buses.add(bu));
-            datesByOpp.get(o.opportunity_id)?.forEach(d => acctMeta.get(o.account_id).billdates.add(d));
+            companyByOpp.get(o.opportunity_id)?.forEach(c => acctMeta.get(o.account_id).companies.add(c));
+            finEntriesByOpp.get(o.opportunity_id)?.forEach(e => acctMeta.get(o.account_id).finEntries.push(e));
         });
         // Index qt_number per account
         (bqts||[]).forEach(q => {
@@ -304,23 +340,24 @@ async function loadLeftPanel() {
             return {
                 ...a,
                 statuses:    m?.statuses    || new Set(),
-                buses:       m?.buses       || new Set(),
-                billdates:   m?.billdates   || new Set(),
+                companies:   m?.companies   || new Set(),
+                finEntries:  m?.finEntries  || [],
                 oppNames:    m?.oppNames    || new Set(),
                 oppIds:      m?.oppIds      || new Set(),
                 searchTerms,
             };
         });
 
-        // Populate BU & Status dropdowns from ALL data
-        const allBus      = [...new Set((buItems||[]).map(i => i.bu).filter(Boolean))].sort();
-        const allStatuses = [...new Set((opps||[]).map(o => o.status).filter(Boolean))].sort();
-        document.getElementById('filterBU').innerHTML     = '<option value="">All</option>' + allBus.map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('');
-        document.getElementById('filterStatus').innerHTML = '<option value="">All</option>' + allStatuses.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+        // Refresh Company QT & Status multi-select options from ALL data —
+        // getOptions() reads these live each time either popover opens, so
+        // no re-init needed.
+        _allCompanies = [...new Set((bqts||[]).map(q => q.company_qt).filter(Boolean))].sort();
+        _allStatuses  = [...new Set((opps||[]).map(o => o.status).filter(Boolean))].sort();
 
         renderTree('');
         document.getElementById('acctSearch').addEventListener('input', e => {
             document.getElementById('acctSearchClear').style.display = e.target.value ? 'block' : 'none';
+            updateResetVisibility();
             deselectAccount();
             renderTree(e.target.value.toLowerCase());
         });
@@ -334,12 +371,22 @@ function clearAcctSearch() {
     const inp = document.getElementById('acctSearch');
     inp.value = '';
     document.getElementById('acctSearchClear').style.display = 'none';
+    updateResetVisibility();
     deselectAccount();
     renderTree('');
 }
 
 function inDateRange(d, from, to) {
     return (!from || d >= from) && (!to || d <= to);
+}
+
+// Billing Status — independent of the Bill Date range (works alongside it,
+// not instead of it): 'pending' = still needs the billing paperwork done
+// (no receipt_date yet), 'billed' = already receipted, 'all' = don't care.
+function billingStatusPasses(receiptDate) {
+    if (_filterBillingStatus === 'pending') return !receiptDate;
+    if (_filterBillingStatus === 'billed')  return !!receiptDate;
+    return true;
 }
 
 function accountMatchesSearch(a, s) {
@@ -356,9 +403,10 @@ function renderTree(search) {
     const tree = {};
     _allAccounts.forEach(a => {
         if (!accountMatchesSearch(a, search)) return;
-        if (_filterBU     && !a.buses.has(_filterBU))         return;
-        if (_filterStatus && !a.statuses.has(_filterStatus))  return;
-        if ((_filterDateFrom || _filterDateTo) && ![...a.billdates].some(d => inDateRange(d, _filterDateFrom, _filterDateTo))) return;
+        if (_filterCompanyQt.size && ![...a.companies].some(c => _filterCompanyQt.has(c))) return;
+        if (_filterStatus.size && ![...a.statuses].some(s => _filterStatus.has(s)))  return;
+        if ((_filterDateFrom || _filterDateTo || _filterBillingStatus !== 'all') &&
+            !a.finEntries.some(e => inDateRange(e.bill_date, _filterDateFrom, _filterDateTo) && billingStatusPasses(e.receipt_date))) return;
         if (!tree[a.account_name]) tree[a.account_name] = [];
         tree[a.account_name].push(a);
     });
@@ -368,7 +416,7 @@ function renderTree(search) {
             <div class="acct-hdr${search ? ' open' : ''}" onclick="this.classList.toggle('open')">
                 <i class="bi bi-chevron-right acct-chevron"></i>
                 <span class="acct-label">${esc(acName)}</span>
-                <span class="acct-badge">${companies.length}</span>
+                ${companies.length > 1 ? `<span class="acct-badge">${companies.length}</span>` : ''}
             </div>
             <div class="acct-companies">
                 ${companies.map(c => `
@@ -407,6 +455,7 @@ function loadAccountDetail(accountId, companyName, accountName) {
             <div class="acct-hdr-badges">
                 ${d.tax_id ? `<span class="acct-taxid-badge"><span class="taxid-lbl">Tax ID</span><span class="taxid-val">${esc(d.tax_id)}</span></span>` : ''}
                 <span class="acct-id-badge">${esc(accountId)}</span>
+                <button class="acct-edit-btn" onclick="editAccountInBAccount('${esc(accountId)}')" title="Edit Account"><i class="bi bi-pencil"></i></button>
                 ${boxes ? `<button class="acct-boxes-toggle" id="acctBoxToggle" onclick="toggleAcctBoxes()" title="Toggle details"><i class="bi bi-chevron-${_boxesCollapsed ? 'down' : 'up'}"></i></button>` : ''}
             </div>
         </div>
@@ -467,7 +516,7 @@ async function loadRightPanel(accountId) {
 
     // Step 3: items + finance rows in parallel
     const [{ data: items }, { data: finRows }] = await Promise.all([
-        qtIds.length ? supabaseClient.from('b_opportunity_qt_item').select('qt_id, bu, qty, price, discount, gp, amount').in('qt_id', qtIds) : Promise.resolve({ data: [] }),
+        qtIds.length ? supabaseClient.from('b_opportunity_qt_item').select('qt_id, qty, price, discount, gp, amount').in('qt_id', qtIds) : Promise.resolve({ data: [] }),
         qtIds.length ? supabaseClient.from('b_finance_qt').select('*').in('qt_id', qtIds).order('qt_id').order('sub_index') : Promise.resolve({ data: [] }),
     ]);
 
@@ -484,14 +533,13 @@ async function loadRightPanel(accountId) {
         finMap.get(r.qt_id).push(r);
     });
 
-    const qtToOpp = new Map((qts||[]).map(q => [q.qt_id, q.opportunity_id]));
-    const buByOpp = new Map();
-    (items||[]).forEach(i => {
-        if (!i.bu) return;
-        const oppId = qtToOpp.get(i.qt_id);
-        if (!oppId) return;
-        if (!buByOpp.has(oppId)) buByOpp.set(oppId, new Set());
-        buByOpp.get(oppId).add(i.bu);
+    // company_qt lives directly on the QT, not per line-item like bu did —
+    // no extra query needed, just group what's already in qts.
+    const companyByOpp = new Map();
+    (qts||[]).forEach(q => {
+        if (!q.company_qt) return;
+        if (!companyByOpp.has(q.opportunity_id)) companyByOpp.set(q.opportunity_id, new Set());
+        companyByOpp.get(q.opportunity_id).add(q.company_qt);
     });
 
     const qtByOpp = new Map();
@@ -502,7 +550,7 @@ async function loadRightPanel(accountId) {
 
     _cachedOpps    = opps;
     _cachedQtByOpp = qtByOpp;
-    _cachedBuByOpp = buByOpp;
+    _cachedCompanyByOpp = companyByOpp;
     applyFinFilters();
 }
 
@@ -515,18 +563,93 @@ function deselectAccount() {
     document.getElementById('financeLayout').classList.add('sidebar-forced');
 }
 
+// Shared tail for every top-filter change (date inputs' onchange, and the
+// Company/Status multi-selects' onChange below) — changing any of them
+// always drops back to the unselected-account view, same as before. Also
+// keeps the Bill Date pill's active-filter highlight in sync regardless of
+// which specific filter triggered the change.
+function applyTopFilters() {
+    document.getElementById('fltDateGroup').classList.toggle('active-filter', !!(_filterDateFrom || _filterDateTo));
+    syncQuickDateButtons();
+    updateResetVisibility();
+    deselectAccount();
+    renderTree(document.getElementById('acctSearch').value.toLowerCase());
+}
+
+// Reset only appears once something is actually filtered — same convention
+// as b-opportunity-list.html's updateResetVisibility(). Called after every
+// filter change (applyTopFilters' shared tail) and on search text changes,
+// which don't otherwise go through applyTopFilters().
+function updateResetVisibility() {
+    const anyActive = document.getElementById('acctSearch').value ||
+        _filterDateFrom || _filterDateTo || _filterBillingStatus !== 'all' ||
+        _filterCompanyQt.size || _filterStatus.size;
+    document.getElementById('btnReset').classList.toggle('has-filters', !!anyActive);
+}
+
 function onFilterChange() {
     _filterDateFrom = document.getElementById('filterDateFrom').value;
     _filterDateTo   = document.getElementById('filterDateTo').value;
-    _filterBU       = document.getElementById('filterBU').value;
-    _filterStatus   = document.getElementById('filterStatus').value;
+    applyTopFilters();
+}
 
-    document.getElementById('fltBuBox').classList.toggle('active-filter', !!_filterBU);
-    document.getElementById('fltStatusBox').classList.toggle('active-filter', !!_filterStatus);
-    syncQuickDateButtons();
+function toggleAdvanced() {
+    document.getElementById('advancedFilterZone').classList.toggle('show');
+    document.getElementById('toggleAdvBtn').classList.toggle('active');
+}
 
-    deselectAccount();
-    renderTree(document.getElementById('acctSearch').value.toLowerCase());
+// Sliding-pill position for the Billing Status carousel — measured via
+// offsetLeft/offsetWidth (same technique as b-account.js's createSegControl)
+// since a 3-option pill's exact widths depend on each label's rendered size.
+function repositionBillingSeg() {
+    const active = document.querySelector('#billingSegWrap .status-seg-btn.active');
+    const slider = document.getElementById('billingSegSlider');
+    if (!active || !slider) return;
+    slider.style.left  = active.offsetLeft + 'px';
+    slider.style.width = active.offsetWidth + 'px';
+}
+
+function setBillingStatus(status) {
+    _filterBillingStatus = status;
+    document.querySelectorAll('#billingSegWrap .status-seg-btn').forEach(b => b.classList.toggle('active', b.dataset.bs === status));
+    repositionBillingSeg();
+    applyTopFilters();
+}
+
+// Company QT/Status dropdown-checkbox popovers (system/multi-select.js) —
+// same component used platform-wide instead of native <select> (can't
+// multi-select, can't be restyled to match the pill filter-box theme).
+// Company QT replaces the old BU filter — BU was never shown anywhere on
+// this page's cards (only company_qt is, via the qt-co-badge), so filtering
+// by it gave no visible confirmation it was even working; company_qt is
+// both visible here and more finance-relevant (billing entity) than BU
+// (internal department).
+function initFinanceFilters() {
+    _companyMS = createMultiSelect({
+        trigger: document.getElementById('fltCompanyBox'),
+        label: 'Company',
+        getOptions: () => _allCompanies.map(c => ({ value: c, label: c })),
+        onChange: values => { _filterCompanyQt = new Set(values); applyTopFilters(); }
+    });
+    _statusMS = createMultiSelect({
+        trigger: document.getElementById('fltStatusBox'),
+        label: 'Status',
+        getOptions: () => _allStatuses.map(s => ({ value: s, label: s })),
+        onChange: values => { _filterStatus = new Set(values); applyTopFilters(); }
+    });
+    repositionBillingSeg(); // initial slider position under the default "All"
+}
+
+function resetAllFilters() {
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value   = '';
+    _filterDateFrom  = '';
+    _filterDateTo    = '';
+    _filterCompanyQt = new Set();
+    _filterStatus    = new Set();
+    _companyMS?.clear();
+    _statusMS?.clear();
+    setBillingStatus('all');
 }
 
 function setQuickDate(type) {
@@ -555,6 +678,7 @@ function syncQuickDateButtons() {
 }
 
 function viewOpp(id) { window.open(`/b-account/b-opportunity-view?id=${encodeURIComponent(id)}`, '_blank'); }
+function editAccountInBAccount(accountId) { window.open(`/b-account/b-account-list?edit=${encodeURIComponent(accountId)}`, '_blank'); }
 
 function toggleQtDetail() {
     _qtDetailOpen = !_qtDetailOpen;
@@ -565,13 +689,13 @@ function toggleQtDetail() {
 function applyFinFilters() {
     let opps = _cachedOpps;
 
-    if (_filterStatus) opps = opps.filter(o => o.status === _filterStatus);
-    if (_filterBU)     opps = opps.filter(o => { const bus = _cachedBuByOpp.get(o.opportunity_id); return bus && bus.has(_filterBU); });
+    if (_filterStatus.size)    opps = opps.filter(o => _filterStatus.has(o.status));
+    if (_filterCompanyQt.size) opps = opps.filter(o => { const cs = _cachedCompanyByOpp.get(o.opportunity_id); return cs && [...cs].some(c => _filterCompanyQt.has(c)); });
 
-    if (_filterDateFrom || _filterDateTo) {
+    if (_filterDateFrom || _filterDateTo || _filterBillingStatus !== 'all') {
         opps = opps.filter(opp =>
             (_cachedQtByOpp.get(opp.opportunity_id) || []).some(qt =>
-                qt.finRows.some(r => r.bill_date && inDateRange(r.bill_date, _filterDateFrom, _filterDateTo))
+                qt.finRows.some(r => r.bill_date && inDateRange(r.bill_date, _filterDateFrom, _filterDateTo) && billingStatusPasses(r.receipt_date))
             )
         );
     }
@@ -634,6 +758,7 @@ function renderRightPanel(opps, qtByOpp) {
     }).join('');
 
     document.getElementById('finOppList').innerHTML = html;
+    syncTextareaHeights(document.getElementById('finOppList'));
 }
 
 function renderQtBlock(qt, qtCount) {
@@ -644,7 +769,7 @@ function renderQtBlock(qt, qtCount) {
     const autoOpen = _qtDetailOpen;
     return `
     <div class="qt-block">
-        <div class="qt-hdr${autoOpen ? ' open' : ''}" onclick="this.classList.toggle('open');this.nextElementSibling.style.display=this.classList.contains('open')?'block':'none'">
+        <div class="qt-hdr${autoOpen ? ' open' : ''}" onclick="this.classList.toggle('open');const b=this.nextElementSibling;b.style.display=this.classList.contains('open')?'block':'none';if(this.classList.contains('open'))syncTextareaHeights(b)">
             <span class="qt-num">${esc(qt.qt_number||qt.qt_id)}</span>
             ${qt.company_qt ? `<span class="qt-co-badge">${esc(qt.company_qt)}</span>` : ''}
             ${qtCount > 1 ? `<div class="qt-nums">
@@ -693,7 +818,7 @@ function _buildFinTable(dbRows, pendingRows, qtId, qtNumber, saleAmt) {
                 ${showSub ? '<col style="width:175px">' : ''}
                 <col style="width:135px">
                 <col style="width:115px">
-                <col>
+                <col style="width:280px">
                 <col style="width:125px">
                 <col style="width:120px">
                 <col style="width:125px">
@@ -745,7 +870,7 @@ function renderFinRow(r, canEdit, showSub, totalRows) {
         ${showSub ? `<td class="fin-td"><input class="fin-input" type="text" value="${esc(r.quotation_sub||'')}" placeholder="—" ${ro} ${on('quotation_sub')}></td>` : ''}
         <td class="fin-td"><input class="fin-input" type="text" value="${esc(r.invoice||'')}" placeholder="—" ${ro} ${on('invoice')}></td>
         <td class="fin-td"><input class="fin-input" type="text" value="${fmtAmt(r.actual_amount)}" placeholder="0" inputmode="decimal" ${ro} ${on('actual_amount','parseAmt(this.value)')} onblur="this.value=fmtAmt(parseAmt(this.value))" style="text-align:right"></td>
-        <td class="fin-td"><input class="fin-input" type="text" value="${esc(r.detail||'')}" placeholder="—" ${ro} ${on('detail')}></td>
+        <td class="fin-td"><textarea class="fin-input fin-textarea" placeholder="—" ${ro} ${on('detail')}>${esc(r.detail||'')}</textarea></td>
         <td class="fin-td"><input class="fin-input" type="date" value="${r.bill_date||''}" ${ro} ${on('bill_date','this.value||null')}></td>
         <td class="fin-td"><input class="fin-input" type="text" value="${esc(r.receipt_no||'')}" placeholder="—" ${ro} ${on('receipt_no')}></td>
         <td class="fin-td"><input class="fin-input" type="date" value="${r.receipt_date||''}" ${ro} ${on('receipt_date','this.value||null')}></td>
@@ -790,6 +915,7 @@ function addSubRow(qtId, qtNumber, saleAmt) {
     const qtBody = document.getElementById(`qtBody-${qtId}`);
     if (qtBody) {
         qtBody.innerHTML = _buildFinTable(existingRows, [...pendingForQt, newRow], qtId, qtNumber, saleAmt);
+        syncTextareaHeights(qtBody);
         const newRowEls = qtBody.querySelectorAll('.is-new');
         newRowEls[newRowEls.length - 1]?.querySelector('input')?.focus();
     }
@@ -857,6 +983,7 @@ async function initPage() {
     sessionStorage.removeItem('bx_perms_bfinance');
     await initLayout(B_FINANCE_CONFIG);
     if (!canFinance('view')) { window.location.replace('/index.html'); return; }
+    initFinanceFilters();
     await loadLeftPanel();
 }
 

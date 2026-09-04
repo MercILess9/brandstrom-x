@@ -476,6 +476,12 @@
     let pickerYear;
     let workList = [];
     let roleList = [];
+    // Daily Capacity % + company holidays — same config b-quest-modal.js's
+    // capacity check already reads, loaded here too so the Timeline/
+    // Calendar Heatmap stop showing full load on a 0%-capacity day (a
+    // weekend set to 0%, or a full-day holiday when Skip Holidays is on).
+    let dashWorkdayWeight = null;
+    let dashHolidays = [];
     // Empty = no restriction (show every role) — same convention as List's
     // multi-selects (getValues() returning [] means "no filter").
     let selectedRoleIds = new Set();
@@ -635,8 +641,25 @@
     });
     document.getElementById('roleToggleScroll').addEventListener('scroll', updateRoleToggleFade);
 
+    // Cached once per page load (same guard style as b-quest-modal.js's
+    // loadWorkdayWeight) — holidays are only fetched when Skip Holidays is
+    // actually on, same as the modal.
+    async function loadDashboardCapacityConfig() {
+        if (dashWorkdayWeight) return;
+        const [{ data: wd }, { data: mergeCfg }] = await Promise.all([
+            supabaseClient.from('b_quest_config').select('value').eq('rule', 'workday_weight').maybeSingle(),
+            supabaseClient.from('b_quest_config').select('value').eq('rule', 'merge_company_holidays').maybeSingle(),
+        ]);
+        dashWorkdayWeight = { mon: 100, tue: 100, wed: 100, thu: 100, fri: 100, sat: 100, sun: 100, ...(wd?.value || {}) };
+        if (mergeCfg?.value === true) {
+            const { data: holidays } = await supabaseClient.from('holiday').select('date_from, date_to, day_type');
+            dashHolidays = holidays || [];
+        }
+    }
+
     async function loadData() {
         calSelectedDate = null;
+        await loadDashboardCapacityConfig();
 
         const { start, end } = monthRange();
 
@@ -884,20 +907,21 @@ if (chartKey === 'des' && chartWtDes) { chartWtDes.destroy(); chartWtDes = null;
         const labels = Array.from({ length: days }, (_, i) => i + 1);
 
         function buildDayWeights(role) {
-            const spread = bqSpreadWeight(tasks.filter(t => t[`${role}_deadline`]), role, start, end, pad);
+            const spread = bqSpreadWeight(tasks.filter(t => t[`${role}_deadline`]), role, start, end, pad, dashWorkdayWeight, dashHolidays);
             return {
                 due:     labels.map(d => spread.weightMap[`${curYear}-${pad(curMonth+1)}-${pad(d)}`] || 0),
                 ongoing: labels.map(d => {
                     const ds = `${curYear}-${pad(curMonth+1)}-${pad(d)}`;
-                    return (spread.ongoingCount[ds] || 0) > 0
-                        ? tasks.filter(t => {
-                            if (!t[`${role}_deadline`]) return false;
-                            const dur = t[`${role}_day`] || 1;
-                            const dl = new Date(t[`${role}_deadline`]);
-                            const st = new Date(dl); st.setDate(st.getDate() - dur + 1);
-                            return st.toISOString().slice(0,10) <= ds && t[`${role}_deadline`] > ds;
-                        }).reduce((sum, t) => sum + (t[`${role}_weight`] || 0), 0)
-                        : 0
+                    const pct = bqDayPct(ds, dashWorkdayWeight, dashHolidays);
+                    if (pct <= 0 || !((spread.ongoingCount[ds] || 0) > 0)) return 0;
+                    const raw = tasks.filter(t => {
+                        if (!t[`${role}_deadline`]) return false;
+                        const dur = t[`${role}_day`] || 1;
+                        const dl = new Date(t[`${role}_deadline`]);
+                        const st = new Date(dl); st.setDate(st.getDate() - dur + 1);
+                        return st.toISOString().slice(0,10) <= ds && t[`${role}_deadline`] > ds;
+                    }).reduce((sum, t) => sum + (t[`${role}_weight`] || 0), 0);
+                    return raw * (pct / 100);
                 })
             };
         }
@@ -1019,8 +1043,8 @@ if (chartKey === 'des' && chartWtDes) { chartWtDes.destroy(); chartWtDes = null;
         const today = new Date();
         const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
 
-        const des = bqSpreadWeight(tasks, 'designer', start, end, pad);
-        const cre = bqSpreadWeight(tasks, 'creative', start, end, pad);
+        const des = bqSpreadWeight(tasks, 'designer', start, end, pad, dashWorkdayWeight, dashHolidays);
+        const cre = bqSpreadWeight(tasks, 'creative', start, end, pad, dashWorkdayWeight, dashHolidays);
         const desMap = des.weightMap, desTaskCount = des.dueCount, desOngoingCount = des.ongoingCount;
         const creMap = cre.weightMap, creTaskCount = cre.dueCount, creOngoingCount = cre.ongoingCount;
 

@@ -22,60 +22,148 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
     overflow: hidden;
 }
 
-/* ── Toolbar ── */
+/* ── Toolbar — outer wrapper now, not the row itself, since the collapsible
+   Advance zone below needs to sit as a sibling block that grows the
+   wrapper's height rather than living inside the fixed-height row.
+   Content was sitting flush against the browser edge on wide screens —
+   .fin-toolbar-inner ports the exact .flt-wrapper/.flt-inner recipe from
+   b-account.css/b-quest.css (max-width cap + centered + its own 20px
+   padding on top of the wrapper's own) instead of relying on one thin
+   16px padding alone. ── */
 .fin-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0 16px;
-    height: 50px;
+    padding: 12px 20px;
     background: #fff;
     border-bottom: 1px solid var(--c-border);
     flex-shrink: 0;
     z-index: 10;
 }
+.fin-toolbar-inner { max-width: 1300px; margin: 0 auto; padding: 0 20px; }
+.fin-toolbar-row { display: flex; align-items: center; gap: 10px; height: 38px; }
 .fin-toolbar-spacer { flex: 1; }
 
-.fin-filter-divider { width: 1px; height: 20px; background: var(--c-border); flex-shrink: 0; }
+/* ── Advance filter panel — exact values from b-opportunity-list.html's
+   .flt-advanced-zone/.flt-advanced-row/.flt-btn-adv, not approximated ones —
+   the earlier padding:12px 0 (top AND bottom) added extra height the
+   reference doesn't have (it uses margin-top+padding-top only, no bottom,
+   relying on .fin-toolbar's own bottom padding to close the gap), and
+   missing justify-content:center + fixed select-box width left the row's
+   content bunched on the left instead of centered/evenly sized. */
+.flt-advanced-zone { max-height: 0; overflow: hidden; transition: max-height 0.35s ease, opacity 0.3s ease; opacity: 0; border-top: 1px dashed transparent; }
+.flt-advanced-zone.show { max-height: 120px; opacity: 1; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--c-border); }
+.flt-advanced-row { display: flex; align-items: center; gap: 10px; justify-content: center; }
+.flt-advanced-row .flt-select-box { width: 240px; flex-shrink: 0; }
+.flt-advanced-row .flt-select-input { text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+.flt-btn-adv { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--c-border); background: #fff; font-size: 1rem; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0; box-sizing: border-box; outline: none; }
+.flt-btn-adv:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); transform: translateY(-1px); color: var(--c-accent); }
+.flt-btn-adv.active { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
 
-/* Shared filter components */
-.flt-date-group { display: flex; align-items: center; background: #fff; border: 1px solid var(--c-border); border-radius: 12px; padding: 0 10px; height: 36px; flex-shrink: 0; transition: 0.2s; }
+/* Shared filter components — full pill shape (20px radius, 38px tall),
+   matching the rest of the platform's filter-zone convention (b-account.css
+   .flt-select-box etc.) instead of this page's old boxier 10-12px corners. */
+/* Date range + This Month joined into one pill — exact recipe as B-Quest's
+   .flt-date-today-wrap/.flt-btn-today (left half rounded+no-right-border,
+   right half rounded+its-own-left-border makes the internal divider line),
+   not two separate floating pills like before. */
+.flt-date-today-wrap { display: flex; align-items: center; flex-shrink: 0; }
+.flt-date-group { display: flex; align-items: center; background: var(--c-bg); border: 1px solid var(--c-border); border-right: none; border-radius: 20px 0 0 20px; padding: 0 10px; height: 38px; flex-shrink: 0; transition: 0.2s; }
 .flt-date-group:focus-within { border-color: var(--c-accent); }
-.flt-date-input { border: none; background: transparent; font-size: 0.78rem; color: var(--c-slate); outline: none; font-family: inherit; width: 112px; cursor: pointer; }
+.flt-date-group:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); transform: translateY(-1px); }
+.flt-date-today-wrap.active-filter .flt-date-group { background: var(--c-accent-light); border-color: var(--c-accent); }
+.flt-date-input { border: none; background: transparent; font-size: 0.78rem; color: var(--c-slate); outline: none; font-family: inherit; width: 108px; cursor: pointer; }
 
-.flt-btn-quick { border: 1px solid var(--c-border); background: #fff; border-radius: 10px; padding: 0 12px; height: 36px; font-size: 0.76rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; flex-shrink: 0; }
-.flt-btn-quick:hover { background: var(--c-bg); border-color: #cbd5e1; }
+.flt-btn-today { border: 1px solid var(--c-border); background: #fff; border-radius: 0 20px 20px 0; padding: 0 14px; height: 38px; font-size: 0.76rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; font-family: inherit; outline: none; flex-shrink: 0; }
+.flt-btn-today:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); transform: translateY(-1px); }
+.flt-btn-today.active { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
+
+.flt-btn-quick { border: 1.5px solid var(--c-border); background: #fff; border-radius: 20px; padding: 0 14px; height: 38px; font-size: 0.76rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; flex-shrink: 0; }
+.flt-btn-quick:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); transform: translateY(-1px); }
 .flt-btn-quick.active { background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
 
-.flt-select-box { background: #fff; border: 1px solid var(--c-border); border-radius: 12px; display: flex; align-items: center; overflow: hidden; height: 36px; flex-shrink: 0; transition: 0.2s; }
-.flt-select-box:hover { border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+/* 3-way sliding-pill segmented control (Billing Status: All/Pending/Billed)
+   — exact "Status Carousel" recipe from b-account.css's .status-seg-wrap,
+   simplified (no label tag / scroll-fade, since it's always just 3 short
+   fixed buttons, nothing to overflow). */
+.status-seg-wrap { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; height: 38px; flex-shrink: 0; padding: 3px; }
+.status-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
+.status-seg-btn { position: relative; z-index: 1; border: none; background: transparent; padding: 0 14px; height: 100%; font-size: 0.76rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; font-family: inherit; outline: none; flex-shrink: 0; }
+.status-seg-btn.active { color: var(--c-accent-dark); }
+.status-seg-btn:not(.active):hover { color: var(--c-accent); }
+
+.flt-select-box { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; display: flex; align-items: center; overflow: hidden; height: 38px; flex-shrink: 0; transition: 0.2s; }
+/* Was neutral gray here (and in b-account.css until just now) — B-Quest's
+   actual canonical .flt-select-box:hover is accent green like every other
+   filter pill, this file had drifted from it. Applies to Company/Status in
+   both the main row and the Advance panel — same class, same fix. */
+.flt-select-box:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); transform: translateY(-1px); }
 .flt-select-tag { background: #f1f5f9; color: var(--c-muted); font-size: 0.6rem; font-weight: 800; padding: 0 10px; height: 100%; display: flex; align-items: center; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid var(--c-border); white-space: nowrap; transition: 0.2s; }
 .flt-select-box:hover .flt-select-tag { background: #e8edf2; color: var(--c-slate); }
-.flt-select-input { border: none; font-size: 0.78rem; font-weight: 600; color: var(--c-slate); padding: 0 8px; outline: none; background: transparent; cursor: pointer; font-family: inherit; text-align: center; text-align-last: center; }
+.flt-select-input { border: none; font-size: 0.78rem; font-weight: 600; color: var(--c-slate); padding: 0 12px; width: 100%; outline: none; background: transparent; cursor: pointer; font-family: inherit; text-align: center; text-align-last: center; }
 .flt-select-box.active-filter { background: var(--c-accent-light); border-color: var(--c-accent); }
 .flt-select-box.active-filter .flt-select-tag { background: var(--c-accent); color: var(--c-dark); border-right-color: var(--c-accent); }
+.flt-select-box.active-filter:hover { box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); }
 
+/* createMultiSelect() (system/multi-select.js) injects its own popover
+   markup/CSS but deliberately leaves .modern-checkbox's look to the host
+   page — b-quest.css/b-account.css both define it, this file never did, so
+   the checkbox fell back to the browser's plain native (blue) checkbox
+   instead of the brand-lime style used everywhere else it appears. */
+.modern-checkbox { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border: 2px solid var(--c-border); border-radius: 6px; background: #fff; cursor: pointer; flex-shrink: 0; position: relative; transition: 0.15s; }
+.modern-checkbox:hover { border-color: var(--c-accent); }
+.modern-checkbox:checked { background: var(--c-accent-light); border-color: var(--c-accent); }
+.modern-checkbox:checked::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid var(--c-accent-dark); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+
+/* Icon-only circular buttons — same shape as .btn-reset/.ac-action-icon
+   elsewhere on the platform, not this page's old rounded-square (8px). */
+/* box-sizing:border-box + padding:0 on purpose — this page loads no
+   Bootstrap reboot/reset (unlike every other project page), so a plain
+   <button> keeps the browser's own default padding on top of a fixed
+   width/height, inflating the box non-uniformly and turning what should
+   be a clean circle into a lopsided rounded rectangle. */
 .fin-sidebar-toggle {
     display: flex; align-items: center; justify-content: center;
-    width: 34px; height: 34px; flex-shrink: 0;
-    border-radius: 8px; border: 1px solid var(--c-border);
+    width: 38px; height: 38px; flex-shrink: 0; padding: 0; box-sizing: border-box;
+    border-radius: 50%; border: 1px solid var(--c-border); outline: none;
     background: transparent; color: var(--c-muted);
     cursor: pointer; transition: all 0.15s; font-size: 1rem;
 }
-.fin-sidebar-toggle:hover { background: var(--c-bg); color: var(--c-dark); border-color: var(--c-dark); }
+.fin-sidebar-toggle:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); transform: translateY(-1px); color: var(--c-accent); }
 .fin-sidebar-toggle.active { background: var(--c-accent-light); border-color: var(--c-accent); color: #7a8500; }
 
-.fin-search-wrap { position: relative; width: 240px; }
+/* .fin-toolbar-right needs position:relative so .btn-reset (its last child)
+   can float out past the row via position:absolute instead of living
+   in-flow — exact pattern as b-opportunity-list.html's .flt-right-group/
+   .btn-reset. In-flow + visibility:hidden would still reserve its own
+   width+gap even while invisible, nudging .flt-btn-adv left of where it
+   should sit at rest; absolute positioning means Reset only affects layout
+   once a filter is actually active and it becomes visible. */
+.fin-toolbar-right { position: relative; display: flex; align-items: center; gap: 10px; }
+.btn-reset {
+    position: absolute; left: 100%; margin-left: 12px;
+    display: flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; flex-shrink: 0; padding: 0; box-sizing: border-box;
+    border-radius: 50%; border: 1px solid var(--c-border); outline: none;
+    background: #fff; color: var(--c-muted);
+    cursor: pointer; transition: all 0.15s; font-size: 0.95rem;
+    visibility: hidden; pointer-events: none;
+}
+.btn-reset.has-filters { visibility: visible; pointer-events: auto; }
+.btn-reset:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); transform: translateY(-1px); color: var(--c-accent); }
+
+/* flex:0 1 340px, not a rigid width — exact .flt-search sizing from
+   b-quest-list.html/b-opportunity-list.html (grows to 340px, can still
+   shrink on a narrow toolbar instead of forcing overflow). */
+.fin-search-wrap { position: relative; flex: 0 1 340px; min-width: 140px; }
 .fin-search-input {
     width: 100%; box-sizing: border-box;
-    border: 1px solid var(--c-border); border-radius: 10px;
-    padding: 7px 10px 7px 32px; font-size: 0.8rem;
+    border: 1px solid var(--c-border); border-radius: 20px;
+    padding: 8px 10px 8px 36px; font-size: 0.8rem;
     background: var(--c-bg); outline: none; font-family: inherit;
     transition: 0.2s;
 }
+.fin-search-input:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); transform: translateY(-1px); }
 .fin-search-input:focus { border-color: var(--c-accent); background: #fff; }
-.fin-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.78rem; pointer-events: none; }
-.flt-search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; padding: 2px 4px; border-radius: 4px; display: none; font-size: 0.82rem; line-height: 1; }
+.fin-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.78rem; pointer-events: none; }
+.flt-search-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; padding: 2px 4px; border-radius: 4px; display: none; font-size: 0.82rem; line-height: 1; }
 .flt-search-clear:hover { color: #475569; }
 
 /* ── Split Layout ── */
@@ -89,7 +177,12 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 .fin-left {
     width: 14px;
     min-width: 14px;
-    background: var(--c-dark);
+    /* Soft lime-tinted glow behind where the chevron sits (vertically
+       centered, same as the chevron itself again) — a flat solid fill read
+       as an empty placeholder rather than an intentional accent rail. */
+    background:
+        radial-gradient(60px 90px at 50% 50%, rgba(189,196,50,0.16), transparent 70%),
+        var(--c-dark);
     border-right: none;
     display: flex;
     flex-direction: column;
@@ -145,25 +238,38 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 .finance-layout.sidebar-pinned .fin-left .fin-tree,
 .finance-layout.sidebar-forced .fin-left .fin-tree { opacity: 1; }
 
-/* Account group */
-.acct-group { }
+/* Account group — softened from the old all-caps/800-weight/flat-hover look:
+   normal-case name (matches .ac-company in b-account-list.html, the
+   platform's own convention — forced uppercase was this page's own
+   outlier), a lime accent bar that slides in on hover/open instead of just
+   a flat background swap, and the count badge only shows once it's actually
+   informative (>1 company under one account). */
+.acct-group { border-bottom: 1px solid #f8fafc; }
+.acct-group:last-child { border-bottom: none; }
 .acct-hdr {
-    display: flex; align-items: center; gap: 7px;
-    padding: 8px 14px 8px 12px; cursor: pointer;
+    position: relative;
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 14px 9px 16px; cursor: pointer;
     transition: background 0.12s; user-select: none;
 }
+.acct-hdr::before {
+    content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px;
+    background: var(--c-accent); border-radius: 0 3px 3px 0;
+    transform: scaleY(0); transform-origin: center; transition: transform 0.15s;
+}
 .acct-hdr:hover { background: #f8fafc; }
+.acct-hdr:hover::before, .acct-hdr.open::before { transform: scaleY(1); }
 .acct-chevron { font-size: 0.65rem; color: var(--c-muted); transition: transform 0.2s; flex-shrink: 0; }
 .acct-hdr.open .acct-chevron { transform: rotate(90deg); }
-.acct-label { font-size: 0.7rem; font-weight: 800; color: var(--c-dark); text-transform: uppercase; letter-spacing: 0.5px; flex: 1; }
+.acct-label { font-size: 0.78rem; font-weight: 700; color: var(--c-dark); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .acct-badge { font-size: 0.62rem; font-weight: 700; color: var(--c-muted); background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 1px 7px; flex-shrink: 0; }
 
 .acct-companies { display: none; }
-.acct-hdr.open + .acct-companies { display: block; }
+.acct-hdr.open + .acct-companies { display: block; padding-bottom: 4px; }
 
 .company-item {
-    padding: 7px 14px 7px 32px; font-size: 0.8rem; font-weight: 600; color: var(--c-slate);
-    cursor: pointer; transition: all 0.12s; border-radius: 8px; margin: 0 6px 1px;
+    padding: 7px 14px 7px 34px; font-size: 0.79rem; font-weight: 600; color: var(--c-slate);
+    cursor: pointer; transition: all 0.12s; border-radius: 8px; margin: 0 8px 1px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .company-item:hover { background: var(--c-bg); color: var(--c-dark); }
@@ -246,6 +352,18 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 }
 .taxid-lbl { user-select: none; font-weight: 600; opacity: 0.7; }
 .taxid-val { user-select: text; cursor: text; color: var(--c-dark); }
+
+/* Opens B-Account's own Account list in a new tab (?edit=<id>, read there
+   to auto-open BAccountApp.openEdit()) rather than embedding B-Account's
+   modal/JS directly here — reuses that page's own edit permission check
+   as-is instead of duplicating a cross-project permission decision. */
+.acct-edit-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%; box-sizing: border-box;
+    border: none; background: transparent; color: var(--c-muted);
+    cursor: pointer; transition: 0.15s; font-size: 0.85rem; padding: 0; outline: none;
+}
+.acct-edit-btn:hover { background: var(--c-bg); color: var(--c-accent-dark); }
 
 /* Boxes toggle button */
 .acct-boxes-toggle {
@@ -419,6 +537,19 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 .fin-input[type="number"]::-webkit-inner-spin-button,
 .fin-input[type="number"]::-webkit-outer-spin-button { display: none; }
 .fin-input::placeholder { color: #cbd5e1; }
+
+/* Detail is the one long-text field — a single-line <input> can never wrap,
+   so a long value either got silently clipped or visually ran into the
+   next column. Auto-grows to fit its content (see autoResizeTextarea() in
+   the script below) between a 2-line floor and an 8-line ceiling — short
+   notes stay compact instead of wasting a fixed tall box, long ones show
+   nearly everything without scrolling, and only something exceeding the
+   ceiling needs its own internal scroll. min/max-height here are just the
+   pre-JS fallback; the actual height is set inline by JS. */
+.fin-textarea {
+    resize: none; overflow-y: auto; min-height: 40px; max-height: 160px; line-height: 1.3;
+    white-space: pre-wrap; word-break: break-word;
+}
 
 .fin-status-cell { padding: 0 10px; white-space: nowrap; }
 .fin-status {

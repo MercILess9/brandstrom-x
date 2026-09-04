@@ -264,7 +264,7 @@ const BQuestApp = (() => {
     // lives in b-quest-task-role, one row per (quest_id, role_id) — no more
     // designer_*/creative_* flat columns, and no more "only these two roles
     // are actually saveable" limitation.
-    const State = { capacities: {}, maxCap: {}, maxCapEffective: {}, workCounts: {}, workLimits: {}, assignProfiles: { _loaded: false }, visibleRoles: [], roleNameById: {}, typeList: [], statusList: [], defaultStatusId: null, workdayWeight: null, currentRoleRows: {}, allowAssign: false, currentData: null };
+    const State = { capacities: {}, maxCap: {}, maxCapEffective: {}, workCounts: {}, workLimits: {}, assignProfiles: { _loaded: false }, visibleRoles: [], roleNameById: {}, typeList: [], statusList: [], defaultStatusId: null, workdayWeight: null, mergeCompanyHolidays: false, holidays: [], currentRoleRows: {}, allowAssign: false, currentData: null };
     const el = id => document.getElementById(id);
     const show = (id, condition, display = 'block') => { const e = el(id); if(e) e.style.display = condition ? display : 'none'; };
 
@@ -312,10 +312,24 @@ const BQuestApp = (() => {
         // Per-weekday % of a role's normal daily capacity — set in
         // Settings' Daily Capacity section. Missing/unset days default to
         // 100% (full capacity), same default the Settings page itself uses.
+        // Also loads the company holiday list when Skip Holidays
+        // (merge_company_holidays) is on — a holiday date overrides the
+        // weekday % entirely (full day = 0%, half day = flat 50%) instead
+        // of being counted at its normal weekday rate. Holiday data lives
+        // in the system-level `holiday` table (system/setting.html), not a
+        // B-Quest one, since it's meant to be reused by other projects too.
         async loadWorkdayWeight() {
             if (State.workdayWeight) return;
-            const { data } = await supabaseClient.from('b_quest_config').select('value').eq('rule', 'workday_weight').maybeSingle();
+            const [{ data }, { data: mergeCfg }] = await Promise.all([
+                supabaseClient.from('b_quest_config').select('value').eq('rule', 'workday_weight').maybeSingle(),
+                supabaseClient.from('b_quest_config').select('value').eq('rule', 'merge_company_holidays').maybeSingle(),
+            ]);
             State.workdayWeight = { mon: 100, tue: 100, wed: 100, thu: 100, fri: 100, sat: 100, sun: 100, ...(data?.value || {}) };
+            State.mergeCompanyHolidays = mergeCfg?.value === true;
+            if (State.mergeCompanyHolidays) {
+                const { data: holidays } = await supabaseClient.from('holiday').select('date_from, date_to, day_type');
+                State.holidays = holidays || [];
+            }
         }
     };
 
@@ -593,13 +607,40 @@ const BQuestApp = (() => {
     // rule; real Weight/Day values are small enough to never approach it.
     const WEEK_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']; // index = Date.getDay()
     const SPREAD_LOOKBACK_GUARD = 3650;
+
+    function toDateStr(d) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    // 'full' | 'half' | null — a holiday date overrides the weekday %
+    // entirely rather than being counted at its normal weekday rate. Only
+    // ever non-null when Skip Holidays is on (State.holidays stays empty
+    // otherwise, see loadWorkdayWeight above), so this is a no-op — same
+    // behavior as before this feature existed — for anyone who hasn't
+    // opted in.
+    function holidayTypeForDate(dateStr) {
+        if (!State.holidays?.length) return null;
+        const hit = State.holidays.find(h => dateStr >= h.date_from && dateStr <= (h.date_to || h.date_from));
+        return hit ? (hit.day_type || 'full') : null;
+    }
+
+    // Full day = 0% (skipped entirely); half day = a flat 50%, not half of
+    // whatever the weekday would normally be — confirmed with the user as
+    // the intended reading of "Half Day" in the holiday list.
+    function dayPct(workdayWeight, date) {
+        const holType = holidayTypeForDate(toDateStr(date));
+        if (holType === 'full') return 0;
+        if (holType === 'half') return 50;
+        return workdayWeight[WEEK_KEYS[date.getDay()]] ?? 100;
+    }
+
     function contributionOnDate(weight, day, deadlineStr, workdayWeight, targetDateStr) {
         let budget = weight * (Number(day) || 1);
         let cursor = new Date(deadlineStr + 'T00:00:00');
         const target = new Date(targetDateStr + 'T00:00:00');
         let guard = 0;
         while (budget > 1e-9 && cursor >= target && guard < SPREAD_LOOKBACK_GUARD) {
-            const pct = workdayWeight[WEEK_KEYS[cursor.getDay()]] ?? 100;
+            const pct = dayPct(workdayWeight, cursor);
             const cap = weight * (pct / 100);
             const absorb = Math.min(budget, cap);
             if (cursor.getTime() === target.getTime()) return absorb;
@@ -614,7 +655,7 @@ const BQuestApp = (() => {
     // Capacity % — e.g. a 10pt role on a 50% Saturday can only take 5pt
     // that day.
     function effectiveMaxCap(roleId, targetDateStr) {
-        const pct = State.workdayWeight?.[WEEK_KEYS[new Date(targetDateStr + 'T00:00:00').getDay()]] ?? 100;
+        const pct = dayPct(State.workdayWeight || {}, new Date(targetDateStr + 'T00:00:00'));
         return (State.maxCap[roleId] ?? 10) * (pct / 100);
     }
 

@@ -1027,8 +1027,12 @@ const BOppApp = (() => {
             // Add Sub behavior (no auto-generated label), user fills it in
             // themselves. Previously defaulted to the QT's own number,
             // which just showed the same code twice (QT header + this row).
+            // detail (finance row's own field, not qt.items[].detail above)
+            // defaults to the Opportunity Name so Finance sees which deal a
+            // sub-invoice belongs to without cross-checking the QT number.
+            const oppName = el('bopp-opp-name')?.value?.trim() || null;
             supabaseClient.from('b_finance_qt')
-                .insert({ qt_id: qtRow.qt_id, sub_index: 1, quotation_sub: null, actual_amount: saleAmt || null })
+                .insert({ qt_id: qtRow.qt_id, sub_index: 1, quotation_sub: null, actual_amount: saleAmt || null, detail: oppName })
                 .then(({ error }) => { if (error) console.warn('[finance auto-create]', error); });
         }
     }
@@ -1073,8 +1077,9 @@ const BOppApp = (() => {
                     && !finRows[0].invoice && !finRows[0].bill_date
                     && !finRows[0].receipt_no && !finRows[0].receipt_date && !finRows[0].remark;
                 if (isEmpty) {
+                    const oppName = el('bopp-opp-name')?.value?.trim() || null;
                     supabaseClient.from('b_finance_qt')
-                        .update({ actual_amount: saleAmt || null, quotation_sub: qtNum || qt.qt_id })
+                        .update({ actual_amount: saleAmt || null, quotation_sub: qtNum || qt.qt_id, detail: oppName })
                         .eq('qt_id', qt.qt_id)
                         .then(({ error }) => { if (error) console.warn('[finance sync]', error); });
                 }

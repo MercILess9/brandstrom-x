@@ -407,6 +407,20 @@
         await loadAllAccounts();
         statusSeg.render();
         typeSeg.render();
+
+        // Deep link from other projects (Finance's Edit icon uses this) —
+        // ?edit=<account_id> opens straight into the Edit modal instead of
+        // just landing on the plain list. Re-checks edit permission here
+        // rather than trusting the caller, same as every other entry point
+        // into BAccountApp.openEdit() on this page.
+        const editId = new URLSearchParams(window.location.search).get('edit');
+        if (editId) {
+            if (_canEdit && allAccounts.some(a => a.account_id === editId)) {
+                BAccountApp.openEdit(editId);
+            } else {
+                notify('', 'Account not found or you don\'t have permission to edit', 'error');
+            }
+        }
     }
 
     initPage();

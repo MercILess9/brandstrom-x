@@ -241,7 +241,37 @@ function bqCalcDayLoad(tasks, role, dl, excludeId = null) {
         .reduce((sum, t) => sum + (Number(t[`${role}_weight`]) || 0), 0);
 }
 
-function bqSpreadWeight(tasks, role, start, end, pad) {
+const BQ_WEEK_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']; // index = Date.getDay()
+
+// 'full' | 'half' | null — same semantics as b-quest-modal.js's own
+// holidayTypeForDate (duplicated here rather than shared, since that one
+// lives inside BQuestApp's IIFE and isn't reachable from this file).
+function bqHolidayType(dateStr, holidays) {
+    if (!holidays?.length) return null;
+    const hit = holidays.find(h => dateStr >= h.date_from && dateStr <= (h.date_to || h.date_from));
+    return hit ? (hit.day_type || 'full') : null;
+}
+
+// Effective % of normal capacity for dateStr: a holiday overrides the
+// weekday % entirely (full day = 0%, half day = a flat 50%), else falls
+// back to the weekday's own Daily Capacity %. workdayWeight/holidays are
+// optional so any existing caller that doesn't pass them keeps behaving
+// exactly as before this existed (always 100%, no holiday awareness).
+function bqDayPct(dateStr, workdayWeight, holidays) {
+    const holType = bqHolidayType(dateStr, holidays);
+    if (holType === 'full') return 0;
+    if (holType === 'half') return 50;
+    if (!workdayWeight) return 100;
+    const dow = new Date(dateStr + 'T00:00:00').getDay();
+    return workdayWeight[BQ_WEEK_KEYS[dow]] ?? 100;
+}
+
+// workdayWeight/holidays are optional — omit them to spread at full
+// (unscaled) weight, same as before Daily Capacity/Skip Holidays existed.
+// When passed, a day at 0% effective capacity (a weekend set to 0%, or a
+// full-day holiday) contributes nothing at all for that date, matching
+// how b-quest-modal.js's own capacity check already treats such a day.
+function bqSpreadWeight(tasks, role, start, end, pad, workdayWeight = null, holidays = []) {
     const weightMap = {}, dueCount = {}, ongoingCount = {};
     tasks.forEach(t => {
         const deadline = t[`${role}_deadline`];
@@ -254,7 +284,10 @@ function bqSpreadWeight(tasks, role, start, end, pad) {
             dt.setDate(dt.getDate() - i);
             const ds = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
             if (ds >= start && ds <= end) {
-                weightMap[ds] = (weightMap[ds] || 0) + weight;
+                const pct = bqDayPct(ds, workdayWeight, holidays);
+                const scaledWeight = weight * (pct / 100);
+                if (scaledWeight <= 0) continue;
+                weightMap[ds] = (weightMap[ds] || 0) + scaledWeight;
                 if (i === 0) dueCount[ds] = (dueCount[ds] || 0) + 1;
                 else ongoingCount[ds] = (ongoingCount[ds] || 0) + 1;
             }

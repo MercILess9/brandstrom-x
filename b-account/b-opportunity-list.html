@@ -54,7 +54,7 @@
         /* Advance button — icon-only circle, ref B-Quest's .flt-btn-adv
            (was a wider labeled button here before). */
         .flt-btn-adv { width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; font-size: 1rem; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .flt-btn-adv:hover { background: var(--c-bg); border-color: #cbd5e1; }
+        .flt-btn-adv:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); transform: translateY(-1px); color: var(--c-accent); }
         .flt-btn-adv.active { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
         /* Reset button — icon-only circle next to Advance, ref B-Quest's
            .flt-btn-reset: position:absolute so it doesn't reserve layout
@@ -62,7 +62,7 @@
            card edge at rest), floats out to the right when it appears. */
         .btn-reset { position: absolute; left: 100%; margin-left: 10px; width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; font-size: 0.95rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; visibility: hidden; pointer-events: none; }
         .btn-reset.has-filters { visibility: visible; pointer-events: auto; }
-        .btn-reset:hover { background: var(--c-bg); color: var(--c-accent); border-color: #cbd5e1; }
+        .btn-reset:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); transform: translateY(-1px); color: var(--c-accent); }
         .flt-advanced-zone { max-height: 0; overflow: hidden; transition: max-height 0.35s ease, opacity 0.3s ease; opacity: 0; border-top: 1px dashed transparent; }
         .flt-advanced-zone.show { max-height: 120px; opacity: 1; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; }
         .flt-advanced-row { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; justify-content: center; }

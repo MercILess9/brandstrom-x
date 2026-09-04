@@ -199,6 +199,128 @@
         .btn-del-confirm { background: #ef4444; color: #fff; border: none; border-radius: 10px; padding: 10px 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: 0.15s; display: flex; align-items: center; gap: 6px; }
         .btn-del-confirm:hover { background: #dc2626; }
         .btn-del-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── Top-level tab switcher (Settings | Holidays) — this page has no
+           existing tab mechanism, Departments/Users & Access are just two
+           always-visible sections; this introduces the first one. ── */
+        .top-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+        .top-tab-btn { background: #fff; border: 1px solid var(--c-border); border-radius: 12px; padding: 9px 18px; font-size: 0.82rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 7px; font-family: inherit; }
+        .top-tab-btn:hover { border-color: var(--c-accent); color: var(--c-accent-dark); }
+        .top-tab-btn.active { background: var(--c-dark); border-color: var(--c-dark); color: var(--c-accent); }
+
+        /* ── Year sub-tabs (Holidays) — pill row + dashed "+" to add a year ── */
+        .year-tabs { display: flex; align-items: center; gap: 8px; padding: 16px 24px 0; flex-wrap: wrap; }
+        .year-tab-btn { background: #fff; border: 1.5px solid var(--c-border); border-radius: 20px; padding: 6px 16px; font-size: 0.8rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.2s; font-family: inherit; }
+        .year-tab-btn:hover { border-color: var(--c-accent); color: var(--c-accent-dark); }
+        .year-tab-btn.active { background: var(--c-accent); border-color: var(--c-accent); color: var(--c-dark); }
+        .year-tab-add { width: 32px; height: 32px; border-radius: 50%; border: 1.5px dashed var(--c-border); background: #fff; color: var(--c-muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; transition: 0.2s; box-sizing: border-box; padding: 0; }
+        .year-tab-add:hover { border-color: var(--c-accent); border-style: solid; color: var(--c-accent); }
+
+        /* ── Holiday list — CSS Grid rows, same recipe as .usr-table-head/
+           .usr-row elsewhere on this page, instead of a plain <table>.
+           A real <table> let the browser auto-layout stretch Description
+           into a huge gap since only No/Day-Type had explicit widths —
+           fixed grid columns keep everything proportioned and dense. ── */
+        .holiday-list-wrap { padding: 16px 24px 20px; }
+        .holiday-cols { grid-template-columns: 40px 210px 1fr 140px 76px; gap: 12px; }
+        .holiday-table-head { display: grid; align-items: center; padding: 0 10px; height: 38px; background: var(--c-bg); border-radius: 10px; margin-bottom: 4px; }
+        .holiday-col-label { font-size: 0.62rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.6px; }
+        .holiday-col-label.c { text-align: center; }
+        .holiday-row { display: grid; align-items: center; padding: 0 10px; min-height: 58px; border-bottom: 1px solid #f8fafc; border-radius: 8px; transition: background 0.15s; }
+        .holiday-row:last-child { border-bottom: none; }
+        .holiday-row:hover { background: #fafbff; }
+        .holiday-row.is-new { background: #f0fdf4; }
+        .holiday-row.is-deleted { opacity: 0.4; background: #fff5f5; pointer-events: none; }
+        .holiday-row.is-deleted .btn-dept-undo { pointer-events: all; }
+        .holiday-cell-c { display: flex; align-items: center; justify-content: center; }
+        .holiday-no-badge { width: 26px; height: 26px; border-radius: 50%; background: var(--c-bg); color: var(--c-muted); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; }
+
+        /* Joined date-range pill — same left/right-split-border technique as
+           .flt-date-today-wrap documented in filter-bar-canonical-values.md,
+           except both sides are plain equal date inputs (no quick-button). */
+        .holiday-date-cell { display: flex; align-items: center; gap: 8px; }
+        .holiday-date-group { display: flex; align-items: center; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; height: 36px; flex-shrink: 0; transition: 0.2s; }
+        .holiday-date-group:focus-within { border-color: var(--c-accent); }
+        .holiday-date-group:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); }
+        .holiday-date-input { border: none; background: transparent; font-size: 0.78rem; color: var(--c-slate); outline: none; font-family: inherit; width: 118px; padding: 0 10px; cursor: pointer; }
+        .holiday-date-sep { color: #cbd5e1; }
+        .holiday-days-badge { font-size: 0.65rem; font-weight: 800; color: var(--c-accent-dark); background: var(--c-accent-light); border-radius: 20px; padding: 3px 10px; white-space: nowrap; flex-shrink: 0; }
+
+        /* Full/Half Day — an on/off switch left it ambiguous which position
+           meant which (checked = Half Day is not an obvious mapping); a
+           2-button segmented pill shows both options at once with the
+           active one highlighted, so there's nothing to interpret. */
+        .holiday-daytype-seg { display: inline-flex; border: 1px solid var(--c-border); border-radius: 20px; overflow: hidden; height: 32px; }
+        .holiday-daytype-btn { border: none; border-right: 1px solid var(--c-border); background: #fff; padding: 0 12px; height: 100%; font-size: 0.72rem; font-weight: 700; color: var(--c-slate); cursor: pointer; font-family: inherit; transition: 0.2s; white-space: nowrap; }
+        .holiday-daytype-btn:last-child { border-right: none; }
+        .holiday-daytype-btn:hover:not(.active) { background: var(--c-bg); }
+        .holiday-daytype-btn.active { background: var(--c-accent); color: var(--c-dark); }
+
+        .holiday-empty { padding: 40px 20px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
+
+        .btn-import-holiday { background: #fff; color: var(--c-dark); border: 1.5px solid var(--c-border); border-radius: 12px; padding: 9px 18px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 7px; font-family: inherit; }
+        .btn-import-holiday:hover { border-color: var(--c-accent); color: var(--c-accent-dark); }
+
+        /* ── Import Modal — same shell recipe as .del-overlay/.del-modal ── */
+        .import-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 1100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .import-overlay.show { opacity: 1; pointer-events: all; }
+        .import-modal { background: #fff; border-radius: 20px; width: 460px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.18); transform: translateY(12px); transition: transform 0.2s; overflow: hidden; }
+        .import-overlay.show .import-modal { transform: translateY(0); }
+        .import-modal-header { padding: 20px 24px 14px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .import-modal-title { font-size: 1rem; font-weight: 800; color: var(--c-dark); display: flex; align-items: center; gap: 8px; }
+        .import-select-all { font-size: 0.78rem; font-weight: 700; color: var(--c-accent-dark); cursor: pointer; background: none; border: none; padding: 0; font-family: inherit; white-space: nowrap; }
+        .import-modal-body { flex: 1; overflow-y: auto; padding: 8px 12px; min-height: 120px; }
+        .import-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; transition: background 0.12s; }
+        .import-item:hover { background: var(--c-bg); }
+        .import-item-date { font-size: 0.72rem; font-weight: 700; color: var(--c-muted); width: 40px; flex-shrink: 0; }
+        .import-item-name { font-size: 0.84rem; font-weight: 600; color: var(--c-dark); }
+        .import-modal-footer { padding: 14px 24px; border-top: 1px solid var(--c-border); display: flex; justify-content: flex-end; gap: 8px; }
+        .import-loading, .import-error { padding: 40px 20px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
+        .import-error { color: #ef4444; }
+
+        /* createMultiSelect-style checkbox is NOT used here, but the exact
+           same .modern-checkbox recipe from filter-bar-canonical-values.md
+           is reused for the Import checklist so it matches the brand-lime
+           checkbox look used everywhere else, not the browser's native one. */
+        .modern-checkbox { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border: 2px solid var(--c-border); border-radius: 6px; background: #fff; cursor: pointer; flex-shrink: 0; position: relative; transition: 0.15s; }
+        .modern-checkbox:hover { border-color: var(--c-accent); }
+        .modern-checkbox:checked { background: var(--c-accent-light); border-color: var(--c-accent); }
+        .modern-checkbox:checked::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid var(--c-accent-dark); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+
+        /* ── Holiday row — display-only (editing moved into the Add/Edit
+           popup below); table rows now just render text + badges. ── */
+        .holiday-view-date { font-size: 0.82rem; font-weight: 700; color: var(--c-dark); display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+        .holiday-view-desc { font-size: 0.84rem; font-weight: 600; color: var(--c-dark); }
+        .holiday-view-desc.empty { color: var(--c-muted); font-weight: 500; font-style: italic; }
+        .holiday-daytype-badge { font-size: 0.68rem; font-weight: 800; border-radius: 20px; padding: 5px 14px; display: inline-block; white-space: nowrap; }
+        .holiday-daytype-badge.full { background: var(--c-accent-light); color: var(--c-accent-dark); }
+        .holiday-daytype-badge.half { background: #fef3c7; color: #b45309; }
+        .holiday-actions { display: flex; align-items: center; justify-content: center; gap: 2px; }
+        .btn-dept-edit { background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 8px 6px; transition: 0.2s; display: inline-flex; align-items: center; font-size: 0.9rem; flex-shrink: 0; }
+        .btn-dept-edit:hover { color: var(--c-accent-dark); }
+
+        /* ── Add/Edit Holiday Modal — same shell recipe as .del-overlay/
+           .import-overlay. The Date/Day-Type controls inside reuse the
+           exact same .holiday-date-group/.holiday-daytype-seg components
+           as the table used to render inline, just given more room. ── */
+        .hform-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 1100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .hform-overlay.show { opacity: 1; pointer-events: all; }
+        .hform-modal { background: #fff; border-radius: 20px; width: 440px; box-shadow: 0 24px 60px rgba(0,0,0,0.18); transform: translateY(12px); transition: transform 0.2s; overflow: hidden; }
+        .hform-overlay.show .hform-modal { transform: translateY(0); }
+        .hform-header { padding: 20px 24px 14px; border-bottom: 1px solid var(--c-border); }
+        .hform-title { font-size: 1rem; font-weight: 800; color: var(--c-dark); display: flex; align-items: center; gap: 8px; }
+        .hform-body { padding: 22px 24px 6px; }
+        .hform-field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+        .hform-field:last-child { margin-bottom: 0; }
+        .hform-label { font-size: 0.68rem; font-weight: 800; color: var(--c-slate); text-transform: uppercase; letter-spacing: 0.6px; }
+        .hform-input { width: 100%; border: 1px solid var(--c-border); border-radius: 12px; padding: 11px 14px; font-size: 0.88rem; font-weight: 600; color: var(--c-dark); background: var(--c-bg); outline: none; font-family: inherit; box-sizing: border-box; transition: 0.2s; }
+        .hform-input::placeholder { color: #cbd5e1; font-weight: 500; }
+        .hform-input:focus { border-color: var(--c-accent); background: #fff; }
+        .hform-body .holiday-date-group { height: 40px; background: var(--c-bg); }
+        .hform-body .holiday-date-input { width: 150px; }
+        .hform-body .holiday-daytype-seg { height: 36px; }
+        .hform-body .holiday-daytype-btn { padding: 0 16px; font-size: 0.76rem; }
+        .hform-footer { padding: 16px 24px 22px; display: flex; justify-content: flex-end; gap: 8px; }
     </style>
 </head>
 <body>
@@ -208,6 +330,13 @@
     <div class="page-header">
         <h1><i class="bi bi-shield-lock-fill me-2" style="color:var(--c-accent)"></i>System Settings</h1>
     </div>
+
+    <div class="top-tabs">
+        <button class="top-tab-btn active" id="top-tab-settings" onclick="switchTopTab('settings')"><i class="bi bi-sliders"></i> Settings</button>
+        <button class="top-tab-btn" id="top-tab-holidays" onclick="switchTopTab('holidays')"><i class="bi bi-calendar-event"></i> Holidays</button>
+    </div>
+
+    <div id="tab-settings">
 
     <!-- Section: Departments -->
     <div class="section" id="section-departments">
@@ -280,6 +409,101 @@
         </div>
     </div>
 
+    </div>
+    <!-- /#tab-settings -->
+
+    <!-- Tab: Holidays -->
+    <div id="tab-holidays" style="display:none;">
+        <div class="section" id="section-holidays">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-calendar-event"></i> Holidays
+                    <span class="dirty-dot"></span>
+                </div>
+                <div style="display:flex; gap:10px; margin-left:auto;">
+                    <button class="btn-import-holiday" onclick="openImportModal()">
+                        <i class="bi bi-cloud-download"></i> Import
+                    </button>
+                    <button class="btn-add-dept" onclick="openHolidayFormModal()" style="margin-left:0;">
+                        <i class="bi bi-plus-lg"></i> Add Holiday
+                    </button>
+                </div>
+            </div>
+            <div class="year-tabs" id="year-tabs"></div>
+            <div class="holiday-list-wrap">
+                <div class="holiday-table-head holiday-cols">
+                    <div class="holiday-col-label c">No</div>
+                    <div class="holiday-col-label">Date</div>
+                    <div class="holiday-col-label">Description</div>
+                    <div class="holiday-col-label c">Day Type</div>
+                    <div></div>
+                </div>
+                <div id="holiday-list"></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Import Holidays Modal -->
+<div class="import-overlay" id="import-overlay">
+    <div class="import-modal">
+        <div class="import-modal-header">
+            <div>
+                <div class="import-modal-title"><i class="bi bi-cloud-download" style="color:var(--c-accent)"></i> <span id="import-modal-year-label">Import Thai Holidays</span></div>
+                <div style="font-size:0.72rem;color:var(--c-muted);margin-top:4px;">Fixed-date holidays only — lunar/Buddhist ones (Makha Bucha, etc.) and one-off special holidays aren't included, add those manually</div>
+            </div>
+            <button class="import-select-all" id="import-select-all-btn" onclick="toggleImportSelectAll()">Deselect All</button>
+        </div>
+        <div class="import-modal-body" id="import-modal-body">
+            <div class="import-loading"><i class="bi bi-arrow-repeat"></i> Loading...</div>
+        </div>
+        <div class="import-modal-footer">
+            <button class="btn-del-cancel" onclick="closeImportModal()">Cancel</button>
+            <button class="btn-save-main" id="import-add-btn" onclick="addSelectedImports()" style="padding:9px 20px;">
+                <i class="bi bi-plus-lg"></i> Add Selected
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Holiday Modal -->
+<div class="hform-overlay" id="hform-overlay">
+    <div class="hform-modal">
+        <div class="hform-header">
+            <div class="hform-title"><i class="bi bi-calendar-plus" style="color:var(--c-accent)"></i> <span id="hform-title-text">Add Holiday</span></div>
+        </div>
+        <div class="hform-body">
+            <div class="hform-field">
+                <label class="hform-label">Holiday Name</label>
+                <input type="text" class="hform-input" id="hform-desc" placeholder="e.g. Songkran Festival" oninput="onHformField('description', this.value)">
+            </div>
+            <div class="hform-field">
+                <label class="hform-label">Date</label>
+                <div class="holiday-date-cell">
+                    <div class="holiday-date-group">
+                        <input type="date" class="holiday-date-input" id="hform-date-from" onchange="onHformDateChange('date_from', this.value)">
+                        <span class="holiday-date-sep">–</span>
+                        <input type="date" class="holiday-date-input" id="hform-date-to" onchange="onHformDateChange('date_to', this.value)">
+                    </div>
+                    <span class="holiday-days-badge" id="hform-days-badge" style="display:none;"></span>
+                </div>
+            </div>
+            <div class="hform-field">
+                <label class="hform-label">Day Type</label>
+                <div class="holiday-daytype-seg">
+                    <button type="button" class="holiday-daytype-btn active" id="hform-daytype-full" onclick="onHformDayTypeChange('full')">Full Day</button>
+                    <button type="button" class="holiday-daytype-btn" id="hform-daytype-half" onclick="onHformDayTypeChange('half')">Half Day</button>
+                </div>
+            </div>
+        </div>
+        <div class="hform-footer">
+            <button class="btn-del-cancel" onclick="closeHolidayFormModal()">Cancel</button>
+            <button class="btn-save-main" id="hform-save-btn" onclick="saveHolidayForm()" style="padding:10px 22px;">
+                <i class="bi bi-plus-lg" id="hform-save-icon"></i> <span id="hform-save-text">Add</span>
+            </button>
+        </div>
+    </div>
 </div>
 
 <!-- Delete Confirm Modal -->
@@ -342,11 +566,20 @@
     let accessChanges = {};  // codename -> changed fields
     let pendingDeleteUser = null;
 
+    // ── Holidays State ──
+    let holidayData = [];         // [{id, year, date_from, date_to, description, day_type}] from DB, all years
+    let holidayChanges = {};      // key -> {_new, _delete, id, year, date_from, date_to, description, day_type}
+    let holidayNewCounter = 0;
+    let holidayYears = [];        // sorted list of years with a visible tab (from data + any empty tab added via +)
+    let currentHolidayYear = null;
+    let importYear = null;
+    let importResults = [];       // [{date, localName, checked}] from Nager.Date, for the currently open Import modal
+
     // ── Init ──
     async function loadPage() {
         await initLayout(SYSTEM_CONFIG);
         guardSystemSetting();
-        await Promise.all([loadUsers(), loadAccessData(), loadDepartments()]);
+        await Promise.all([loadUsers(), loadAccessData(), loadDepartments(), loadHolidays()]);
         buildDeptFilter();
         renderUsers();
     }
@@ -492,8 +725,393 @@
         const anyDirty =
             Object.keys(deptChanges).length > 0 ||
             Object.keys(accessChanges).length > 0 ||
-            Object.keys(profileChanges).length > 0;
+            Object.keys(profileChanges).length > 0 ||
+            Object.keys(holidayChanges).length > 0;
         if (!anyDirty) document.getElementById('save-bar').classList.remove('visible');
+    }
+
+    // ── Holidays ──
+    async function loadHolidays() {
+        const { data, error } = await supabaseClient
+            .from('holiday')
+            .select('*')
+            .order('date_from', { ascending: true });
+        holidayData = error ? [] : (data || []);
+
+        // Build year tabs from whatever data exists, plus always the
+        // current year so the page is never empty on first use.
+        const dataYears = [...new Set(holidayData.map(h => h.year))];
+        const curYear = new Date().getFullYear();
+        holidayYears = [...new Set([...dataYears, curYear])].sort((a, b) => a - b);
+        if (!currentHolidayYear || !holidayYears.includes(currentHolidayYear)) {
+            currentHolidayYear = dataYears.length ? Math.max(...dataYears) : curYear;
+        }
+        renderYearTabs();
+        renderHolidays();
+    }
+
+    function renderYearTabs() {
+        const wrap = document.getElementById('year-tabs');
+        wrap.innerHTML = holidayYears.map(y => `
+            <button class="year-tab-btn ${y === currentHolidayYear ? 'active' : ''}" onclick="switchHolidayYear(${y})">${y}</button>
+        `).join('') + `<button class="year-tab-add" onclick="promptAddYear()" title="Add year"><i class="bi bi-plus"></i></button>`;
+    }
+
+    function switchHolidayYear(y) {
+        currentHolidayYear = y;
+        renderYearTabs();
+        renderHolidays();
+    }
+
+    async function promptAddYear() {
+        const suggested = holidayYears.length ? Math.max(...holidayYears) + 1 : new Date().getFullYear();
+        const { value } = await Swal.fire({
+            title: 'Add Year',
+            input: 'number',
+            inputValue: suggested,
+            inputLabel: 'Year',
+            showCancelButton: true,
+            confirmButtonText: 'Add',
+        });
+        if (!value) return;
+        const y = parseInt(value, 10);
+        if (!Number.isFinite(y)) return;
+        if (!holidayYears.includes(y)) {
+            holidayYears.push(y);
+            holidayYears.sort((a, b) => a - b);
+        }
+        switchHolidayYear(y);
+    }
+
+    function esc(s) {
+        return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    const HOLIDAY_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    function formatHolidayRange(dateFrom, dateTo) {
+        const [fy, fm, fd] = dateFrom.split('-').map(Number);
+        if (!dateTo || dateTo === dateFrom) return `${fd} ${HOLIDAY_MONTHS[fm - 1]} ${fy}`;
+        const [ty, tm, td] = dateTo.split('-').map(Number);
+        if (fy === ty && fm === tm) return `${fd}–${td} ${HOLIDAY_MONTHS[fm - 1]} ${fy}`;
+        if (fy === ty) return `${fd} ${HOLIDAY_MONTHS[fm - 1]} – ${td} ${HOLIDAY_MONTHS[tm - 1]} ${fy}`;
+        return `${fd} ${HOLIDAY_MONTHS[fm - 1]} ${fy} – ${td} ${HOLIDAY_MONTHS[tm - 1]} ${ty}`;
+    }
+
+    // Current (data + any staged change) view of one holiday row, shared by
+    // renderHolidays() and the Add/Edit popup so both read the same state.
+    function getHolidayItem(key) {
+        if (key.startsWith('db_')) {
+            const id = key.slice(3);
+            const orig = holidayData.find(h => String(h.id) === id);
+            const ch = holidayChanges[key];
+            return ch ? { ...orig, ...ch } : { ...orig };
+        }
+        return { ...holidayChanges[key] };
+    }
+
+    function renderHolidays() {
+        const container = document.getElementById('holiday-list');
+        const year = currentHolidayYear;
+
+        // key = "db_<id>" for existing rows, "new_<n>" for staged new ones
+        let items = holidayData.filter(h => h.year === year).map(h => {
+            const key = `db_${h.id}`;
+            const ch  = holidayChanges[key];
+            if (!ch)        return { ...h, _key: key, _state: 'clean' };
+            if (ch._delete) return { ...h, _key: key, _state: 'deleted' };
+            return { ...h, ...ch, _key: key, _state: 'edited' };
+        });
+
+        Object.entries(holidayChanges)
+            .filter(([, v]) => v._new && v.year === year)
+            .forEach(([k, v]) => items.push({ ...v, _key: k, _state: 'new' }));
+
+        items.sort((a, b) => (a.date_from || '').localeCompare(b.date_from || ''));
+
+        if (!items.length) {
+            container.innerHTML = `<div class="holiday-empty"><i class="bi bi-calendar-x me-2"></i>No holidays for ${year} yet — click + Add Holiday or Import</div>`;
+            return;
+        }
+
+        container.innerHTML = items.map((h, i) => {
+            const isNew     = h._state === 'new';
+            const isDeleted = h._state === 'deleted';
+            const safeKey   = h._key;
+            const dateFrom  = h.date_from || '';
+            const dateTo    = h.date_to || dateFrom;
+            const dayCount  = (dateFrom && dateTo) ? Math.round((new Date(dateTo) - new Date(dateFrom)) / 86400000) + 1 : 0;
+            const dayType   = h.day_type || 'full';
+
+            const actionBtns = isDeleted
+                ? `<button class="btn-dept-undo" onclick="undoHolidayDelete('${safeKey}')">Undo</button>`
+                : `<div class="holiday-actions">
+                       <button class="btn-dept-edit" onclick="openHolidayFormModal('${safeKey}')" title="Edit"><i class="bi bi-pencil"></i></button>
+                       <button class="btn-dept-del" onclick="stageHolidayDelete('${safeKey}')" title="Remove"><i class="bi bi-trash3"></i></button>
+                   </div>`;
+
+            return `<div class="holiday-row holiday-cols ${isNew ? 'is-new' : isDeleted ? 'is-deleted' : ''}" data-key="${safeKey}">
+                <div class="holiday-cell-c"><span class="holiday-no-badge">${i + 1}</span></div>
+                <div>
+                    <span class="holiday-view-date">${formatHolidayRange(dateFrom, dateTo)}${dayCount > 1 ? `<span class="holiday-days-badge">${dayCount} days</span>` : ''}</span>
+                </div>
+                <div>
+                    <span class="holiday-view-desc ${h.description ? '' : 'empty'}">${h.description ? esc(h.description) : 'No name'}</span>
+                </div>
+                <div class="holiday-cell-c">
+                    <span class="holiday-daytype-badge ${dayType}">${dayType === 'half' ? 'Half Day' : 'Full Day'}</span>
+                </div>
+                <div class="holiday-cell-c">${actionBtns}</div>
+            </div>`;
+        }).join('');
+    }
+
+    function getOrInitHolidayChange(key) {
+        if (!holidayChanges[key]) {
+            if (key.startsWith('db_')) {
+                const id = key.slice(3);
+                const orig = holidayData.find(h => String(h.id) === id);
+                holidayChanges[key] = {
+                    id, year: orig.year, date_from: orig.date_from, date_to: orig.date_to,
+                    description: orig.description, day_type: orig.day_type,
+                };
+            } else {
+                holidayChanges[key] = { _new: true, year: currentHolidayYear, date_from: '', date_to: '', description: '', day_type: 'full' };
+            }
+        }
+        return holidayChanges[key];
+    }
+
+    // ── Add/Edit Holiday popup ──
+    let hformState = null;   // { date_from, date_to, description, day_type } — draft only, not staged until Save
+    let hformEditKey = null; // null = adding a new holiday; otherwise the key of the row being edited
+
+    function openHolidayFormModal(key = null) {
+        hformEditKey = key;
+        // Adding fresh defaults the date into whichever year tab is currently
+        // being viewed — most likely what the user means to add into.
+        const defaultDate = `${currentHolidayYear}-01-01`;
+        const item = key ? getHolidayItem(key) : { date_from: defaultDate, date_to: defaultDate, description: '', day_type: 'full' };
+        hformState = {
+            date_from: item.date_from || '',
+            date_to: item.date_to || item.date_from || '',
+            description: item.description || '',
+            day_type: item.day_type || 'full',
+        };
+        document.getElementById('hform-title-text').textContent = key ? 'Edit Holiday' : 'Add Holiday';
+        document.getElementById('hform-save-text').textContent = key ? 'Save' : 'Add';
+        document.getElementById('hform-save-icon').className = key ? 'bi bi-check2' : 'bi bi-plus-lg';
+        document.getElementById('hform-desc').value = hformState.description;
+        document.getElementById('hform-date-from').value = hformState.date_from;
+        document.getElementById('hform-date-to').value = hformState.date_to;
+        updateHformDayTypeButtons();
+        updateHformDaysBadge();
+        document.getElementById('hform-overlay').classList.add('show');
+        document.getElementById('hform-desc').focus();
+    }
+
+    function onHformField(field, value) {
+        hformState[field] = value;
+    }
+
+    function onHformDateChange(field, value) {
+        hformState[field] = value;
+        if (field === 'date_from' && (!hformState.date_to || hformState.date_to < value)) {
+            hformState.date_to = value;
+            document.getElementById('hform-date-to').value = value;
+        }
+        updateHformDaysBadge();
+    }
+
+    function updateHformDaysBadge() {
+        const badge = document.getElementById('hform-days-badge');
+        const { date_from, date_to } = hformState;
+        const dayCount = (date_from && date_to) ? Math.round((new Date(date_to) - new Date(date_from)) / 86400000) + 1 : 0;
+        if (dayCount > 1) {
+            badge.textContent = `${dayCount} days`;
+            badge.style.display = '';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    function onHformDayTypeChange(value) {
+        hformState.day_type = value;
+        updateHformDayTypeButtons();
+    }
+
+    function updateHformDayTypeButtons() {
+        document.getElementById('hform-daytype-full').classList.toggle('active', hformState.day_type !== 'half');
+        document.getElementById('hform-daytype-half').classList.toggle('active', hformState.day_type === 'half');
+    }
+
+    function closeHolidayFormModal() {
+        document.getElementById('hform-overlay').classList.remove('show');
+        hformState = null;
+        hformEditKey = null;
+    }
+
+    function saveHolidayForm() {
+        if (!hformState.date_from) {
+            Swal.fire('Missing date', 'Please choose a date for this holiday.', 'warning');
+            return;
+        }
+        if (!hformState.description.trim()) {
+            Swal.fire('Missing name', 'Please enter a holiday name.', 'warning');
+            return;
+        }
+        // Year is derived from the date actually picked, not whichever year
+        // tab happened to be open when Add was clicked — the tabs are just
+        // a filter for viewing, they no longer drive what gets saved.
+        const year = parseInt(hformState.date_from.slice(0, 4), 10);
+        const key = hformEditKey || `new_${++holidayNewCounter}`;
+        const ch = getOrInitHolidayChange(key);
+        ch.year = year;
+        ch.date_from = hformState.date_from;
+        ch.date_to = hformState.date_to || hformState.date_from;
+        ch.description = hformState.description.trim();
+        ch.day_type = hformState.day_type;
+        markDirtyHoliday();
+        if (!holidayYears.includes(year)) { holidayYears.push(year); holidayYears.sort((a, b) => a - b); }
+        currentHolidayYear = year; // jump the filter to wherever the saved date actually landed
+        renderYearTabs();
+        renderHolidays();
+        closeHolidayFormModal();
+    }
+
+    function stageHolidayDelete(key) {
+        if (holidayChanges[key]?._new) {
+            delete holidayChanges[key];
+            checkDirtyHoliday();
+            renderHolidays();
+            return;
+        }
+        getOrInitHolidayChange(key)._delete = true;
+        markDirtyHoliday();
+        renderHolidays();
+    }
+
+    function undoHolidayDelete(key) {
+        if (holidayChanges[key]?._new) {
+            delete holidayChanges[key];
+        } else {
+            const ch = holidayChanges[key];
+            delete ch._delete;
+            const id = key.slice(3);
+            const orig = holidayData.find(h => String(h.id) === id);
+            if (orig && ch.date_from === orig.date_from && ch.date_to === orig.date_to
+                && ch.description === orig.description && ch.day_type === orig.day_type) {
+                delete holidayChanges[key];
+            }
+        }
+        checkDirtyHoliday();
+        renderHolidays();
+    }
+
+    function markDirtyHoliday() {
+        document.getElementById('section-holidays').classList.add('is-dirty');
+        document.getElementById('save-bar').classList.add('visible');
+    }
+
+    function checkDirtyHoliday() {
+        if (!Object.keys(holidayChanges).length) {
+            document.getElementById('section-holidays').classList.remove('is-dirty');
+            checkSaveBarVisible();
+        }
+    }
+
+    // ── Import Thai Holidays (Nager.Date, free/no-auth public API) ──
+    // Accepted as non-exhaustive per the user — manual add/edit/delete
+    // already covers anything Thailand-specific it misses.
+    // Thailand's fixed-date public holidays only (dates that never move
+    // year to year) — deliberately NOT a live external fetch. Neither of
+    // the two real candidates works from a plain static-HTML page with no
+    // backend of its own: Nager.Date's public holiday API has no Thailand
+    // data at all (confirmed against its own /AvailableCountries list),
+    // and Google's own public "Holidays in Thailand" calendar (which does
+    // have real data, including lunar-calendar ones) blocks direct
+    // browser fetches with no CORS headers. Lunar/Buddhist-calendar
+    // holidays (Makha Bucha, Visakha Bucha, Asalha Bucha, Buddhist Lent)
+    // and any one-off holiday the Cabinet declares for a given year are
+    // NOT included here — same "not exhaustive, add the rest manually"
+    // deal already agreed for this feature.
+    function fixedThaiHolidays(year) {
+        return [
+            { date: `${year}-01-01`, name: "New Year's Day" },
+            { date: `${year}-04-06`, name: 'Chakri Memorial Day' },
+            { date: `${year}-04-13`, name: 'Songkran Festival' },
+            { date: `${year}-04-14`, name: 'Songkran Festival' },
+            { date: `${year}-04-15`, name: 'Songkran Festival' },
+            { date: `${year}-05-01`, name: 'National Labour Day' },
+            { date: `${year}-05-04`, name: 'Coronation Day' },
+            { date: `${year}-06-03`, name: "Queen Suthida's Birthday" },
+            { date: `${year}-07-28`, name: "King's Birthday" },
+            { date: `${year}-08-12`, name: "Queen Mother's Birthday / Mother's Day" },
+            { date: `${year}-10-13`, name: 'King Bhumibol Memorial Day' },
+            { date: `${year}-10-23`, name: 'Chulalongkorn Day' },
+            { date: `${year}-12-05`, name: "King Bhumibol's Birthday / Father's Day" },
+            { date: `${year}-12-10`, name: 'Constitution Day' },
+            { date: `${year}-12-31`, name: "New Year's Eve" },
+        ];
+    }
+
+    function openImportModal() {
+        importYear = currentHolidayYear;
+        document.getElementById('import-modal-year-label').textContent = `Import Thai Holidays — ${importYear}`;
+        document.getElementById('import-overlay').classList.add('show');
+        importResults = fixedThaiHolidays(importYear).map(d => ({ date: d.date, localName: d.name, checked: true }));
+        renderImportList();
+    }
+
+    function renderImportList() {
+        const body = document.getElementById('import-modal-body');
+        if (!importResults.length) {
+            body.innerHTML = `<div class="import-error">No data found for ${importYear}.</div>`;
+            return;
+        }
+        body.innerHTML = importResults.map((r, i) => `
+            <label class="import-item">
+                <input type="checkbox" class="modern-checkbox" ${r.checked ? 'checked' : ''} onchange="importResults[${i}].checked = this.checked; updateImportSelectAllLabel()">
+                <span class="import-item-date">${formatImportDate(r.date)}</span>
+                <span class="import-item-name">${(r.localName || '').replace(/</g, '&lt;')}</span>
+            </label>
+        `).join('');
+        updateImportSelectAllLabel();
+    }
+
+    function formatImportDate(iso) {
+        const [, m, d] = iso.split('-');
+        return `${d}/${m}`;
+    }
+
+    function toggleImportSelectAll() {
+        const allChecked = importResults.every(r => r.checked);
+        importResults.forEach(r => r.checked = !allChecked);
+        renderImportList();
+    }
+
+    function updateImportSelectAllLabel() {
+        const allChecked = importResults.length > 0 && importResults.every(r => r.checked);
+        document.getElementById('import-select-all-btn').textContent = allChecked ? 'Deselect All' : 'Select All';
+    }
+
+    function closeImportModal() {
+        document.getElementById('import-overlay').classList.remove('show');
+        importResults = [];
+    }
+
+    function addSelectedImports() {
+        const selected = importResults.filter(r => r.checked);
+        selected.forEach(r => {
+            const key = `new_${++holidayNewCounter}`;
+            holidayChanges[key] = { _new: true, year: importYear, date_from: r.date, date_to: r.date, description: r.localName, day_type: 'full' };
+        });
+        if (selected.length) markDirtyHoliday();
+        if (!holidayYears.includes(importYear)) { holidayYears.push(importYear); holidayYears.sort((a, b) => a - b); }
+        currentHolidayYear = importYear;
+        renderYearTabs();
+        renderHolidays();
+        closeImportModal();
     }
 
     function guardSystemSetting() {
@@ -501,6 +1119,14 @@
         if (user?.level === 'god') return;
         // Check setting_project table — if not god, must have system_setting = true
         // We check after data loads via guardAfterLoad()
+    }
+
+    // ── Top-level tabs ──
+    function switchTopTab(tab) {
+        document.getElementById('top-tab-settings').classList.toggle('active', tab === 'settings');
+        document.getElementById('top-tab-holidays').classList.toggle('active', tab === 'holidays');
+        document.getElementById('tab-settings').style.display = tab === 'settings' ? '' : 'none';
+        document.getElementById('tab-holidays').style.display = tab === 'holidays' ? '' : 'none';
     }
 
     async function guardAfterLoad() {
@@ -725,8 +1351,10 @@
         deptChanges = {};
         accessChanges = {};
         profileChanges = {};
+        holidayChanges = {};
         document.getElementById('section-departments').classList.remove('is-dirty');
         document.getElementById('section-users').classList.remove('is-dirty');
+        document.getElementById('section-holidays').classList.remove('is-dirty');
         document.getElementById('save-bar').classList.remove('visible');
     }
 
@@ -853,6 +1481,32 @@
                 else accessData[codename] = { ...accessData[codename], ...payload };
             }
 
+            // 3. Save holiday changes
+            for (const [, ch] of Object.entries(holidayChanges)) {
+                if (ch._new) {
+                    if (!ch.date_from) continue; // skip an empty row nobody filled in
+                    const { error } = await supabaseClient
+                        .from('holiday')
+                        .insert([{
+                            year: ch.year, date_from: ch.date_from, date_to: ch.date_to || ch.date_from,
+                            description: ch.description || null, day_type: ch.day_type || 'full',
+                        }]);
+                    if (error) errors.push(`Holiday add: ${error.message}`);
+                } else if (ch._delete) {
+                    const { error } = await supabaseClient.from('holiday').delete().eq('id', ch.id);
+                    if (error) errors.push(`Holiday delete: ${error.message}`);
+                } else {
+                    const { error } = await supabaseClient
+                        .from('holiday')
+                        .update({
+                            date_from: ch.date_from, date_to: ch.date_to || ch.date_from,
+                            description: ch.description || null, day_type: ch.day_type || 'full',
+                        })
+                        .eq('id', ch.id);
+                    if (error) errors.push(`Holiday update: ${error.message}`);
+                }
+            }
+
             if (errors.length) {
                 Swal.fire('Some errors occurred', errors.join('\n'), 'error');
             } else {
@@ -860,8 +1514,9 @@
                 clearDirty();
             }
 
-            // Reload departments to sync fresh data
+            // Reload departments/holidays to sync fresh data
             await loadDepartments();
+            await loadHolidays();
 
         } catch (e) {
             Swal.fire('Error', e.message, 'error');

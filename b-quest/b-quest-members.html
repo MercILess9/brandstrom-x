@@ -724,7 +724,7 @@
                 const { error } = await supabaseClient.from('b_quest_member').delete().eq('codename', codename);
                 if (error) errors.push(`Member remove "${codename}": ` + error.message);
             }
-            await saveTable('b-quest-member-role', memberRoleChanges, memberRoleDeletes, 'codename', errors, 'Member Role');
+            await saveTable('b_quest_member_role', memberRoleChanges, memberRoleDeletes, 'codename', errors, 'Member Role');
 
             if (errors.length) {
                 Swal.fire('Some errors occurred', errors.join('\n'), 'error');

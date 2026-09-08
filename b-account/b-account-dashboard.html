@@ -378,6 +378,28 @@ function pctStr(a, b) {
 // (can't multi-select at all).
 let _yearMS = null, _monthMS = null;
 
+// Filter state (year/month/BU) survives a refresh within the same tab via
+// sessionStorage — otherwise every reload silently snapped back to "this
+// month, all BUs" and threw away whatever the user had picked.
+const DASH_FILTER_KEY = 'bx_baccount_dashboard_filters';
+
+function saveFiltersToSession() {
+    try {
+        sessionStorage.setItem(DASH_FILTER_KEY, JSON.stringify({
+            years: [..._yearFilters],
+            months: [..._monthFilters],
+            bus: [..._buFilters],
+        }));
+    } catch {}
+}
+
+function loadFiltersFromSession() {
+    try {
+        const raw = sessionStorage.getItem(DASH_FILTER_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+}
+
 function initFilterDropdowns() {
     const cur = new Date().getFullYear();
     const years = [];
@@ -387,24 +409,29 @@ function initFilterDropdowns() {
         trigger: document.getElementById('wrap-filterYear'),
         label: 'Year',
         getOptions: () => years.map(y => ({ value: String(y), label: String(y) })),
-        onChange: values => { _yearFilters = new Set(values.map(Number)); render(); }
+        onChange: values => { _yearFilters = new Set(values.map(Number)); saveFiltersToSession(); render(); }
     });
 
     _monthMS = createMultiSelect({
         trigger: document.getElementById('wrap-filterMonth'),
         label: 'Month',
         getOptions: () => MONTHS.map((m, i) => ({ value: String(i + 1).padStart(2, '0'), label: m })),
-        onChange: values => { _monthFilters = new Set(values); render(); }
+        onChange: values => { _monthFilters = new Set(values); saveFiltersToSession(); render(); }
     });
 
-    // Default to "this month, this year" on first load — same as what the
-    // Reset button snaps back to — instead of an all-time view. setValues()
-    // doesn't fire onChange, so the app-state Sets are set directly here too.
+    // Restore whatever was picked before a refresh, if any; otherwise
+    // default to "this month, this year" — same as what the Reset button
+    // snaps back to — instead of an all-time view. setValues() doesn't
+    // fire onChange, so the app-state Sets are set directly here too.
+    const saved = loadFiltersFromSession();
     const now = new Date();
-    _yearFilters = new Set([now.getFullYear()]);
-    _monthFilters = new Set([String(now.getMonth() + 1).padStart(2, '0')]);
-    _yearMS.setValues([String(now.getFullYear())]);
-    _monthMS.setValues([String(now.getMonth() + 1).padStart(2, '0')]);
+    const yearsToUse  = saved?.years?.length  ? saved.years  : [now.getFullYear()];
+    const monthsToUse = saved?.months?.length ? saved.months : [String(now.getMonth() + 1).padStart(2, '0')];
+    _yearFilters  = new Set(yearsToUse);
+    _monthFilters = new Set(monthsToUse);
+    _buFilters    = new Set(saved?.bus || []);
+    _yearMS.setValues(yearsToUse.map(String));
+    _monthMS.setValues(monthsToUse);
 }
 
 // ── BU chips ──────────────────────────────────────────────────────────────────
@@ -437,6 +464,7 @@ function toggleBuChip(bu) {
     }
     // Every BU included again → collapse back to the empty "all" sentinel.
     if (_buFilters.size >= _cfgBU.length) _buFilters.clear();
+    saveFiltersToSession();
     renderBuChips();
     render();
 }
@@ -450,6 +478,7 @@ function resetAllFilters() {
     _monthFilters = new Set([String(now.getMonth() + 1).padStart(2, '0')]);
     _yearMS?.setValues([String(now.getFullYear())]);
     _monthMS?.setValues([String(now.getMonth() + 1).padStart(2, '0')]);
+    saveFiltersToSession();
     renderBuChips();
     render();
 }
@@ -470,7 +499,7 @@ async function loadData() {
         supabaseClient.from('b_opportunity_list')
             // total_amount/total_gp not selected — every aggregate on this page
             // is derived from b_opportunity_qt_item line items instead.
-            .select('opportunity_id, opportunity_name, account_id, status, business_type, lead_source, create_date, churn_date, owner')
+            .select('opportunity_id, opportunity_name, account_id, status, business_type, lead_source, create_date, signed_date, churn_date, owner')
             .limit(3000),
         supabaseClient.from('b_opportunity_qt')
             .select('qt_id, opportunity_id, qt_type')
@@ -487,7 +516,11 @@ async function loadData() {
     _opps = opps || [];
     _accMap = new Map((accs || []).map(a => [a.account_id, a]));
     _cfgBU = (cfgBU || []).map(c => c.value);
-    _buFilters.clear();
+    // _buFilters is already set by initFilterDropdowns() (restored from
+    // sessionStorage, or the empty "all BUs" default) — drop any BU that
+    // no longer exists in the config we just loaded, so a stale saved
+    // filter can't silently reference a BU that's been renamed/removed.
+    for (const bu of [..._buFilters]) { if (!_cfgBU.includes(bu)) _buFilters.delete(bu); }
     renderBuChips();
 
     // Build qtMap: oppId → [{qt_type, b_opportunity_qt_item:[]}]
@@ -515,15 +548,19 @@ async function loadData() {
 }
 
 // ── Compute aggregates ─────────────────────────────────────────────────────────
-function yearPasses(createDate) {
+// Every year/month bucket on this dashboard is keyed off signed_date, not
+// create_date — an opportunity with no signed_date yet (still open/
+// negotiating, not actually closed) has nothing to bucket it by and is
+// deliberately excluded everywhere on this page, not just here.
+function yearPasses(signedDate) {
     if (_yearFilters.size === 0) return true;
-    return _yearFilters.has(+(createDate || '').slice(0, 4));
+    return _yearFilters.has(+(signedDate || '').slice(0, 4));
 }
 
 function computeData() {
     const filtered = _opps.filter(o => {
-        if (!yearPasses(o.create_date)) return false;
-        if (_monthFilters.size && !_monthFilters.has((o.create_date || '').slice(5,7))) return false;
+        if (!yearPasses(o.signed_date)) return false;
+        if (_monthFilters.size && !_monthFilters.has((o.signed_date || '').slice(5,7))) return false;
         return true;
     });
 
@@ -636,13 +673,13 @@ function computeData() {
 // Year like everything else. BU is applied per-item below (via buPasses)
 // since it's the axis the "By BU" mode breaks out by.
 function trendFilteredOpps() {
-    return _opps.filter(o => yearPasses(o.create_date));
+    return _opps.filter(o => yearPasses(o.signed_date));
 }
 
 function computeTrendMonthMap() {
     const monthMap = new Map();
     for (const opp of trendFilteredOpps()) {
-        const month = (opp.create_date || '').slice(0, 7);
+        const month = (opp.signed_date || '').slice(0, 7);
         if (!month) continue;
         const qts = _qtMap.get(opp.opportunity_id) || [];
         for (const qt of qts) {
@@ -665,7 +702,7 @@ function computeTrendMonthMap() {
 function computeTrendBUMap() {
     const map = new Map();
     for (const opp of trendFilteredOpps()) {
-        const month = (opp.create_date || '').slice(0, 7);
+        const month = (opp.signed_date || '').slice(0, 7);
         if (!month) continue;
         const qts = _qtMap.get(opp.opportunity_id) || [];
         for (const qt of qts) {

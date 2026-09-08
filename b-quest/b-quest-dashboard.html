@@ -908,21 +908,13 @@ if (chartKey === 'des' && chartWtDes) { chartWtDes.destroy(); chartWtDes = null;
 
         function buildDayWeights(role) {
             const spread = bqSpreadWeight(tasks.filter(t => t[`${role}_deadline`]), role, start, end, pad, dashWorkdayWeight, dashHolidays);
+            // due + ongoing here are a split of the SAME total (spread.weightMap),
+            // not two independently-computed numbers — they always sum back to
+            // it exactly, so the stacked bar's height matches the real capacity
+            // load instead of double-counting spread-in tasks in both segments.
             return {
-                due:     labels.map(d => spread.weightMap[`${curYear}-${pad(curMonth+1)}-${pad(d)}`] || 0),
-                ongoing: labels.map(d => {
-                    const ds = `${curYear}-${pad(curMonth+1)}-${pad(d)}`;
-                    const pct = bqDayPct(ds, dashWorkdayWeight, dashHolidays);
-                    if (pct <= 0 || !((spread.ongoingCount[ds] || 0) > 0)) return 0;
-                    const raw = tasks.filter(t => {
-                        if (!t[`${role}_deadline`]) return false;
-                        const dur = t[`${role}_day`] || 1;
-                        const dl = new Date(t[`${role}_deadline`]);
-                        const st = new Date(dl); st.setDate(st.getDate() - dur + 1);
-                        return st.toISOString().slice(0,10) <= ds && t[`${role}_deadline`] > ds;
-                    }).reduce((sum, t) => sum + (t[`${role}_weight`] || 0), 0);
-                    return raw * (pct / 100);
-                })
+                due:     labels.map(d => spread.dueWeightMap[`${curYear}-${pad(curMonth+1)}-${pad(d)}`] || 0),
+                ongoing: labels.map(d => spread.ongoingWeightMap[`${curYear}-${pad(curMonth+1)}-${pad(d)}`] || 0)
             };
         }
 

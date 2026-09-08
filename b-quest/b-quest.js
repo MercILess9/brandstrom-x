@@ -272,7 +272,15 @@ function bqDayPct(dateStr, workdayWeight, holidays) {
 // full-day holiday) contributes nothing at all for that date, matching
 // how b-quest-modal.js's own capacity check already treats such a day.
 function bqSpreadWeight(tasks, role, start, end, pad, workdayWeight = null, holidays = []) {
-    const weightMap = {}, dueCount = {}, ongoingCount = {};
+    // weightMap is the combined due+ongoing total per date — the number
+    // that actually matters for "is this day over capacity" (calendar
+    // heatmap). dueWeightMap/ongoingWeightMap split that same total by
+    // i===0 (deadline lands here) vs i>0 (spread in from a later
+    // deadline), both scaled the same way — so a caller stacking them
+    // for a chart gets the two segments summing back to weightMap
+    // exactly, instead of re-deriving "ongoing" with a different,
+    // unscaled formula that double-counted these same tasks.
+    const weightMap = {}, dueWeightMap = {}, ongoingWeightMap = {}, dueCount = {}, ongoingCount = {};
     tasks.forEach(t => {
         const deadline = t[`${role}_deadline`];
         if (!deadline || deadline < start || deadline > end) return;
@@ -288,12 +296,17 @@ function bqSpreadWeight(tasks, role, start, end, pad, workdayWeight = null, holi
                 const scaledWeight = weight * (pct / 100);
                 if (scaledWeight <= 0) continue;
                 weightMap[ds] = (weightMap[ds] || 0) + scaledWeight;
-                if (i === 0) dueCount[ds] = (dueCount[ds] || 0) + 1;
-                else ongoingCount[ds] = (ongoingCount[ds] || 0) + 1;
+                if (i === 0) {
+                    dueCount[ds] = (dueCount[ds] || 0) + 1;
+                    dueWeightMap[ds] = (dueWeightMap[ds] || 0) + scaledWeight;
+                } else {
+                    ongoingCount[ds] = (ongoingCount[ds] || 0) + 1;
+                    ongoingWeightMap[ds] = (ongoingWeightMap[ds] || 0) + scaledWeight;
+                }
             }
         }
     });
-    return { weightMap, dueCount, ongoingCount };
+    return { weightMap, dueWeightMap, ongoingWeightMap, dueCount, ongoingCount };
 }
 
 async function handleDeleteTask(id) {

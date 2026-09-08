@@ -28,6 +28,15 @@
         .dash-updated { font-size: 0.7rem; color: #94a3b8; white-space: nowrap; flex-shrink: 0; margin-left: auto; display: inline-flex; align-items: center; gap: 5px; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* ── Quick date-range chips (YTD/Q1-Q4) — shortcuts that just
+           auto-fill the existing Year/Month dropdowns, not a separate
+           mode; same visual language as .bu-chip on purpose. ── */
+        .range-chip-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .range-chip { border: 1.5px solid var(--c-accent-dark); border-radius: 20px; padding: 0 14px; height: 34px;
+            font-size: 0.75rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap;
+            transition: 0.2s; background: #fff; color: var(--c-accent-dark); opacity: 0.45; }
+        .range-chip.active { opacity: 1; background: var(--c-accent-dark); color: #fff; }
+
         /* ── BU chips — pushed to the opposite edge from Year/Month ── */
         .bu-chip-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-left: auto; }
         .bu-chip-reset { border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; border-radius: 50%; width: 34px; height: 34px; font-size: 0.95rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -131,7 +140,7 @@
         /* Sliding-pill toggle — exact recipe as .sort-seg-wrap/-slider above
            (2-way, fixed 50/50 split via flex:1 + translateX(100%)), not a
            hand-rolled bordered-box segmented control. */
-        .trend-mode-toggle { display: flex; flex-shrink: 0; }
+        .trend-mode-toggle { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
         .trend-toggle-group { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; padding: 3px; }
         .trend-toggle-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: transform 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
         .trend-toggle-group:has(.trend-mode-btn:last-child.active) .trend-toggle-slider { transform: translateX(100%); }
@@ -186,6 +195,7 @@
     <div class="dash-ctrl-inner">
         <div class="flt-select-box" id="wrap-filterYear" style="width:150px"></div>
         <div class="flt-select-box" id="wrap-filterMonth" style="width:160px"></div>
+        <div class="range-chip-row" id="rangeChipRow"></div>
         <div class="bu-chip-row" id="buChipRow"></div>
     </div>
 </div>
@@ -212,6 +222,14 @@
             <span class="sec-hd-title">Sales Trend</span>
             <div class="trend-legend" id="trendLegend"></div>
             <div class="trend-mode-toggle">
+                <!-- Only meaningful for Amount/GP — By BU is always a
+                     stacked bar (a "line" breakdown-by-category isn't a
+                     sensible chart), so this hides whenever By BU is active. -->
+                <div class="trend-toggle-group" id="trendChartTypeGroup">
+                    <div class="trend-toggle-slider"></div>
+                    <button class="trend-mode-btn active" data-ct="line" onclick="setTrendChartType('line')">Line</button>
+                    <button class="trend-mode-btn" data-ct="bar" onclick="setTrendChartType('bar')">Bar</button>
+                </div>
                 <div class="trend-toggle-group" id="trendBreakdownGroup">
                     <div class="trend-toggle-slider"></div>
                     <button class="trend-mode-btn active" data-bd="amtgp" onclick="setTrendBreakdown('amtgp')">Amount/GP</button>
@@ -337,6 +355,7 @@ let _buFilters    = new Set(); // empty = all BUs
 let _chartMonthly = null;
 let _chartType    = null;
 let _chartBU      = null;
+let _trendChartType = 'line'; // 'line' | 'bar' — Amount/GP mode only
 let _chartLead    = null;
 let _trendBreakdown = 'amtgp'; // 'amtgp' | 'bu'
 // A year-over-year Compare mode (MoM/QoQ, with its own Normal/Compare and
@@ -400,6 +419,73 @@ function loadFiltersFromSession() {
     } catch { return null; }
 }
 
+// ── Quick date-range chips (YTD / Q1-Q4) ─────────────────────────────────────
+// Shortcuts only — they just set the same _yearFilters/_monthFilters (and
+// the same two dropdowns) a user would otherwise tick by hand, so nothing
+// stops fine-tuning the selection afterward the normal way.
+const QUARTER_MONTHS = {
+    q1: ['01', '02', '03'],
+    q2: ['04', '05', '06'],
+    q3: ['07', '08', '09'],
+    q4: ['10', '11', '12'],
+};
+
+function ytdMonths() {
+    const months = [];
+    for (let m = 1; m <= new Date().getMonth() + 1; m++) months.push(String(m).padStart(2, '0'));
+    return months;
+}
+
+// Quarters apply to whatever year is currently selected (if exactly one is
+// picked) so picking Q2 while looking at 2025 stays on 2025 — only YTD
+// forces the current year, since "year to date" only means anything for
+// the year that's actually still in progress.
+function quarterTargetYear() {
+    return _yearFilters.size === 1 ? [..._yearFilters][0] : new Date().getFullYear();
+}
+
+function setsEqual(a, b) {
+    if (a.size !== b.size) return false;
+    for (const v of a) if (!b.has(v)) return false;
+    return true;
+}
+
+function isRangeChipActive(type) {
+    if (type === 'ytd') {
+        return _yearFilters.size === 1 && [..._yearFilters][0] === new Date().getFullYear()
+            && setsEqual(_monthFilters, new Set(ytdMonths()));
+    }
+    const year = quarterTargetYear();
+    return _yearFilters.size === 1 && [..._yearFilters][0] === year
+        && setsEqual(_monthFilters, new Set(QUARTER_MONTHS[type]));
+}
+
+function applyQuickRange(type) {
+    const year = type === 'ytd' ? new Date().getFullYear() : quarterTargetYear();
+    const months = type === 'ytd' ? ytdMonths() : QUARTER_MONTHS[type];
+    _yearFilters = new Set([year]);
+    _monthFilters = new Set(months);
+    _yearMS?.setValues([String(year)]);
+    _monthMS?.setValues(months);
+    saveFiltersToSession();
+    render();
+}
+
+function renderRangeChips() {
+    const el = document.getElementById('rangeChipRow');
+    if (!el) return;
+    const chips = [
+        { type: 'ytd', label: 'YTD' },
+        { type: 'q1', label: 'Q1' },
+        { type: 'q2', label: 'Q2' },
+        { type: 'q3', label: 'Q3' },
+        { type: 'q4', label: 'Q4' },
+    ];
+    el.innerHTML = chips.map(c =>
+        `<button class="range-chip${isRangeChipActive(c.type) ? ' active' : ''}" onclick="applyQuickRange('${c.type}')">${c.label}</button>`
+    ).join('');
+}
+
 function initFilterDropdowns() {
     const cur = new Date().getFullYear();
     const years = [];
@@ -420,13 +506,13 @@ function initFilterDropdowns() {
     });
 
     // Restore whatever was picked before a refresh, if any; otherwise
-    // default to "this month, this year" — same as what the Reset button
-    // snaps back to — instead of an all-time view. setValues() doesn't
-    // fire onChange, so the app-state Sets are set directly here too.
+    // default to Year-to-Date — same as what the Reset button snaps back
+    // to — instead of an all-time view. setValues() doesn't fire
+    // onChange, so the app-state Sets are set directly here too.
     const saved = loadFiltersFromSession();
     const now = new Date();
     const yearsToUse  = saved?.years?.length  ? saved.years  : [now.getFullYear()];
-    const monthsToUse = saved?.months?.length ? saved.months : [String(now.getMonth() + 1).padStart(2, '0')];
+    const monthsToUse = saved?.months?.length ? saved.months : ytdMonths();
     _yearFilters  = new Set(yearsToUse);
     _monthFilters = new Set(monthsToUse);
     _buFilters    = new Set(saved?.bus || []);
@@ -436,7 +522,7 @@ function initFilterDropdowns() {
 
 // ── BU chips ──────────────────────────────────────────────────────────────────
 function renderBuChips() {
-    const resetBtn = `<button class="bu-chip-reset" onclick="resetAllFilters()" title="Reset to this month, all BUs"><i class="bi bi-arrow-counterclockwise"></i></button>`;
+    const resetBtn = `<button class="bu-chip-reset" onclick="resetAllFilters()" title="Reset to Year-to-Date, all BUs"><i class="bi bi-arrow-counterclockwise"></i></button>`;
     const chips = _cfgBU.map(bu => {
         const active = _buFilters.size === 0 || _buFilters.has(bu);
         const c = buColor(bu);
@@ -469,15 +555,16 @@ function toggleBuChip(bu) {
     render();
 }
 
-// Reset icon — not just BU: snaps the whole filter bar back to "this
-// month, every BU" (the sensible default view), not just clearing BU alone.
+// Reset icon — not just BU: snaps the whole filter bar back to
+// "Year-to-Date, every BU" (the sensible default view), not just
+// clearing BU alone.
 function resetAllFilters() {
     _buFilters.clear();
     const now = new Date();
     _yearFilters = new Set([now.getFullYear()]);
-    _monthFilters = new Set([String(now.getMonth() + 1).padStart(2, '0')]);
+    _monthFilters = new Set(ytdMonths());
     _yearMS?.setValues([String(now.getFullYear())]);
-    _monthMS?.setValues([String(now.getMonth() + 1).padStart(2, '0')]);
+    _monthMS?.setValues(ytdMonths());
     saveFiltersToSession();
     renderBuChips();
     render();
@@ -726,6 +813,7 @@ function computeTrendBUMap() {
 
 // ── Render all ────────────────────────────────────────────────────────────────
 function render() {
+    renderRangeChips();
     const d = computeData();
     renderKPIs(d);
     renderBUCards(d);
@@ -852,6 +940,14 @@ function trendLabels(keys) {
 function setTrendBreakdown(bd) {
     _trendBreakdown = bd;
     document.querySelectorAll('#trendBreakdownGroup .trend-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.bd === bd));
+    // Line/Bar only applies to Amount/GP — By BU is always a stacked bar.
+    document.getElementById('trendChartTypeGroup').style.display = bd === 'bu' ? 'none' : '';
+    renderTrendChart();
+}
+
+function setTrendChartType(ct) {
+    _trendChartType = ct;
+    document.querySelectorAll('#trendChartTypeGroup .trend-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.ct === ct));
     renderTrendChart();
 }
 
@@ -910,10 +1006,11 @@ function renderTrendAmtGP(monthMap) {
     const amts = keys.map(m => m > nowKey ? null : (monthMap.get(m)?.amt ?? 0));
     const gps  = keys.map(m => m > nowKey ? null : (monthMap.get(m)?.gp ?? 0));
 
+    const isBar = _trendChartType === 'bar';
     const ctx = document.getElementById('monthlyChart').getContext('2d');
     if (_chartMonthly) _chartMonthly.destroy();
     _chartMonthly = new Chart(ctx, {
-        type: 'line',
+        type: _trendChartType,
         data: {
             labels,
             datasets: [
@@ -921,8 +1018,9 @@ function renderTrendAmtGP(monthMap) {
                     label: 'Amount',
                     data: amts,
                     borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59,130,246,0.08)',
-                    borderWidth: 2.5,
+                    backgroundColor: isBar ? 'rgba(59,130,246,0.75)' : 'rgba(59,130,246,0.08)',
+                    borderWidth: isBar ? 0 : 2.5,
+                    borderRadius: isBar ? 4 : 0,
                     pointRadius: 4,
                     pointBackgroundColor: '#3b82f6',
                     tension: 0.35,
@@ -934,8 +1032,9 @@ function renderTrendAmtGP(monthMap) {
                     label: 'GP',
                     data: gps,
                     borderColor: '#16a34a',
-                    backgroundColor: 'rgba(22,163,74,0.08)',
-                    borderWidth: 2.5,
+                    backgroundColor: isBar ? 'rgba(22,163,74,0.75)' : 'rgba(22,163,74,0.08)',
+                    borderWidth: isBar ? 0 : 2.5,
+                    borderRadius: isBar ? 4 : 0,
                     pointRadius: 4,
                     pointBackgroundColor: '#16a34a',
                     tension: 0.35,

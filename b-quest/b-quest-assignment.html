@@ -11,6 +11,8 @@
     <script src="/system/system.js"></script>
     <script src="/system/save-bar.js"></script>
     <script src="/system/multi-select.js"></script>
+    <script src="/system/date-picker.js"></script>
+    <script src="/system/pull-refresh.js"></script>
     <script src="b-quest.js"></script>
     <script src="b-quest-assign-picker.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
@@ -32,7 +34,13 @@
 
         .flt-search { flex: 0 1 320px; min-width: 140px; }
 
-        .flt-date-group { border-radius: 20px; padding: 0 14px; }
+        /* Same fixed width every filter pill uses on the List page — this
+           page was missing it entirely, so Deadline (and Status/Type/Work/
+           Owner in the Advance row) auto-sized down to their placeholder
+           text ("All"), reading as cramped next to the much wider Role
+           segment control. */
+        .flt-right-group .flt-select-box, .flt-advanced-row .flt-select-box { width: 240px; flex-shrink: 0; }
+        .flt-right-group .flt-select-input, .flt-advanced-row .flt-select-input { text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
 
         /* Role — same sliding-segment mechanic as Status uses on the List
            page, single-select ("All" + one button per role). */
@@ -48,18 +56,28 @@
         .page-header { margin: 0 0 20px; display: flex; align-items: center; gap: 10px; }
         .page-header h1 { font-size: 1.4rem; font-weight: 800; color: var(--c-dark); margin: 0; }
         .page-header .count-badge { background: var(--c-accent-light); color: var(--c-accent-dark); border-radius: 20px; padding: 2px 12px; font-size: 0.78rem; font-weight: 800; }
-        .btn-refresh { margin-left: auto; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; color: var(--c-slate); font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
-        .btn-refresh:hover:not(:disabled) { border-color: var(--c-accent); color: var(--c-accent-dark); background: var(--c-accent-light); }
-        .btn-refresh:disabled { opacity: 0.6; cursor: default; }
-        .btn-refresh.spinning i { animation: btn-refresh-spin 0.6s linear; }
-        @keyframes btn-refresh-spin { to { transform: rotate(360deg); } }
 
         .assign-wrapper { max-width: 1300px; margin: 0 auto; padding: 24px 20px 40px; }
 
+        /* overscroll-behavior-y alone doesn't fully stop Safari's own
+           elastic bounce (it mostly governs scroll *chaining*, not the
+           bounce animation itself) — createPullToRefresh() (system/pull-
+           refresh.js) also calls preventDefault() on the qualifying
+           touchmove/wheel events, which is the part that actually stops
+           it. Both belt-and-suspenders, ref B-Quest List. */
+        html, body { overscroll-behavior-y: none; }
+
+        /* Pull-to-refresh indicator is a shared system module — see
+           /system/pull-refresh.js (createPullToRefresh()) for markup/CSS/
+           gesture logic. #assign-container/#list-rows just need to stay
+           position:relative (with list-rows above the indicator) for it
+           to slide/reveal correctly, ref B-Quest List's #card-container/
+           #taskContainer pair. Replaces the old refresh-icon button. */
+        #assign-container { position: relative; }
         /* ── Card list — free-floating cards, no wrapping "section" box
            (a box literally titled "Unassigned" around a page whose only
            job is showing unassigned items was pointless framing) ── */
-        #list-rows { display: flex; flex-direction: column; gap: 10px; }
+        #list-rows { display: flex; flex-direction: column; gap: 10px; position: relative; z-index: 1; }
 
         .assign-card { display: flex; align-items: center; gap: 0; background: #fff; overflow: hidden; }
         .ac-zone { padding: 14px 18px; }
@@ -164,13 +182,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="flt-date-today-wrap">
-                    <div class="flt-date-group">
-                        <input type="date" class="flt-date-input" id="startDate">
-                        <span style="color:#cbd5e1; padding: 0 2px;">-</span>
-                        <input type="date" class="flt-date-input" id="endDate">
-                    </div>
-                </div>
+                <div class="flt-select-box" id="wrap-filterDeadline"></div>
                 <button class="flt-btn-adv" id="toggleFilters" title="Advance Filters"><i class="bi bi-sliders"></i></button>
                 <button class="flt-btn-reset" id="clearAllBtn" onclick="resetAllFilters()" title="Clear all filters"><i class="bi bi-arrow-counterclockwise"></i></button>
             </div>
@@ -192,10 +204,11 @@
     <div class="page-header">
         <h1><i class="bi bi-person-lines-fill me-2" style="color:var(--c-accent)"></i>B-QUEST Assignment</h1>
         <span class="count-badge" id="badge-count">0</span>
-        <button class="btn-refresh" id="btnRefresh" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
     </div>
 
-    <div id="list-rows"></div>
+    <div id="assign-container">
+        <div id="list-rows"></div>
+    </div>
     <div id="assign-load-more-trigger" style="height:50px;"></div>
 
 </div>
@@ -214,6 +227,7 @@
     let ownerList = [];
     // createMultiSelect() instances — all initialized once in loadPage()
     let statusFilter, typeFilter, workFilter, ownerFilter;
+    let deadlineFilter; // createDatePicker() instance — initialized in setupMultiSelects()
     let allRows  = [];          // task-role rows, each with an embedded .quest (b-quest-list fields)
     let openDetailIds = new Set();
     let pendingAssign = {};     // taskRoleId -> { taskRoleId, questId, value }
@@ -235,25 +249,21 @@
         await loadRows(true);
         setupSearch();
         setupInfiniteScroll();
-        setupDateToday();
+        setupAdvancedZone();
         setupSort();
-        setupRefreshBtn();
+        setupRefreshGesture();
     }
 
     // Manual refresh without location.reload() — that would lose scroll
-    // position and silently reset every filter widget back to empty,
-    // same reasoning as List's pull-to-refresh (system/pull-refresh.js).
+    // position and silently reset every filter widget back to empty.
     // resetAndReload() already re-queries from whatever the filter widgets
-    // currently hold, never touching them.
-    function setupRefreshBtn() {
-        const btn = document.getElementById('btnRefresh');
-        btn.addEventListener('click', async () => {
-            if (btn.disabled) return;
-            btn.disabled = true;
-            btn.classList.add('spinning');
-            await resetAndReload();
-            btn.classList.remove('spinning');
-            btn.disabled = false;
+    // currently hold, never touching them. Was a tap-to-spin icon button;
+    // now the same gesture List uses (system/pull-refresh.js).
+    function setupRefreshGesture() {
+        createPullToRefresh({
+            container: document.getElementById('assign-container'),
+            track: document.getElementById('list-rows'),
+            onRefresh: resetAndReload
         });
     }
 
@@ -281,6 +291,15 @@
             trigger: document.getElementById('wrap-filterOwner'),
             label: 'Owner',
             getOptions: () => ownerList.map(o => ({ value: o, label: o })),
+            onChange: () => applyFilters()
+        });
+        // date-picker.js owns its own active-filter tint on #wrap-filterDeadline
+        // internally (same as every other .flt-select-box filter pill) — no
+        // separate highlight function needed here, ref b-quest-list.html.
+        deadlineFilter = createDatePicker({
+            trigger: document.getElementById('wrap-filterDeadline'),
+            mode: 'range',
+            label: 'Deadline',
             onChange: () => applyFilters()
         });
     }
@@ -420,9 +439,8 @@
         if (typeInputs.length) query = query.in('type', typeInputs);
         const workInputs = workFilter?.getValues() || [];
         if (workInputs.length) query = query.in('work', workInputs);
-        const startDate = document.getElementById('startDate').value;
+        const { start: startDate, end: endDate } = deadlineFilter?.getValue() || {};
         if (startDate) query = query.gte('deadline', startDate);
-        const endDate = document.getElementById('endDate').value;
         if (endDate) query = query.lte('deadline', endDate);
 
         query = sortBy === 'last_update'
@@ -502,11 +520,6 @@
         }
     }
 
-    function updateDateHighlight() {
-        const s = document.getElementById('startDate').value;
-        const e = document.getElementById('endDate').value;
-        document.querySelector('.flt-date-today-wrap').classList.toggle('active-filter', !!(s || e));
-    }
     function setupSearch() {
         let timer;
         const input = document.getElementById('filterSearch');
@@ -519,18 +532,12 @@
             input.focus(); applyFilters();
         });
     }
-    function setupDateToday() {
+    function setupAdvancedZone() {
         document.getElementById('toggleFilters').addEventListener('click', () => {
             const zone = document.getElementById('advancedFilterZone');
             const btn = document.getElementById('toggleFilters');
             zone.classList.toggle('show');
             btn.classList.toggle('active', zone.classList.contains('show'));
-        });
-        ['startDate', 'endDate'].forEach(id => {
-            document.getElementById(id)?.addEventListener('change', () => {
-                updateDateHighlight();
-                applyFilters();
-            });
         });
         document.getElementById('roleSegWrap')?.addEventListener('scroll', () => roleSeg.updateFade());
     }
@@ -557,15 +564,15 @@
 
     function updateClearAllVisibility() {
         const val = id => document.getElementById(id)?.value || '';
-        const anyActive = val('filterSearch') || val('startDate') || val('endDate') || getRoleFilter() ||
+        const { start: deadlineStart, end: deadlineEnd } = deadlineFilter?.getValue() || {};
+        const anyActive = val('filterSearch') || deadlineStart || deadlineEnd || getRoleFilter() ||
             statusFilter?.getValues().length || typeFilter?.getValues().length || workFilter?.getValues().length || ownerFilter?.getValues().length;
         document.getElementById('clearAllBtn')?.classList.toggle('has-filters', !!anyActive);
     }
 
     function resetAllFilters() {
         document.getElementById('filterSearch').value = ''; document.getElementById('clearSearchBtn').style.display = 'none';
-        document.getElementById('startDate').value = ''; document.getElementById('endDate').value = '';
-        updateDateHighlight();
+        deadlineFilter.setValue({ start: null, end: null });
         statusFilter?.clear();
         typeFilter?.clear();
         workFilter?.clear();

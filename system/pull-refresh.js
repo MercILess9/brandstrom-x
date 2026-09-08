@@ -146,6 +146,12 @@
         }
 
         document.addEventListener('touchstart', e => {
+            // A filter dropdown or popup being open locks body scroll (see
+            // system.js) — don't let a pull gesture start underneath it,
+            // since atTop() alone can't tell "locked" from "already at the
+            // top and free to scroll" apart (the scroll position freezes
+            // either way).
+            if (typeof isBodyScrollLocked === 'function' && isBodyScrollLocked()) return;
             if (!atTop() || refreshing || Date.now() < cooldownUntil) return;
             pulling = true;
             startY = e.touches[0].clientY;
@@ -184,6 +190,9 @@
         });
 
         document.addEventListener('wheel', e => {
+            // Same reasoning as touchstart above — don't start/continue a
+            // pull while a dropdown/popup has body scroll locked.
+            if (typeof isBodyScrollLocked === 'function' && isBodyScrollLocked() && !refreshing) return;
             // Same reasoning as touchmove's refreshing branch — trackpad
             // momentum keeps sending wheel ticks after the fingers lift, and
             // without preventDefault() here the browser's native scroll/

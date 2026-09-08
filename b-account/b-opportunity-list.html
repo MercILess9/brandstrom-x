@@ -9,6 +9,8 @@
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="/system/multi-select.js"></script>
+    <script src="/system/month-picker.js"></script>
+    <script src="/system/date-picker.js"></script>
     <script src="/system/pull-refresh.js"></script>
     <script src="b-account.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
@@ -164,7 +166,11 @@
         .op-qt-group.sign-group { border: 1px solid #e2e8f0; background: #fafafa; opacity: 0.55; pointer-events: none; }
         .op-qt-group.sign-group .op-qt-group-label { color: #94a3b8; }
         .op-churn-summary { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-        .op-churn-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.4); border-radius: 20px; padding: 3px 12px; font-size: 0.72rem; font-weight: 800; color: #c2410c; white-space: nowrap; }
+        /* color: #f97316 (not the old #c2410c) — matches
+           b-opportunity-modal.js's own Churn Amount/GP value color exactly
+           (.bopp-hdr-lost-zone .bopp-hdr-tval), same orange used for every
+           other churn accent (card border, CHURN label) on this page too. */
+        .op-churn-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.4); border-radius: 20px; padding: 3px 12px; font-size: 0.72rem; font-weight: 800; color: #f97316; white-space: nowrap; }
         .op-churn-badge-lbl { font-size: 0.6rem; font-weight: 700; color: #9a3412; text-transform: uppercase; letter-spacing: 0.05em; }
         .op-qt-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #f0f1f9; border-bottom: 2px solid #e2e8f0; flex-wrap: wrap; }
         .op-qt-num { font-size: 0.82rem; font-weight: 800; color: var(--c-text-main); display: flex; align-items: center; gap: 6px; }
@@ -288,14 +294,12 @@
     var _companyQtMap = new Map(); // opportunity_id → Set<company_qt>
     var _cfgBU = [], _cfgStatus = [], _cfgType = [];
     var _ownerList = [], _amList = [], _leadList = [];
-    var _signedMonthMap = new Map(); // opportunity_id → signed_date's month, '01'..'12' (unset if no signed_date)
-    const SIGN_MONTHS = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-    const SIGN_MONTH_LABELS = { '01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec' };
+    var _signedMap = new Map(); // opportunity_id → signed_date sliced to 'YYYY-MM' (unset if no signed_date)
     let _canEdit = false, _canDel = false;
     // Status is the only single-select (Carousel); the rest are multi-select
     // (arrays) — ref B-Quest's filter zone.
     let _statusFilter = '';
-    let _typeFilters = [], _buFilters = [], _ownerFilters = [], _amFilters = [], _leadFilters = [], _signMonthFilters = [];
+    let _typeFilters = [], _buFilters = [], _ownerFilters = [], _amFilters = [], _leadFilters = [];
     let _sortFilter = 'latest';
     let _searchText = '';
     let _page = 0, _hasMore = true, _fetching = false;
@@ -334,10 +338,15 @@
         getOptions: () => _leadList.map(v => ({ value: v, label: v })),
         onChange: values => { _leadFilters = values; applyFilters(); }
     });
-    const signMonthFilter = createMultiSelect({
-        trigger: document.getElementById('wrap-filterSignMonth'), label: 'Sign Month',
-        getOptions: () => SIGN_MONTHS.map(v => ({ value: v, label: SIGN_MONTH_LABELS[v] })),
-        onChange: values => { _signMonthFilters = values; applyFilters(); }
+    // Same year+month range picker as the B-Account Dashboard's Date
+    // filter — no local state mirrored here, signPicker.getValue() is the
+    // source of truth (ref system/month-picker.js). Default (no
+    // months picked) means "no Signed filter", matching every other
+    // pill in this row rather than the dashboard's always-has-a-value
+    // baseline, so isDefault/formatLabel are both left unset on purpose.
+    const signPicker = createMonthPicker({
+        trigger: document.getElementById('wrap-filterSignMonth'), label: 'Signed', minYear: 2024,
+        onChange: () => applyFilters()
     });
 
     function setSortFilter(type) {
@@ -351,15 +360,16 @@
     }
     function resetFilters() {
         _statusFilter = '';
-        _typeFilters = []; _buFilters = []; _ownerFilters = []; _amFilters = []; _leadFilters = []; _signMonthFilters = [];
+        _typeFilters = []; _buFilters = []; _ownerFilters = []; _amFilters = []; _leadFilters = [];
         statusSeg.render();
-        typeFilter.clear(); buFilter.clear(); ownerFilter.clear(); amFilter.clear(); leadFilter.clear(); signMonthFilter.clear();
+        typeFilter.clear(); buFilter.clear(); ownerFilter.clear(); amFilter.clear(); leadFilter.clear();
+        signPicker.setValue({ year: new Date().getFullYear(), months: [] });
         applyFilters();
     }
     function updateResetVisibility() {
         const anyActive = _searchText || _statusFilter ||
             _typeFilters.length || _buFilters.length || _ownerFilters.length ||
-            _amFilters.length || _leadFilters.length || _signMonthFilters.length;
+            _amFilters.length || _leadFilters.length || signPicker.getValue().months.length;
         document.getElementById('btnReset')?.classList.toggle('has-filters', !!anyActive);
     }
     function applyFilters() {
@@ -374,7 +384,7 @@
         _ownerList = uniq('owner');
         _amList    = uniq('am');
         _leadList  = uniq('lead_source');
-        _signedMonthMap = new Map(idx.filter(o => o.signed_date).map(o => [o.opportunity_id, String(o.signed_date).slice(5,7)]));
+        _signedMap = new Map(idx.filter(o => o.signed_date).map(o => [o.opportunity_id, String(o.signed_date).slice(0,7)]));
         statusSeg.render();
     }
 
@@ -445,9 +455,11 @@
                 .map(([id]) => id));
         }
 
-        if (_signMonthFilters.length) {
-            const monthIds = new Set([..._signedMonthMap.entries()]
-                .filter(([, month]) => _signMonthFilters.includes(month))
+        const signVal = signPicker.getValue();
+        if (signVal.months.length) {
+            const targetSet = new Set(signVal.months.map(m => `${signVal.year}-${m}`));
+            const monthIds = new Set([..._signedMap.entries()]
+                .filter(([, ym]) => targetSet.has(ym))
                 .map(([id]) => id));
             idFilter = idFilter
                 ? new Set([...idFilter].filter(id => monthIds.has(id)))
@@ -694,14 +706,30 @@
             if (status === 'Churn') {
                 const churnQTs = data.filter(q => q.qt_type === 'churn');
                 const signQTs  = data.filter(q => q.qt_type !== 'churn');
-                const allItems = churnQTs.flatMap(q => q.b_opportunity_qt_item || []);
-                const cAmt     = allItems.reduce((s, i) => s + (+i.amount || 0), 0);
-                const cGP      = allItems.reduce((s, i) => s + (+i.gp  || 0), 0);
+                // "Churn Amt/GP" here means LOST revenue (Sign total minus
+                // Churn total) — same metric b-opportunity-modal.js's header
+                // shows (its bopp-hdr-lost-amt/-gp), not the churn QT's own
+                // raw total. Used to just be the raw churn total, which is a
+                // completely different (much smaller) number than the modal
+                // shows for the same deal — confusing side by side.
+                const churnItems = churnQTs.flatMap(q => q.b_opportunity_qt_item || []);
+                const signItems  = signQTs.flatMap(q => q.b_opportunity_qt_item || []);
+                const churnAmt   = churnItems.reduce((s, i) => s + (+i.amount || 0), 0);
+                const churnGP    = churnItems.reduce((s, i) => s + (+i.gp  || 0), 0);
+                const signAmt    = signItems.reduce((s, i) => s + (+i.amount || 0), 0);
+                const signGP     = signItems.reduce((s, i) => s + (+i.gp  || 0), 0);
+                const lostAmt    = signAmt - churnAmt;
+                const lostGP     = signGP  - churnGP;
+                // Same sign-flip as the modal's own fmt() — a churn QT
+                // occasionally being worth MORE than the sign QT (lostAmt
+                // negative) shows as a gain (+) instead of a nonsensical
+                // "-(negative number)".
+                const fmtLost  = v => (v >= 0 ? '-' : '+') + fmtAmt(Math.abs(v));
                 const rec      = _cardData.get(oppId);
                 const cDate    = rec?.churn_date ? fmtDate(rec.churn_date) : '';
                 const summary  = `<div class="op-churn-summary">
-                    ${cAmt ? `<span class="op-churn-badge"><span class="op-churn-badge-lbl">Churn Amt</span>-${fmtAmt(cAmt)}</span>` : ''}
-                    ${cGP  ? `<span class="op-churn-badge"><span class="op-churn-badge-lbl">Churn GP</span>-${fmtAmt(cGP)}</span>` : ''}
+                    ${lostAmt ? `<span class="op-churn-badge"><span class="op-churn-badge-lbl">Churn Amt</span>${fmtLost(lostAmt)}</span>` : ''}
+                    ${lostGP  ? `<span class="op-churn-badge"><span class="op-churn-badge-lbl">Churn GP</span>${fmtLost(lostGP)}</span>` : ''}
                     ${cDate ? `<span class="op-churn-badge"><span class="op-churn-badge-lbl">Churn Date</span>${cDate}</span>` : ''}
                 </div>`;
                 zone.innerHTML = `

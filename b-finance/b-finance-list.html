@@ -9,6 +9,7 @@
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="/system/multi-select.js"></script>
+    <script src="/system/date-picker.js"></script>
     <script src="b-finance.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="/system/theme.css">
@@ -33,11 +34,7 @@
                 <div class="fin-toolbar-spacer"></div>
                 <div class="fin-toolbar-right">
                     <div class="flt-date-today-wrap" id="fltDateGroup">
-                        <div class="flt-date-group">
-                            <input type="date" class="flt-date-input" id="filterDateFrom" onchange="onFilterChange()">
-                            <span style="color:#cbd5e1;padding:0 4px">—</span>
-                            <input type="date" class="flt-date-input" id="filterDateTo" onchange="onFilterChange()">
-                        </div>
+                        <div class="flt-select-box" id="wrap-filterBillDate"></div>
                         <button class="flt-btn-today" id="btnMonth" onclick="setQuickDate('month')">This Month</button>
                     </div>
                     <div class="status-seg-wrap" id="billingSegWrap">
@@ -120,7 +117,7 @@ let _filterCompanyQt = new Set();
 let _filterStatus   = new Set();
 let _allCompanies   = []; // options for the Company QT multi-select, refreshed by loadLeftPanel()
 let _allStatuses    = []; // options for the Status multi-select, refreshed by loadLeftPanel()
-let _companyMS = null, _statusMS = null;
+let _companyMS = null, _statusMS = null, _billDateFilter = null; // createDatePicker() instance — initialized in initFinanceFilters()
 let _qtDetailOpen   = true;
 let _cachedOpps     = [];
 let _cachedQtByOpp  = new Map();
@@ -563,13 +560,10 @@ function deselectAccount() {
     document.getElementById('financeLayout').classList.add('sidebar-forced');
 }
 
-// Shared tail for every top-filter change (date inputs' onchange, and the
-// Company/Status multi-selects' onChange below) — changing any of them
-// always drops back to the unselected-account view, same as before. Also
-// keeps the Bill Date pill's active-filter highlight in sync regardless of
-// which specific filter triggered the change.
+// Shared tail for every top-filter change (the Bill Date picker's onChange,
+// and the Company/Status multi-selects' onChange below) — changing any of
+// them always drops back to the unselected-account view, same as before.
 function applyTopFilters() {
-    document.getElementById('fltDateGroup').classList.toggle('active-filter', !!(_filterDateFrom || _filterDateTo));
     syncQuickDateButtons();
     updateResetVisibility();
     deselectAccount();
@@ -585,12 +579,6 @@ function updateResetVisibility() {
         _filterDateFrom || _filterDateTo || _filterBillingStatus !== 'all' ||
         _filterCompanyQt.size || _filterStatus.size;
     document.getElementById('btnReset').classList.toggle('has-filters', !!anyActive);
-}
-
-function onFilterChange() {
-    _filterDateFrom = document.getElementById('filterDateFrom').value;
-    _filterDateTo   = document.getElementById('filterDateTo').value;
-    applyTopFilters();
 }
 
 function toggleAdvanced() {
@@ -637,12 +625,24 @@ function initFinanceFilters() {
         getOptions: () => _allStatuses.map(s => ({ value: s, label: s })),
         onChange: values => { _filterStatus = new Set(values); applyTopFilters(); }
     });
+    // date-picker.js owns its own active-filter tint on #wrap-filterBillDate
+    // internally — the fltDateGroup-level toggle in applyTopFilters() below
+    // is gone, ref b-quest-list.html's Deadline filter for the same pattern.
+    _billDateFilter = createDatePicker({
+        trigger: document.getElementById('wrap-filterBillDate'),
+        mode: 'range',
+        label: 'Bill Date',
+        onChange: ({ start, end }) => {
+            _filterDateFrom = start || '';
+            _filterDateTo   = end || '';
+            applyTopFilters();
+        }
+    });
     repositionBillingSeg(); // initial slider position under the default "All"
 }
 
 function resetAllFilters() {
-    document.getElementById('filterDateFrom').value = '';
-    document.getElementById('filterDateTo').value   = '';
+    _billDateFilter.setValue({ start: null, end: null });
     _filterDateFrom  = '';
     _filterDateTo    = '';
     _filterCompanyQt = new Set();
@@ -653,25 +653,25 @@ function resetAllFilters() {
 }
 
 function setQuickDate(type) {
-    const f = document.getElementById('filterDateFrom');
-    const t = document.getElementById('filterDateTo');
     if (type === 'month') {
         const active = document.getElementById('btnMonth').classList.contains('active');
-        if (active) { f.value = ''; t.value = ''; }
-        else {
+        if (active) {
+            _billDateFilter.setValue({ start: null, end: null });
+        } else {
             const d = new Date();
             const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0');
             const last = new Date(y, d.getMonth() + 1, 0).getDate();
-            f.value = `${y}-${m}-01`;
-            t.value = `${y}-${m}-${String(last).padStart(2, '0')}`;
+            _billDateFilter.setValue({ start: `${y}-${m}-01`, end: `${y}-${m}-${String(last).padStart(2, '0')}` });
         }
     }
-    onFilterChange();
+    const { start, end } = _billDateFilter.getValue();
+    _filterDateFrom = start || '';
+    _filterDateTo   = end || '';
+    applyTopFilters();
 }
 
 function syncQuickDateButtons() {
-    const f = document.getElementById('filterDateFrom').value;
-    const t = document.getElementById('filterDateTo').value;
+    const { start: f, end: t } = _billDateFilter.getValue();
     const d = new Date(), y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0');
     const last = String(new Date(y, d.getMonth() + 1, 0).getDate()).padStart(2, '0');
     document.getElementById('btnMonth').classList.toggle('active', f === `${y}-${m}-01` && t === `${y}-${m}-${last}`);
@@ -759,6 +759,7 @@ function renderRightPanel(opps, qtByOpp) {
 
     document.getElementById('finOppList').innerHTML = html;
     syncTextareaHeights(document.getElementById('finOppList'));
+    enhanceFinDateInputs(document.getElementById('finOppList'));
 }
 
 function renderQtBlock(qt, qtCount) {
@@ -879,6 +880,23 @@ function renderFinRow(r, canEdit, showSub, totalRows) {
     </tr>`;
 }
 
+// Bill Date/Receipt Date cells -> the shared day-picker (system/date-picker.js),
+// same treatment as every other type="date" field on the platform. Called
+// after every fin-table render (both the full right-panel render and
+// addSubRow's partial <tbody> patch) — safe to call on already-converted
+// rows too, since the [type="date"] selector naturally stops matching an
+// input the moment attachDatePicker() flips it to type="hidden".
+// No onChange passed: the row's existing inline onchange/oninput attribute
+// (trackChange/trackNewChange, written directly into the <input> markup
+// above) still fires normally, because attachDatePicker() dispatches real
+// 'change'/'input' events on that same original element.
+// Read-only tables (view-only permission) are left as plain native
+// <input type="date" readonly> — same fallback used everywhere else.
+function enhanceFinDateInputs(container) {
+    if (!canFinance('edit')) return;
+    container.querySelectorAll('.fin-input[type="date"]').forEach(inp => attachDatePicker(inp));
+}
+
 // Single unified path — no separate "first split" vs "append" branches.
 // Previously the two diverged (the "split" branch hardcoded sub_index=2
 // and did a full re-render using only the single newest pending row,
@@ -916,6 +934,7 @@ function addSubRow(qtId, qtNumber, saleAmt) {
     if (qtBody) {
         qtBody.innerHTML = _buildFinTable(existingRows, [...pendingForQt, newRow], qtId, qtNumber, saleAmt);
         syncTextareaHeights(qtBody);
+        enhanceFinDateInputs(qtBody);
         const newRowEls = qtBody.querySelectorAll('.is-new');
         newRowEls[newRowEls.length - 1]?.querySelector('input')?.focus();
     }

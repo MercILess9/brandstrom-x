@@ -10,6 +10,7 @@
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="/system/multi-select.js"></script>
+    <script src="/system/date-picker.js"></script>
     <script src="/system/pull-refresh.js"></script>
 
     <script src="b-quest.js"></script>
@@ -51,7 +52,10 @@
         .flt-search { flex: 0 1 340px; min-width: 120px; }
 
         /* --- Date range + Today --- */
-        .flt-date-group { border-right: none; border-radius: 20px 0 0 20px; padding: 0 10px; }
+        /* Joins visually with .flt-btn-today right next to it, same seam
+           the old .flt-date-group override made (border-right:none, square
+           right corners) — now scoped to the date-picker.js trigger box. */
+        #wrap-filterDeadline { border-right: none; border-radius: 20px 0 0 20px; }
         .flt-btn-today { border: 1px solid #e2e8f0; background: #fff; border-radius: 0 20px 20px 0; padding: 0 14px; height: 38px; font-size: 0.78rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
 
         /* --- Role: iOS-style sliding segmented control, scrolls if it grows --- */
@@ -208,11 +212,7 @@
                     </div>
                 </div>
                 <div class="flt-date-today-wrap">
-                    <div class="flt-date-group">
-                        <input type="date" class="flt-date-input" id="startDate">
-                        <span style="color:#cbd5e1; padding: 0 2px;">-</span>
-                        <input type="date" class="flt-date-input" id="endDate">
-                    </div>
+                    <div class="flt-select-box" id="wrap-filterDeadline"></div>
                     <button class="flt-btn-today" id="btnToday">Today</button>
                 </div>
                 <button class="flt-btn-adv" id="toggleFilters" title="Advance Filters"><i class="bi bi-sliders"></i></button>
@@ -255,6 +255,7 @@
     let ownerList = [];      // distinct owner names, feeds the Owner multi-select
     // createMultiSelect() instances — all initialized once near the bottom of this script
     let statusFilter, workFilter, typeFilter, assignFilter, ownerFilter;
+    let deadlineFilter; // createDatePicker() instance — initialized near the Today button below
     // Admin-configured, set via Settings ("Data Visibility" / "Filter
     // เริ่มต้น") — loaded once in loadListConfig(), before loadMasterData()
     // since it scopes roleList/ownerList.
@@ -417,7 +418,8 @@
 
     function updateClearAllVisibility() {
         const val = (id) => document.getElementById(id)?.value || "";
-        const anyActive = val('globalSearch') || val('startDate') || val('endDate') || getRoleFilter() ||
+        const { start: deadlineStart, end: deadlineEnd } = deadlineFilter?.getValue() || {};
+        const anyActive = val('globalSearch') || deadlineStart || deadlineEnd || getRoleFilter() ||
             statusFilter?.getValues().length || workFilter?.getValues().length || typeFilter?.getValues().length ||
             assignFilter?.getValues().length || ownerFilter?.getValues().length;
         const btn = document.getElementById('clearAllBtn');
@@ -483,9 +485,7 @@
         if (statusFilter && filterDefaults.status?.length) statusFilter.setValues(filterDefaults.status);
         if (typeFilter && filterDefaults.type?.length) typeFilter.setValues(filterDefaults.type);
         const [start, end] = computeDeadlineDefaultRange();
-        if (start) document.getElementById('startDate').value = start;
-        if (end) document.getElementById('endDate').value = end;
-        updateDateHighlight();
+        if (start || end) { deadlineFilter.setValue({ start, end }); syncTodayButton(); }
         // Without a Role default too, initPage() never calls applyFilters()
         // on load (it goes straight to fetchQuests()), so the Reset button's
         // has-filters state would otherwise never get recalculated even
@@ -518,11 +518,10 @@
     // Status filters by status_id (not name) — a task shows if ANY of its
     // open roles currently has that status.
     async function getMatchingQuestIds() {
-        const val = (id) => document.getElementById(id)?.value || "";
         const roles = activeRoles();
         const works = workFilter?.getValues() || [], types = typeFilter?.getValues() || [], assigns = assignFilter?.getValues() || [];
         const statuses = statusFilter?.getValues() || [];
-        const startDate = val('startDate'), endDate = val('endDate');
+        const { start: startDate, end: endDate } = deadlineFilter?.getValue() || {};
 
         let ids = null;
         if (roles.length || works.length || types.length || assigns.length || statuses.length || startDate || endDate) {
@@ -809,10 +808,8 @@
     function resetAllFilters() {
         document.getElementById('globalSearch').value = '';
         clearSearchBtn.style.display = 'none';
-        document.getElementById('startDate').value = '';
-        document.getElementById('endDate').value = '';
+        deadlineFilter.setValue({ start: null, end: null });
         document.getElementById('btnToday').classList.remove('active');
-        updateDateHighlight();
         statusFilter?.clear();
         workFilter?.clear();
         typeFilter?.clear();
@@ -889,37 +886,29 @@
         btn.classList.toggle('active', zone.classList.contains('show'));
     });
 
-    function updateDateHighlight() {
-        const s = document.getElementById('startDate').value;
-        const e = document.getElementById('endDate').value;
-        document.querySelector('.flt-date-today-wrap').classList.toggle('active-filter', !!(s || e));
+    // date-picker.js owns its own active-filter tint on #wrap-filterDeadline
+    // internally (same as every other .flt-select-box filter pill) — no
+    // separate highlight function needed here any more.
+    deadlineFilter = createDatePicker({
+        trigger: document.getElementById('wrap-filterDeadline'),
+        mode: 'range',
+        label: 'Deadline',
+        onChange: () => { syncTodayButton(); applyFilters(); }
+    });
+
+    function syncTodayButton() {
+        const { start, end } = deadlineFilter.getValue();
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('btnToday').classList.toggle('active', start === today && end === today);
     }
 
     document.getElementById('btnToday').addEventListener('click', () => {
         const today = new Date().toISOString().split('T')[0];
-        const s = document.getElementById('startDate');
-        const e = document.getElementById('endDate');
-        const btn = document.getElementById('btnToday');
-        if (s.value === today && e.value === today) {
-            s.value = ''; e.value = '';
-            btn.classList.remove('active');
-        } else {
-            s.value = today; e.value = today;
-            btn.classList.add('active');
-        }
-        updateDateHighlight();
+        const { start, end } = deadlineFilter.getValue();
+        if (start === today && end === today) deadlineFilter.setValue({ start: null, end: null });
+        else deadlineFilter.setValue({ start: today, end: today });
+        syncTodayButton();
         applyFilters();
-    });
-
-    ['startDate', 'endDate'].forEach(id => {
-        document.getElementById(id)?.addEventListener('change', () => {
-            const today = new Date().toISOString().split('T')[0];
-            const s = document.getElementById('startDate').value;
-            const e = document.getElementById('endDate').value;
-            if (s !== today || e !== today) document.getElementById('btnToday').classList.remove('active');
-            updateDateHighlight();
-            applyFilters();
-        });
     });
 
     statusFilter = createMultiSelect({

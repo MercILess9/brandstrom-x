@@ -20,6 +20,12 @@ function unlockBodyScroll() {
     _scrollLockCount = Math.max(0, _scrollLockCount - 1);
     if (_scrollLockCount === 0) document.body.style.overflow = '';
 }
+// Pull-to-refresh (system/pull-refresh.js) listens on document directly,
+// independent of whatever popup/dropdown is currently open on top of the
+// page — it needs this to know "something modal is showing, don't start
+// a pull gesture underneath it" instead of just checking raw scroll
+// position, which stays reported as "at top" even while locked.
+function isBodyScrollLocked() { return _scrollLockCount > 0; }
 
 // Shared number formatting — was duplicated as ~6 slightly-different
 // fmtN()/fmtAmt()/fmtGP()/fNum() functions across b-account.js,

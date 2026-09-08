@@ -11,6 +11,7 @@
     <script src="/system/system.js"></script>
     <script src="/system/pull-refresh.js"></script>
     <script src="/system/multi-select.js"></script>
+    <script src="/system/month-picker.js"></script>
     <script src="b-account.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-account.css">
@@ -29,13 +30,15 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* ── Quick date-range chips (YTD/Q1-Q4) — shortcuts that just
-           auto-fill the existing Year/Month dropdowns, not a separate
-           mode; same visual language as .bu-chip on purpose. ── */
+           auto-fill the Range picker, not a separate mode. Neutral by
+           default, same as the picker's own preset row — only the
+           active one gets the accent color, not every chip all the time. ── */
         .range-chip-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .range-chip { border: 1.5px solid var(--c-accent-dark); border-radius: 20px; padding: 0 14px; height: 34px;
+        .range-chip { border: 1.5px solid #e2e8f0; border-radius: 20px; padding: 0 14px; height: 34px;
             font-size: 0.75rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap;
-            transition: 0.2s; background: #fff; color: var(--c-accent-dark); opacity: 0.45; }
-        .range-chip.active { opacity: 1; background: var(--c-accent-dark); color: #fff; }
+            transition: 0.2s; background: #fff; color: #64748b; }
+        .range-chip:hover { border-color: #cbd5e1; color: #475569; }
+        .range-chip.active { border-color: var(--c-accent-dark); background: var(--c-accent-dark); color: #fff; }
 
         /* ── BU chips — pushed to the opposite edge from Year/Month ── */
         .bu-chip-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-left: auto; }
@@ -193,8 +196,7 @@
 
 <div class="dash-ctrl">
     <div class="dash-ctrl-inner">
-        <div class="flt-select-box" id="wrap-filterYear" style="width:150px"></div>
-        <div class="flt-select-box" id="wrap-filterMonth" style="width:160px"></div>
+        <div class="flt-select-box" id="wrap-filterRange" style="width:190px"></div>
         <div class="range-chip-row" id="rangeChipRow"></div>
         <div class="bu-chip-row" id="buChipRow"></div>
     </div>
@@ -349,7 +351,7 @@ let _opps  = [];
 let _qtMap = new Map(); // oppId → [{qt_type, b_opportunity_qt_item:[{bu,qty,price,discount,gp}]}]
 let _accMap = new Map(); // account_id → {account_name}
 let _cfgBU  = []; // ordered list of BU values from config — drives chip order + stable color assignment
-let _yearFilters  = new Set(); // empty = default (current year); multi-select supported
+let _yearFilters  = new Set(); // the range picker only ever sets exactly one year — kept as a Set (not a scalar) because the filtering logic below still treats it generically
 let _monthFilters = new Set(); // '01'..'12', empty = all months
 let _buFilters    = new Set(); // empty = all BUs
 let _chartMonthly = null;
@@ -390,12 +392,12 @@ function pctStr(a, b) {
     return (+a / +b * 100).toFixed(1) + '%';
 }
 
-// ── Year tabs ─────────────────────────────────────────────────────────────────
-// Dropdown-checkbox popovers (system/multi-select.js) — same component the
-// Opportunity/Account List filter bars already use, instead of a fixed row
-// of year-tab buttons (doesn't scale) or a native single-select <select>
-// (can't multi-select at all).
-let _yearMS = null, _monthMS = null;
+// ── Year/Month range ─────────────────────────────────────────────────────────
+// system/month-picker.js — click a start month, click an end month
+// (same interaction every modern analytics dashboard uses), instead of a
+// flat Year+Month checkbox list. Shared component — reusable anywhere
+// else in the app a Year+Month range is needed.
+let _rangePicker = null;
 
 // Filter state (year/month/BU) survives a refresh within the same tab via
 // sessionStorage — otherwise every reload silently snapped back to "this
@@ -436,18 +438,34 @@ function ytdMonths() {
     return months;
 }
 
+function setsEqual(a, b) {
+    if (a.size !== b.size) return false;
+    for (const v of a) if (!b.has(v)) return false;
+    return true;
+}
+
+// The picker's trigger shows the matching preset's name (YTD/Q1-4) when
+// the selection lands on one exactly, same as the chip row's own
+// active-state check below — so the two stay saying the same thing
+// instead of the trigger showing "Mar–Sep 2026" while a chip is lit up
+// active right next to it. Falls back to null (→ the picker's own
+// "Mon–Mon YYYY" default) for anything that isn't a recognized preset.
+function formatRangeLabel(year, months) {
+    if (!months.length) return null;
+    const set = new Set(months);
+    if (year === new Date().getFullYear() && setsEqual(set, new Set(ytdMonths()))) return 'YTD';
+    for (const [key, qm] of Object.entries(QUARTER_MONTHS)) {
+        if (setsEqual(set, new Set(qm))) return key.toUpperCase();
+    }
+    return null;
+}
+
 // Quarters apply to whatever year is currently selected (if exactly one is
 // picked) so picking Q2 while looking at 2025 stays on 2025 — only YTD
 // forces the current year, since "year to date" only means anything for
 // the year that's actually still in progress.
 function quarterTargetYear() {
     return _yearFilters.size === 1 ? [..._yearFilters][0] : new Date().getFullYear();
-}
-
-function setsEqual(a, b) {
-    if (a.size !== b.size) return false;
-    for (const v of a) if (!b.has(v)) return false;
-    return true;
 }
 
 function isRangeChipActive(type) {
@@ -465,8 +483,7 @@ function applyQuickRange(type) {
     const months = type === 'ytd' ? ytdMonths() : QUARTER_MONTHS[type];
     _yearFilters = new Set([year]);
     _monthFilters = new Set(months);
-    _yearMS?.setValues([String(year)]);
-    _monthMS?.setValues(months);
+    _rangePicker?.setValue({ year, months });
     saveFiltersToSession();
     render();
 }
@@ -481,43 +498,46 @@ function renderRangeChips() {
         { type: 'q3', label: 'Q3' },
         { type: 'q4', label: 'Q4' },
     ];
+    // All 5 chips follow the exact same rule as each other — whichever
+    // one is currently the active selection gets the tint, YTD included.
+    // The Date trigger next to them follows suit (see initFilterDropdowns —
+    // no isDefault callback means it tints for any of the 5 the same way).
     el.innerHTML = chips.map(c =>
         `<button class="range-chip${isRangeChipActive(c.type) ? ' active' : ''}" onclick="applyQuickRange('${c.type}')">${c.label}</button>`
     ).join('');
 }
 
 function initFilterDropdowns() {
-    const cur = new Date().getFullYear();
-    const years = [];
-    for (let y = cur; y >= 2024; y--) years.push(y); // newest first in the checklist
-
-    _yearMS = createMultiSelect({
-        trigger: document.getElementById('wrap-filterYear'),
-        label: 'Year',
-        getOptions: () => years.map(y => ({ value: String(y), label: String(y) })),
-        onChange: values => { _yearFilters = new Set(values.map(Number)); saveFiltersToSession(); render(); }
-    });
-
-    _monthMS = createMultiSelect({
-        trigger: document.getElementById('wrap-filterMonth'),
-        label: 'Month',
-        getOptions: () => MONTHS.map((m, i) => ({ value: String(i + 1).padStart(2, '0'), label: m })),
-        onChange: values => { _monthFilters = new Set(values); saveFiltersToSession(); render(); }
+    _rangePicker = createMonthPicker({
+        trigger: document.getElementById('wrap-filterRange'),
+        minYear: 2024,
+        onChange: ({ year, months }) => {
+            _yearFilters  = new Set([year]);
+            _monthFilters = new Set(months);
+            saveFiltersToSession();
+            render();
+        },
+        formatLabel: formatRangeLabel,
+        // Trigger stays tinted at all times EXCEPT when the current
+        // selection is exactly YTD (this dashboard's baseline view) —
+        // Q1-4 and any custom range always show colored.
+        isDefault: (year, months) => year === new Date().getFullYear() && setsEqual(new Set(months), new Set(ytdMonths()))
     });
 
     // Restore whatever was picked before a refresh, if any; otherwise
     // default to Year-to-Date — same as what the Reset button snaps back
-    // to — instead of an all-time view. setValues() doesn't fire
-    // onChange, so the app-state Sets are set directly here too.
+    // to — instead of an all-time view. setValue() doesn't fire onChange,
+    // so the app-state Sets are set directly here too. Only ever takes
+    // the FIRST saved year — a session saved before this picker became
+    // single-year-only could in theory still have more than one.
     const saved = loadFiltersFromSession();
     const now = new Date();
-    const yearsToUse  = saved?.years?.length  ? saved.years  : [now.getFullYear()];
-    const monthsToUse = saved?.months?.length ? saved.months : ytdMonths();
-    _yearFilters  = new Set(yearsToUse);
+    const yearToUse   = saved?.years?.length  ? saved.years[0] : now.getFullYear();
+    const monthsToUse = saved?.months?.length ? saved.months   : ytdMonths();
+    _yearFilters  = new Set([yearToUse]);
     _monthFilters = new Set(monthsToUse);
     _buFilters    = new Set(saved?.bus || []);
-    _yearMS.setValues(yearsToUse.map(String));
-    _monthMS.setValues(monthsToUse);
+    _rangePicker.setValue({ year: yearToUse, months: monthsToUse });
 }
 
 // ── BU chips ──────────────────────────────────────────────────────────────────
@@ -563,8 +583,7 @@ function resetAllFilters() {
     const now = new Date();
     _yearFilters = new Set([now.getFullYear()]);
     _monthFilters = new Set(ytdMonths());
-    _yearMS?.setValues([String(now.getFullYear())]);
-    _monthMS?.setValues(ytdMonths());
+    _rangePicker?.setValue({ year: now.getFullYear(), months: ytdMonths() });
     saveFiltersToSession();
     renderBuChips();
     render();

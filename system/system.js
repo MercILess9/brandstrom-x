@@ -5,6 +5,22 @@ function esc(s) { return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 function safeLink(url) { if (!url) return '#'; const u = url.trim(); return (u.startsWith('http://') || u.startsWith('https://')) ? u : '#'; }
 
+// Body scroll lock for the many custom fixed-overlay popups across the
+// app (Settings, Members, assign-picker, ...) — Bootstrap's own modals
+// already lock scroll via their .modal-open class, so this is only for
+// everything else. Reference-counted so one overlay closing while
+// another is still open (e.g. a confirm dialog over a modal) doesn't
+// unlock the page underneath both.
+let _scrollLockCount = 0;
+function lockBodyScroll() {
+    _scrollLockCount++;
+    document.body.style.overflow = 'hidden';
+}
+function unlockBodyScroll() {
+    _scrollLockCount = Math.max(0, _scrollLockCount - 1);
+    if (_scrollLockCount === 0) document.body.style.overflow = '';
+}
+
 // Shared number formatting — was duplicated as ~6 slightly-different
 // fmtN()/fmtAmt()/fmtGP()/fNum() functions across b-account.js,
 // b-opportunity-modal.js, b-account-dashboard.html, b-opportunity-list.html,

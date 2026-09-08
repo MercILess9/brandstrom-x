@@ -479,7 +479,7 @@
     // Daily Capacity % + company holidays — same config b-quest-modal.js's
     // capacity check already reads, loaded here too so the Timeline/
     // Calendar Heatmap stop showing full load on a 0%-capacity day (a
-    // weekend set to 0%, or a full-day holiday when Skip Holidays is on).
+    // weekend set to 0%, or a full-day holiday when Include Holidays is off).
     let dashWorkdayWeight = null;
     let dashHolidays = [];
     // Empty = no restriction (show every role) — same convention as List's
@@ -642,8 +642,8 @@
     document.getElementById('roleToggleScroll').addEventListener('scroll', updateRoleToggleFade);
 
     // Cached once per page load (same guard style as b-quest-modal.js's
-    // loadWorkdayWeight) — holidays are only fetched when Skip Holidays is
-    // actually on, same as the modal.
+    // loadWorkdayWeight) — holidays are only fetched when Include Holidays
+    // is actually off, same as the modal.
     async function loadDashboardCapacityConfig() {
         if (dashWorkdayWeight) return;
         const [{ data: wd }, { data: mergeCfg }] = await Promise.all([

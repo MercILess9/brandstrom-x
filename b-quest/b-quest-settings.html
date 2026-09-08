@@ -523,8 +523,8 @@
                     <button class="cfg-btn-info" onclick="openCapacityInfoPopup(event)" title="What do these percentages mean?"><i class="bi bi-info-circle"></i></button>
                     <span class="dirty-dot"></span>
                 </div>
-                <div class="wc-merge-toggle" title="Once the company holiday list exists, turning this on skips holidays entirely instead of counting them at their weekday percentage">
-                    <span>Skip Holidays</span>
+                <div class="wc-merge-toggle" title="Once the company holiday list exists, turning this on counts holidays at their weekday percentage like a normal day instead of skipping them entirely">
+                    <span>Include Holidays</span>
                     <label class="bq-toggle small">
                         <input type="checkbox" id="wc-merge-toggle-input" onchange="onMergeHolidaysToggle(this.checked)">
                         <span class="bq-slider"></span>
@@ -1384,6 +1384,7 @@
         // top/left/bottom all get set synchronously right after, in the
         // same tick, before the browser paints anything.
         document.getElementById('picker-backdrop').classList.add('show');
+        lockBodyScroll();
         const rect = evt.currentTarget.getBoundingClientRect();
         // .cfg-picker is absolutely positioned inside the fixed backdrop, so its
         // containing block is the viewport itself — use viewport-relative
@@ -1431,8 +1432,8 @@
                 <div class="cfg-info-scope-row"><span class="mem-scope-badge">0%</span><span class="info-txt">Day doesn't count at all, e.g. a weekend or day off.</span></div>
             </div>
             <div class="cfg-info-item">
-                <div class="cfg-info-title"><i class="bi bi-toggle-on"></i> Skip Holidays</div>
-                <p>Once a company holiday list exists, turning this on skips holidays entirely instead of counting them at their weekday %.</p>
+                <div class="cfg-info-title"><i class="bi bi-toggle-on"></i> Include Holidays</div>
+                <p>Once a company holiday list exists, turning this on counts holidays at their weekday % like a normal day instead of skipping them entirely.</p>
             </div>
         `;
         positionPicker(evt);
@@ -1554,6 +1555,7 @@
     function closePicker() {
         document.getElementById('picker-backdrop').classList.remove('show');
         pickerTarget = null;
+        unlockBodyScroll();
     }
 
     function applyColor(c) {
@@ -1868,8 +1870,12 @@
     function renderWorkCalendar() {
         const cfg = calendarConfigBuffer();
         const weights = { ...WORKDAY_DEFAULT, ...(cfg.workday_weight || {}) };
+        // "Include Holidays" is the inverse of the stored merge_company_
+        // holidays flag — merge=true is what actually SKIPS holidays (0%/
+        // 50% override instead of their weekday %), so checked (Include)
+        // means merge is false.
         const mergeEl = document.getElementById('wc-merge-toggle-input');
-        if (mergeEl) mergeEl.checked = cfg.merge_company_holidays === true;
+        if (mergeEl) mergeEl.checked = cfg.merge_company_holidays !== true;
         const list = document.getElementById('wc-day-list');
         if (!list) return;
         list.innerHTML = WEEK_DAYS.map(day => {
@@ -1908,7 +1914,9 @@
     // saved like everything else here so it's already wired up and ready
     // the moment that feature lands, instead of needing this UI built then.
     function onMergeHolidaysToggle(checked) {
-        calendarChanges.merge_company_holidays = checked;
+        // checked = Include Holidays on = holidays counted normally =
+        // merge_company_holidays false (see renderWorkCalendar).
+        calendarChanges.merge_company_holidays = !checked;
         markDirty('section-calendar');
     }
 
@@ -2390,12 +2398,14 @@
         renderAdminAddModalList('');
         updateAdminModalFooter();
         document.getElementById('aa-add-overlay').classList.add('show');
+        lockBodyScroll();
         setTimeout(() => document.getElementById('aa-add-search').focus(), 100);
     }
 
     function closeAdminAddModal(e) {
         if (e && e.target !== document.getElementById('aa-add-overlay')) return;
         document.getElementById('aa-add-overlay').classList.remove('show');
+        unlockBodyScroll();
     }
 
     function availableAdminProfiles(q = '') {
@@ -2476,6 +2486,7 @@
             adminAccessChanges[codename] = { permissions: [...permissions] };
         });
         document.getElementById('aa-add-overlay').classList.remove('show');
+        unlockBodyScroll();
         markDirty('section-adminaccess');
         renderAdminAccess();
     }

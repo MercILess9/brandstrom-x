@@ -312,8 +312,8 @@ const BQuestApp = (() => {
         // Per-weekday % of a role's normal daily capacity — set in
         // Settings' Daily Capacity section. Missing/unset days default to
         // 100% (full capacity), same default the Settings page itself uses.
-        // Also loads the company holiday list when Skip Holidays
-        // (merge_company_holidays) is on — a holiday date overrides the
+        // Also loads the company holiday list when "Include Holidays" is
+        // OFF (merge_company_holidays true) — a holiday date overrides the
         // weekday % entirely (full day = 0%, half day = flat 50%) instead
         // of being counted at its normal weekday rate. Holiday data lives
         // in the system-level `holiday` table (system/setting.html), not a
@@ -869,6 +869,14 @@ const BQuestApp = (() => {
 
     el('role-cards-container')?.addEventListener('scroll', updateRoleColFade);
     el('b-quest-modal')?.addEventListener('shown.bs.modal', syncRoleColHeight);
+    // Bootstrap already locks body scroll via its own .modal-open class,
+    // but SweetAlert2 (used for save/error toasts fired while this modal
+    // is open) manages document.body.style.overflow independently and
+    // can stomp on Bootstrap's lock when it closes — this shared,
+    // reference-counted lock keeps the background from scrolling
+    // regardless of which library's cleanup runs last.
+    el('b-quest-modal')?.addEventListener('shown.bs.modal', lockBodyScroll);
+    el('b-quest-modal')?.addEventListener('hidden.bs.modal', unlockBodyScroll);
 
     return {
         async openModal(taskId = null, workData = []) {

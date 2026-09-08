@@ -197,7 +197,18 @@ const BAccountApp = (() => {
     let _overlayNames = [];
 
     function getBsModal() {
-        if (!_bsModal) _bsModal = new bootstrap.Modal(el('b-account-modal'));
+        if (!_bsModal) {
+            _bsModal = new bootstrap.Modal(el('b-account-modal'));
+            // Bootstrap already locks body scroll via its own .modal-open
+            // class, but SweetAlert2 (save/error toasts fired while this
+            // modal is open) manages document.body.style.overflow
+            // independently and can stomp on Bootstrap's lock when it
+            // closes — this shared, reference-counted lock keeps the
+            // background from scrolling regardless of which library's
+            // cleanup runs last.
+            el('b-account-modal').addEventListener('shown.bs.modal', lockBodyScroll);
+            el('b-account-modal').addEventListener('hidden.bs.modal', unlockBodyScroll);
+        }
         return _bsModal;
     }
 

@@ -622,6 +622,7 @@
         // otherwise 0 (display:none ancestor), which would make the
         // horizontal-overflow check below a no-op.
         document.getElementById('picker-backdrop').classList.add('show');
+        lockBodyScroll();
         const rect = evt.currentTarget.getBoundingClientRect();
         const margin = 8;
         const spaceBelow = window.innerHeight - rect.bottom - margin;
@@ -646,6 +647,7 @@
     function closePicker() {
         pickerTarget = null;
         document.getElementById('picker-backdrop').classList.remove('show');
+        unlockBodyScroll();
     }
 
     function openMemberPermInfoPopup(evt) {
@@ -796,12 +798,14 @@
         toggleSearchClearBtn('');
         renderColumnFilterList('');
         document.getElementById('mem-filter-overlay').classList.add('show');
+        lockBodyScroll();
         setTimeout(() => document.getElementById('mem-filter-search').focus(), 100);
     }
 
     function closeColumnFilterPopup(e) {
         if (e && e.target !== document.getElementById('mem-filter-overlay')) return;
         document.getElementById('mem-filter-overlay').classList.remove('show');
+        unlockBodyScroll();
     }
 
     function toggleSearchClearBtn(val) {
@@ -1217,12 +1221,14 @@
         renderModalList('');
         updateModalFooter();
         document.getElementById('am-overlay').classList.add('show');
+        lockBodyScroll();
         setTimeout(() => document.getElementById('am-search').focus(), 100);
     }
 
     function closeAddModal(e) {
         if (e && e.target !== document.getElementById('am-overlay')) return;
         document.getElementById('am-overlay').classList.remove('show');
+        unlockBodyScroll();
     }
 
     function availableProfiles(q = '') {
@@ -1295,6 +1301,7 @@
     function confirmAddMembers() {
         [...modalSelected].forEach(codename => { memberChanges[codename] = { permissions: [] }; });
         document.getElementById('am-overlay').classList.remove('show');
+        unlockBodyScroll();
         markDirty('section-members');
         renderMembers(currentMemberFilter());
     }

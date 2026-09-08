@@ -1293,6 +1293,14 @@ const BOppApp = (() => {
     el('bopp-form').addEventListener('submit', handleSubmit);
     el('bopp-btn-del').addEventListener('click', handleDelete);
     el('b-opp-modal').addEventListener('hidden.bs.modal', () => { _editingId = null; });
+    // Bootstrap already locks body scroll via its own .modal-open class,
+    // but SweetAlert2 (save/error toasts fired while this modal is open)
+    // manages document.body.style.overflow independently and can stomp
+    // on Bootstrap's lock when it closes — this shared, reference-counted
+    // lock keeps the background from scrolling regardless of which
+    // library's cleanup runs last.
+    el('b-opp-modal').addEventListener('shown.bs.modal', lockBodyScroll);
+    el('b-opp-modal').addEventListener('hidden.bs.modal', unlockBodyScroll);
 
     function setChurnDate(v) { _churnDate = v; }
     return { openNew, openEdit, openDuplicate, openOverlay, closeOverlay, addQT, addItem, removeItem, removeQT, dupQT, undo, setChurnDate };

@@ -99,6 +99,13 @@ const B_QUEST_MODAL_HTML = `
     .bq-cap-badge.over { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
     .bq-cap-frac { font-size: 0.72rem; font-weight: 700; color: #64748b; }
     .bq-cap-frac.over { color: #dc2626; font-weight: 800; }
+    /* "(2+1)" breakdown ahead of the "3 / 6" total — smaller/lighter so
+       the total stays the number that's scanned first, this is just the
+       "where did 3 come from" explanation next to it. The "+1" part is
+       colored to match .bq-cap-fill-new inline (same existing/new tie-in
+       the bar itself already uses), so the number and the bar segment
+       read as the same thing. */
+    .bq-cap-breakdown { font-size: 0.62rem; font-weight: 600; color: #94a3b8; margin-right: 3px; }
     /* flex row of two segments — overflow:hidden + the track's own
        border-radius rounds off whichever segment ends up at each edge, so
        neither segment needs its own radius. */
@@ -227,7 +234,7 @@ const B_QUEST_MODAL_HTML = `
                                     </div>
                                     <div class="col-md-4">
                                         <label class="bq-label-modern text-center d-block">Publish Date</label>
-                                        <input type="date" class="bq-input-modern m-0" id="b-quest-modal-publish-date" name="publish_date" required>
+                                        <input type="text" class="bq-input-modern m-0" id="b-quest-modal-publish-date" name="publish_date" required>
                                     </div>
                                 </div>
                                 <label class="bq-label-modern">Detail</label>
@@ -257,6 +264,14 @@ const B_QUEST_MODAL_HTML = `
 `;
 
 document.body.insertAdjacentHTML('beforeend', B_QUEST_MODAL_HTML);
+// Turns the plain input above into a hidden ISO carrier + a visible
+// DD-MM-YYYY masked field + calendar icon (see system/date-picker.js).
+// Attached once here, not per modal open, same as every other one-time
+// init in this file. fillFormData() below uses the returned handle
+// instead of the generic field-fill loop, since the element `el()` finds
+// by this id is now the hidden field — setting it directly wouldn't
+// update what's actually visible.
+const publishDatePicker = attachDatePicker(document.getElementById('b-quest-modal-publish-date'));
 
 const BQuestApp = (() => {
     // Task-level fields (account/opportunity/task name/link/date/detail/
@@ -264,7 +279,8 @@ const BQuestApp = (() => {
     // lives in b-quest-task-role, one row per (quest_id, role_id) — no more
     // designer_*/creative_* flat columns, and no more "only these two roles
     // are actually saveable" limitation.
-    const State = { capacities: {}, maxCap: {}, maxCapEffective: {}, workCounts: {}, workLimits: {}, assignProfiles: { _loaded: false }, visibleRoles: [], roleNameById: {}, typeList: [], statusList: [], defaultStatusId: null, workdayWeight: null, mergeCompanyHolidays: false, holidays: [], currentRoleRows: {}, allowAssign: false, currentData: null };
+    const State = { capacities: {}, maxCap: {}, maxCapEffective: {}, workCounts: {}, workLimits: {}, assignProfiles: { _loaded: false }, visibleRoles: [], roleNameById: {}, typeList: [], statusList: [], defaultStatusId: null, workdayWeight: null, mergeCompanyHolidays: false, holidays: [], currentRoleRows: {}, allowAssign: false, currentData: null,
+        deadlinePickers: {} }; // roleId -> attachDatePicker() handle, rebuilt every renderRoleCards()+setupDropdowns() cycle since role cards are fully re-rendered per modal open
     const el = id => document.getElementById(id);
     const show = (id, condition, display = 'block') => { const e = el(id); if(e) e.style.display = condition ? display : 'none'; };
 
@@ -488,6 +504,11 @@ const BQuestApp = (() => {
             typeSelect.innerHTML = '<option value="" selected disabled>Select...</option>';
             State.typeList.forEach(t => typeSelect.add(new Option(t.name, t.name)));
 
+            // Role cards are torn down and rebuilt (renderRoleCards()'s
+            // innerHTML replace) on every modal open, so this — like the
+            // rest of setupDropdowns() — runs fresh each time too; no
+            // separate cleanup needed for the previous cycle's handle.
+            State.deadlinePickers[role.id] = attachDatePicker(el(`b-quest-modal-${role.id}-deadline`));
             el(`b-quest-modal-${role.id}-deadline`).addEventListener('change', () => checkCapacity(role.id));
         });
     }
@@ -500,20 +521,20 @@ const BQuestApp = (() => {
             'opportunity_name': 'b-quest-modal-opportunity',
             'task_name': 'b-quest-modal-taskname',
             'link': 'b-quest-modal-link',
-            'publish_date': 'b-quest-modal-publish-date',
             'detail': 'b-quest-modal-detail'
         };
         for (let key in fields) {
             const element = el(fields[key]);
             if (element) element.value = data[key] || '';
         }
+        publishDatePicker.setValue(data.publish_date || null);
         if (data.owner !== undefined) el('modal-owner-display').innerText = data.owner || '—';
     }
 
     function fillRoleCardData(roleId, row) {
         el(`b-quest-modal-${roleId}-type`).value = row?.type || '';
         el(`b-quest-modal-${roleId}-work`).value = row?.work || '';
-        el(`b-quest-modal-${roleId}-deadline`).value = row?.deadline || '';
+        State.deadlinePickers[roleId]?.setValue(row?.deadline || null);
         el(`b-quest-modal-${roleId}-weight`).value = row?.weight ?? 0;
         el(`b-quest-modal-${roleId}-day`).value = row?.day ?? 1;
         el(`b-quest-modal-${roleId}-maxperday`).value = row?.max_per_day ?? '';
@@ -534,17 +555,25 @@ const BQuestApp = (() => {
         const isChecked = el(`check-${roleId}`).checked;
         const canAssign = State.allowAssign;
         const card = el(`card-${roleId}`);
-        const inputs = ['type', 'work', 'deadline'].map(s => el(`b-quest-modal-${roleId}-${s}`));
+        // Deadline handled separately below via its picker handle — setting
+        // .required/.value directly on that field would target the hidden
+        // ISO carrier, not the visible field the user (and native
+        // validation) actually sees.
+        const inputs = ['type', 'work'].map(s => el(`b-quest-modal-${roleId}-${s}`));
+        const deadlinePicker = State.deadlinePickers[roleId];
 
         if (isChecked) {
             card.classList.add('active'); card.classList.remove('disabled');
             inputs.forEach(input => input.required = true);
+            deadlinePicker?.setRequired(true);
             const currentAssign = el(`b-quest-modal-${roleId}-assign`).value || '';
             refreshAssignBadge(roleId, currentAssign, canAssign);
             show(`b-quest-modal-${roleId}-status`, true);
         } else {
             card.classList.remove('active'); card.classList.add('disabled');
             inputs.forEach(input => { input.required = false; input.value = ''; });
+            deadlinePicker?.setRequired(false);
+            deadlinePicker?.setValue(null);
             el(`b-quest-modal-${roleId}-weight`).value = '0';
             el(`b-quest-modal-${roleId}-assign`).value = '';
 
@@ -704,6 +733,8 @@ const BQuestApp = (() => {
             const barColor = isOver ? '#ef4444' : total >= maxCap * 0.8 ? '#f59e0b' : '#4ade80';
             const displayTotal = Math.round(total * 10) / 10;
             const displayMaxCap = Math.round(maxCap * 10) / 10; // maxCap can now be fractional (e.g. 10 x 75%)
+            const displayExisting = Math.round(existingTotal * 10) / 10;
+            const displayNew = Math.round(newContribution * 10) / 10;
             // Two segments instead of one flat fill — existing (gray, what
             // was already booked by other tasks) then new (colored, what
             // THIS task is adding) stacked side by side, so it's visually
@@ -728,8 +759,8 @@ const BQuestApp = (() => {
 
             info.innerHTML = `
                 <div class="bq-cap-nums">
-                    <span class="bq-cap-badge${isOver ? ' over' : ''}">+${Math.round(newContribution * 10) / 10} Point</span>
-                    <span class="bq-cap-frac${isOver ? ' over' : ''}">${displayTotal} / ${displayMaxCap}</span>
+                    <span class="bq-cap-badge${isOver ? ' over' : ''}">+${displayNew} Point</span>
+                    <span class="bq-cap-frac${isOver ? ' over' : ''}"><span class="bq-cap-breakdown">(${displayExisting}<span style="color:${barColor}">+${displayNew}</span>)</span>${displayTotal} / ${displayMaxCap}</span>
                 </div>
                 <div class="bq-cap-track">
                     <div class="bq-cap-fill-existing" style="width:${existingPct}%"></div>

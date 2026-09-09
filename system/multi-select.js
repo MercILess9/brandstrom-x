@@ -54,10 +54,11 @@
                 cursor: pointer; font-size: 0.8rem; color: #334155; transition: background 0.12s; }
             .bx-ms-item:hover { background: #f8fafc; }
             .bx-ms-empty { padding: 20px; text-align: center; color: #94a3b8; font-size: 0.78rem; }
-            .bx-ms-footer { padding: 8px 10px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; flex-shrink: 0; }
-            .bx-ms-clear { background: none; border: none; color: #94a3b8; font-size: 0.72rem; font-weight: 700;
+            .bx-ms-footer { padding: 8px 10px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; flex-shrink: 0; }
+            .bx-ms-clear, .bx-ms-selectall { background: none; border: none; color: #94a3b8; font-size: 0.72rem; font-weight: 700;
                 cursor: pointer; padding: 4px 6px; transition: color 0.15s; font-family: inherit; }
             .bx-ms-clear:hover { color: #ef4444; }
+            .bx-ms-selectall:hover { color: var(--c-accent-dark); }
         `;
         document.head.appendChild(style);
     }
@@ -66,7 +67,7 @@
         return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    window.createMultiSelect = function ({ trigger, label, getOptions, onChange, width = 240, showTag = true }) {
+    window.createMultiSelect = function ({ trigger, label, getOptions, onChange, width = 240, showTag = true, formatLabel = null }) {
         injectStyles();
         let values = new Set();
         let panel = null;
@@ -90,7 +91,15 @@
         function updateLabel() {
             const opts = getOptions();
             const arr = [...values];
-            if (arr.length === 0) btn.textContent = 'All';
+            // formatLabel — for a caller whose "N selected" doesn't mean
+            // anything useful on its own (e.g. a combined Year+Month picker
+            // where the interesting summary is "YTD" or "Q2", not "5
+            // selected") — falls back to the default text below if it
+            // returns a falsy value, so a caller can defer to specific
+            // cases only.
+            const custom = formatLabel ? formatLabel(arr, opts) : null;
+            if (custom) btn.textContent = custom;
+            else if (arr.length === 0) btn.textContent = 'All';
             else if (arr.length === 1) {
                 const o = opts.find(o => o.value === arr[0]);
                 btn.textContent = o ? o.label : arr[0];
@@ -118,16 +127,38 @@
             panel = null;
             document.removeEventListener('click', onDocClick, true);
             document.removeEventListener('scroll', onScroll, true);
+            if (typeof unlockBodyScroll === 'function') unlockBodyScroll();
+        }
+
+        // Visible = whatever the search box currently narrows the list to
+        // (everything, if the search is empty) — Select All/Deselect All
+        // and its own label both work against this set, not the full
+        // unfiltered option list, so "search then Select All" only selects
+        // what's actually showing.
+        function visibleOptions(filterText) {
+            const fl = filterText.toLowerCase();
+            return getOptions().filter(o => o.label.toLowerCase().includes(fl));
+        }
+
+        // The footer button doubles as its own state indicator — "Select
+        // All" when the visible set isn't fully selected yet, "Deselect
+        // All" once it is — same toggle-by-current-state convention as a
+        // header checkbox in a table, just as text instead of a tri-state
+        // box.
+        function updateSelectAllToggle(filterText) {
+            const btn = panel.querySelector('.bx-ms-selectall');
+            const vis = visibleOptions(filterText);
+            const allSelected = vis.length > 0 && vis.every(o => values.has(o.value));
+            btn.textContent = allSelected ? 'Deselect All' : 'Select All';
         }
 
         function renderList(filterText = '') {
             // options may optionally carry a `group` field (e.g. Work/Assign
             // grouped by Role) — a plain flat list just never sets it.
-            const opts = getOptions();
-            const fl = filterText.toLowerCase();
             const list = panel.querySelector('.bx-ms-list');
             list.innerHTML = '';
-            const matches = opts.filter(o => o.label.toLowerCase().includes(fl));
+            const matches = visibleOptions(filterText);
+            updateSelectAllToggle(filterText);
             if (!matches.length) {
                 list.innerHTML = `<div class="bx-ms-empty">No matches</div>`;
                 return;
@@ -149,6 +180,7 @@
                 item.querySelector('input').addEventListener('change', e => {
                     if (e.target.checked) values.add(o.value); else values.delete(o.value);
                     updateLabel();
+                    updateSelectAllToggle(filterText);
                     onChange([...values]);
                 });
                 list.appendChild(item);
@@ -157,6 +189,7 @@
 
         function open() {
             if (panel) return;
+            if (typeof lockBodyScroll === 'function') lockBodyScroll();
             panel = document.createElement('div');
             panel.className = 'bx-ms-panel';
             panel.innerHTML = `
@@ -165,7 +198,10 @@
                     <input type="text" class="bx-ms-search" placeholder="Search...">
                 </div>
                 <div class="bx-ms-list"></div>
-                <div class="bx-ms-footer"><button type="button" class="bx-ms-clear">Clear</button></div>
+                <div class="bx-ms-footer">
+                    <button type="button" class="bx-ms-selectall">Select All</button>
+                    <button type="button" class="bx-ms-clear">Clear</button>
+                </div>
             `;
             panel.style.width = width + 'px';
             document.body.appendChild(panel);
@@ -190,6 +226,19 @@
                 updateLabel();
                 onChange([]);
                 renderList(panel.querySelector('.bx-ms-search').value);
+            });
+            // Toggles based on its own current label — Select All when the
+            // visible set isn't fully checked yet, Deselect All once it is
+            // (see updateSelectAllToggle) — scoped to the search-filtered
+            // set either way, same as Select All alone was.
+            panel.querySelector('.bx-ms-selectall').addEventListener('click', () => {
+                const searchVal = panel.querySelector('.bx-ms-search').value;
+                const vis = visibleOptions(searchVal);
+                const allSelected = vis.length > 0 && vis.every(o => values.has(o.value));
+                vis.forEach(o => allSelected ? values.delete(o.value) : values.add(o.value));
+                updateLabel();
+                onChange([...values]);
+                renderList(searchVal);
             });
             // Deferred so the click that opened the panel doesn't
             // immediately bubble into this same-tick listener and close it.

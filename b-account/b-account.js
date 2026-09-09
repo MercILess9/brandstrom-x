@@ -4,7 +4,7 @@ function gpPct(gp, amt) { return (gp && amt && +amt > 0) ? (+gp / +amt * 100).to
 
 const B_ACCOUNT_CONFIG = {
     projectName: "B-ACCOUNT",
-    version: "2.2.2",
+    version: "2.2.3",
     accessKey: 'baccount',
     menus: [
         { name: "Account",     link: "b-account-list.html" },

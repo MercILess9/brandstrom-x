@@ -11,6 +11,7 @@
     <script src="/system/system.js"></script>
     <script src="/system/pull-refresh.js"></script>
     <script src="/system/multi-select.js"></script>
+    <script src="/system/month-picker.js"></script>
     <script src="b-account.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-account.css">
@@ -29,20 +30,28 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* ── Quick date-range chips (YTD/Q1-Q4) — shortcuts that just
-           auto-fill the existing Year/Month dropdowns, not a separate
-           mode; same visual language as .bu-chip on purpose. ── */
+           auto-fill the Range picker, not a separate mode. Neutral by
+           default, same as the picker's own preset row — only the
+           active one gets the accent color, not every chip all the time. ── */
         .range-chip-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .range-chip { border: 1.5px solid var(--c-accent-dark); border-radius: 20px; padding: 0 14px; height: 34px;
+        .range-chip { border: 1.5px solid #e2e8f0; border-radius: 20px; padding: 0 14px; height: 34px;
             font-size: 0.75rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap;
-            transition: 0.2s; background: #fff; color: var(--c-accent-dark); opacity: 0.45; }
-        .range-chip.active { opacity: 1; background: var(--c-accent-dark); color: #fff; }
+            transition: 0.2s; background: #fff; color: #64748b; }
+        .range-chip:hover { border-color: #cbd5e1; color: #475569; }
+        .range-chip.active { border-color: var(--c-accent-dark); background: var(--c-accent-dark); color: #fff; }
 
         /* ── BU chips — pushed to the opposite edge from Year/Month ── */
         .bu-chip-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-left: auto; }
         .bu-chip-reset { border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; border-radius: 50%; width: 34px; height: 34px; font-size: 0.95rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .bu-chip-reset:hover { background: var(--c-bg); color: var(--c-accent-dark); border-color: #cbd5e1; }
-        .bu-chip { border: 1.5px solid; border-radius: 20px; padding: 0 14px; height: 34px; font-size: 0.75rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap; transition: 0.2s; background: #fff; opacity: 0.45; }
-        .bu-chip.active { opacity: 1; }
+        /* Neutral gray by default, each BU's own color only once selected —
+           was every chip in its own color at all times (active just faded
+           the rest to 0.45 opacity), which read as barely different from
+           selected at a glance since every color already starts fairly
+           light. Color now IS the "selected" signal, not opacity. */
+        .bu-chip { border: 1.5px solid #e2e8f0; border-radius: 20px; padding: 0 14px; height: 34px; font-size: 0.75rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap; transition: 0.2s; background: #fff; color: #94a3b8; }
+        .bu-chip:hover { border-color: #cbd5e1; color: #64748b; }
+        .bu-chip.active { border-color: var(--chip-color); color: var(--chip-color); }
 
         /* ── Wrap ── */
         .dash-wrap { max-width: 1320px; margin: 0 auto; padding: 18px 20px 0; position: relative; z-index: 1; }
@@ -137,14 +146,29 @@
         .trend-legend-item:hover { opacity: 0.75; }
         .trend-legend-item.is-hidden { opacity: 0.4; text-decoration: line-through; }
         .trend-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-        /* Sliding-pill toggle — exact recipe as .sort-seg-wrap/-slider above
-           (2-way, fixed 50/50 split via flex:1 + translateX(100%)), not a
-           hand-rolled bordered-box segmented control. */
+        /* Compact toggle box — shared by Line/Bar (icon glyphs, fixed 26px
+           square) and Month/Quarter (.wide modifier, text sized to its own
+           word). Sits next to the title, not styled as the big filter pill
+           Overview/BU uses below (see .trend-toggle-group) — that one's a
+           bigger decision (what the chart's data axis even is), these two
+           are closer to display settings. */
+        .trend-type-toggle { display: flex; align-items: center; gap: 2px; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 10px; padding: 2px; flex-shrink: 0; }
+        .trend-type-btn { border: none; background: transparent; width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; color: #94a3b8; cursor: pointer; transition: 0.15s; font-family: inherit; }
+        .trend-type-btn.wide { width: auto; padding: 0 10px; white-space: nowrap; }
+        .trend-type-btn:hover { color: var(--c-accent-dark); }
+        .trend-type-btn.active { background: #fff; color: var(--c-accent-dark); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+        /* Sliding-pill toggle — "Overview" and "BU" aren't the same length,
+           so a fixed 50/50 split (flex:1 + translateX(100%)) either left
+           the highlight not matching the short label's width or let the
+           long label overflow its half. Slider's left/width are now set in
+           JS from the active button's own measured offsetLeft/offsetWidth
+           (same technique as b-account.js's createSegControl) — each
+           button sizes to its own text (no flex:1) instead of a forced
+           even split. */
         .trend-mode-toggle { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
         .trend-toggle-group { position: relative; display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 20px; height: 38px; padding: 3px; }
-        .trend-toggle-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: transform 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
-        .trend-toggle-group:has(.trend-mode-btn:last-child.active) .trend-toggle-slider { transform: translateX(100%); }
-        .trend-mode-btn { position: relative; z-index: 1; flex: 1; height: 100%; border: none; background: transparent; padding: 0 16px; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; font-family: inherit; outline: none; }
+        .trend-toggle-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 17px; transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1); z-index: 0; }
+        .trend-mode-btn { position: relative; z-index: 1; height: 100%; border: none; background: transparent; padding: 0 16px; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); cursor: pointer; white-space: nowrap; transition: color 0.2s; font-family: inherit; outline: none; }
         .trend-mode-btn.active { color: var(--c-accent-dark); }
         .trend-mode-btn:not(.active):hover { color: var(--c-accent); }
 
@@ -193,8 +217,7 @@
 
 <div class="dash-ctrl">
     <div class="dash-ctrl-inner">
-        <div class="flt-select-box" id="wrap-filterYear" style="width:150px"></div>
-        <div class="flt-select-box" id="wrap-filterMonth" style="width:160px"></div>
+        <div class="flt-select-box" id="wrap-filterRange" style="width:190px"></div>
         <div class="range-chip-row" id="rangeChipRow"></div>
         <div class="bu-chip-row" id="buChipRow"></div>
     </div>
@@ -220,22 +243,39 @@
         <div class="sec-hd sec-hd-trend">
             <div class="sec-hd-bar"></div>
             <span class="sec-hd-title">Sales Trend</span>
-            <div class="trend-legend" id="trendLegend"></div>
+            <!-- Icon toggle, not a text pill — sits right against the title
+                 since it's reading as "what kind of chart is this", same
+                 register as a label, not a filter control (those live on
+                 the right). Applies to both Overview and By BU now — By BU
+                 in Line mode draws one (non-stacked) line per active BU
+                 instead of the stacked bar, see renderTrendByBU. -->
+            <div class="trend-type-toggle" id="trendChartTypeGroup">
+                <button class="trend-type-btn active" data-ct="line" onclick="setTrendChartType('line')" title="Line chart"><i class="bi bi-graph-up"></i></button>
+                <button class="trend-type-btn" data-ct="bar" onclick="setTrendChartType('bar')" title="Bar chart"><i class="bi bi-bar-chart-fill"></i></button>
+            </div>
+            <!-- Both toggles now sit with the title on the left — they're
+                 controls that change what the chart IS, same register as
+                 the Line/Bar icons next to them. The right side is legend-
+                 only now (trend-legend's own margin-left:auto pushes just
+                 that to the far edge), not mixed with controls. -->
             <div class="trend-mode-toggle">
-                <!-- Only meaningful for Amount/GP — By BU is always a
-                     stacked bar (a "line" breakdown-by-category isn't a
-                     sensible chart), so this hides whenever By BU is active. -->
-                <div class="trend-toggle-group" id="trendChartTypeGroup">
-                    <div class="trend-toggle-slider"></div>
-                    <button class="trend-mode-btn active" data-ct="line" onclick="setTrendChartType('line')">Line</button>
-                    <button class="trend-mode-btn" data-ct="bar" onclick="setTrendChartType('bar')">Bar</button>
+                <!-- Defaults from whichever range chip is active (Q1-4 ->
+                     Quarter, anything else -> Month, see
+                     trendGranularityForRange/applyQuickRange) but is a
+                     free-standing manual toggle after that — clicking here
+                     doesn't touch the date range chips, and picking a chip
+                     doesn't lock this away from being changed again. -->
+                <div class="trend-type-toggle" id="trendGranularityGroup">
+                    <button class="trend-type-btn wide active" data-g="month" onclick="setTrendGranularity('month')">Month</button>
+                    <button class="trend-type-btn wide" data-g="quarter" onclick="setTrendGranularity('quarter')">Quarter</button>
                 </div>
                 <div class="trend-toggle-group" id="trendBreakdownGroup">
                     <div class="trend-toggle-slider"></div>
-                    <button class="trend-mode-btn active" data-bd="amtgp" onclick="setTrendBreakdown('amtgp')">Amount/GP</button>
-                    <button class="trend-mode-btn" data-bd="bu" onclick="setTrendBreakdown('bu')">By BU</button>
+                    <button class="trend-mode-btn active" data-bd="amtgp" onclick="setTrendBreakdown('amtgp')">Overview</button>
+                    <button class="trend-mode-btn" data-bd="bu" onclick="setTrendBreakdown('bu')">BU</button>
                 </div>
             </div>
+            <div class="trend-legend" id="trendLegend"></div>
         </div>
         <div class="monthly-wrap" id="monthlyWrap"><canvas id="monthlyChart"></canvas></div>
     </div>
@@ -349,15 +389,20 @@ let _opps  = [];
 let _qtMap = new Map(); // oppId → [{qt_type, b_opportunity_qt_item:[{bu,qty,price,discount,gp}]}]
 let _accMap = new Map(); // account_id → {account_name}
 let _cfgBU  = []; // ordered list of BU values from config — drives chip order + stable color assignment
-let _yearFilters  = new Set(); // empty = default (current year); multi-select supported
+let _yearFilters  = new Set(); // the range picker only ever sets exactly one year — kept as a Set (not a scalar) because the filtering logic below still treats it generically
 let _monthFilters = new Set(); // '01'..'12', empty = all months
 let _buFilters    = new Set(); // empty = all BUs
 let _chartMonthly = null;
 let _chartType    = null;
 let _chartBU      = null;
-let _trendChartType = 'line'; // 'line' | 'bar' — Amount/GP mode only
+let _trendChartType = 'line'; // 'line' | 'bar' — both Overview and By BU
 let _chartLead    = null;
 let _trendBreakdown = 'amtgp'; // 'amtgp' | 'bu'
+// Time-axis bucketing for the chart — defaults from the active range chip
+// (see applyQuickRange/isQuarterMonths) but is a free manual toggle after
+// that, not re-derived on every render (only when the date range itself
+// changes, or the toggle itself is clicked).
+let _trendGranularity = 'month'; // 'month' | 'quarter'
 // A year-over-year Compare mode (MoM/QoQ, with its own Normal/Compare and
 // granularity toggles) was built and rolled back for being confusing —
 // keeping this section to the plain trend only, on purpose, for now.
@@ -390,12 +435,12 @@ function pctStr(a, b) {
     return (+a / +b * 100).toFixed(1) + '%';
 }
 
-// ── Year tabs ─────────────────────────────────────────────────────────────────
-// Dropdown-checkbox popovers (system/multi-select.js) — same component the
-// Opportunity/Account List filter bars already use, instead of a fixed row
-// of year-tab buttons (doesn't scale) or a native single-select <select>
-// (can't multi-select at all).
-let _yearMS = null, _monthMS = null;
+// ── Year/Month range ─────────────────────────────────────────────────────────
+// system/month-picker.js — click a start month, click an end month
+// (same interaction every modern analytics dashboard uses), instead of a
+// flat Year+Month checkbox list. Shared component — reusable anywhere
+// else in the app a Year+Month range is needed.
+let _rangePicker = null;
 
 // Filter state (year/month/BU) survives a refresh within the same tab via
 // sessionStorage — otherwise every reload silently snapped back to "this
@@ -436,18 +481,55 @@ function ytdMonths() {
     return months;
 }
 
+function setsEqual(a, b) {
+    if (a.size !== b.size) return false;
+    for (const v of a) if (!b.has(v)) return false;
+    return true;
+}
+
+// True when `months` exactly matches one of Q1-Q4's 3-month sets — used to
+// auto-default the Sales Trend chart's Month/Quarter toggle (see
+// applyQuickRange and the range picker's onChange) whenever the selected
+// range happens to line up with a quarter, whether picked via a Q1-Q4 chip
+// or by hand-selecting the same 3 months in the custom range picker.
+function isQuarterMonths(months) {
+    const set = new Set(months);
+    return Object.values(QUARTER_MONTHS).some(qm => setsEqual(set, new Set(qm)));
+}
+
+// Sets _trendGranularity AND re-derives _trendChartType's default from it —
+// Quarter's discrete buckets read better as Bar, Month's continuous trend
+// reads better as Line. Same hybrid rule as granularity's own auto-default:
+// applies every time granularity changes (auto-detected or the toggle
+// clicked by hand), but the Line/Bar toggle stays freely clickable
+// afterward — this only sets where it LANDS, never locks it.
+function setTrendGranularityState(g) {
+    _trendGranularity = g;
+    _trendChartType = g === 'quarter' ? 'bar' : 'line';
+}
+
+// The picker's trigger shows the matching preset's name (YTD/Q1-4) when
+// the selection lands on one exactly, same as the chip row's own
+// active-state check below — so the two stay saying the same thing
+// instead of the trigger showing "Mar–Sep 2026" while a chip is lit up
+// active right next to it. Falls back to null (→ the picker's own
+// "Mon–Mon YYYY" default) for anything that isn't a recognized preset.
+function formatRangeLabel(year, months) {
+    if (!months.length) return null;
+    const set = new Set(months);
+    if (year === new Date().getFullYear() && setsEqual(set, new Set(ytdMonths()))) return 'YTD';
+    for (const [key, qm] of Object.entries(QUARTER_MONTHS)) {
+        if (setsEqual(set, new Set(qm))) return key.toUpperCase();
+    }
+    return null;
+}
+
 // Quarters apply to whatever year is currently selected (if exactly one is
 // picked) so picking Q2 while looking at 2025 stays on 2025 — only YTD
 // forces the current year, since "year to date" only means anything for
 // the year that's actually still in progress.
 function quarterTargetYear() {
     return _yearFilters.size === 1 ? [..._yearFilters][0] : new Date().getFullYear();
-}
-
-function setsEqual(a, b) {
-    if (a.size !== b.size) return false;
-    for (const v of a) if (!b.has(v)) return false;
-    return true;
 }
 
 function isRangeChipActive(type) {
@@ -465,8 +547,8 @@ function applyQuickRange(type) {
     const months = type === 'ytd' ? ytdMonths() : QUARTER_MONTHS[type];
     _yearFilters = new Set([year]);
     _monthFilters = new Set(months);
-    _yearMS?.setValues([String(year)]);
-    _monthMS?.setValues(months);
+    _rangePicker?.setValue({ year, months });
+    setTrendGranularityState(type === 'ytd' ? 'month' : 'quarter');
     saveFiltersToSession();
     render();
 }
@@ -481,43 +563,56 @@ function renderRangeChips() {
         { type: 'q3', label: 'Q3' },
         { type: 'q4', label: 'Q4' },
     ];
+    // All 5 chips follow the exact same rule as each other — whichever
+    // one is currently the active selection gets the tint, YTD included.
+    // The Date trigger next to them follows suit (see initFilterDropdowns —
+    // no isDefault callback means it tints for any of the 5 the same way).
     el.innerHTML = chips.map(c =>
         `<button class="range-chip${isRangeChipActive(c.type) ? ' active' : ''}" onclick="applyQuickRange('${c.type}')">${c.label}</button>`
     ).join('');
 }
 
 function initFilterDropdowns() {
-    const cur = new Date().getFullYear();
-    const years = [];
-    for (let y = cur; y >= 2024; y--) years.push(y); // newest first in the checklist
-
-    _yearMS = createMultiSelect({
-        trigger: document.getElementById('wrap-filterYear'),
-        label: 'Year',
-        getOptions: () => years.map(y => ({ value: String(y), label: String(y) })),
-        onChange: values => { _yearFilters = new Set(values.map(Number)); saveFiltersToSession(); render(); }
-    });
-
-    _monthMS = createMultiSelect({
-        trigger: document.getElementById('wrap-filterMonth'),
-        label: 'Month',
-        getOptions: () => MONTHS.map((m, i) => ({ value: String(i + 1).padStart(2, '0'), label: m })),
-        onChange: values => { _monthFilters = new Set(values); saveFiltersToSession(); render(); }
+    _rangePicker = createMonthPicker({
+        trigger: document.getElementById('wrap-filterRange'),
+        minYear: 2024,
+        onChange: ({ year, months }) => {
+            _yearFilters  = new Set([year]);
+            _monthFilters = new Set(months);
+            setTrendGranularityState(isQuarterMonths(months) ? 'quarter' : 'month');
+            saveFiltersToSession();
+            render();
+        },
+        formatLabel: formatRangeLabel,
+        // Trigger stays tinted at all times EXCEPT when the current
+        // selection is exactly YTD (this dashboard's baseline view) —
+        // Q1-4 and any custom range always show colored.
+        isDefault: (year, months) => year === new Date().getFullYear() && setsEqual(new Set(months), new Set(ytdMonths()))
     });
 
     // Restore whatever was picked before a refresh, if any; otherwise
     // default to Year-to-Date — same as what the Reset button snaps back
-    // to — instead of an all-time view. setValues() doesn't fire
-    // onChange, so the app-state Sets are set directly here too.
+    // to — instead of an all-time view. setValue() doesn't fire onChange,
+    // so the app-state Sets are set directly here too. Only ever takes
+    // the FIRST saved year — a session saved before this picker became
+    // single-year-only could in theory still have more than one.
     const saved = loadFiltersFromSession();
     const now = new Date();
-    const yearsToUse  = saved?.years?.length  ? saved.years  : [now.getFullYear()];
-    const monthsToUse = saved?.months?.length ? saved.months : ytdMonths();
-    _yearFilters  = new Set(yearsToUse);
+    const yearToUse   = saved?.years?.length  ? saved.years[0] : now.getFullYear();
+    const monthsToUse = saved?.months?.length ? saved.months   : ytdMonths();
+    _yearFilters  = new Set([yearToUse]);
     _monthFilters = new Set(monthsToUse);
     _buFilters    = new Set(saved?.bus || []);
-    _yearMS.setValues(yearsToUse.map(String));
-    _monthMS.setValues(monthsToUse);
+    // setValue() doesn't fire onChange (see above), so this mirrors that
+    // handler's own auto-detect — a session restored mid-quarter should
+    // still open on the Quarter chart, not silently fall back to Month.
+    // Only checked when there's an actual SAVED selection, not the no-
+    // session YTD default — YTD's own months can coincidentally equal a
+    // quarter's (e.g. Jan-Mar during Q1) without the user ever having
+    // picked that quarter, and applyQuickRange('ytd') always forces
+    // 'month' regardless, so the default here has to match that exactly.
+    setTrendGranularityState((saved?.months?.length && isQuarterMonths(monthsToUse)) ? 'quarter' : 'month');
+    _rangePicker.setValue({ year: yearToUse, months: monthsToUse });
 }
 
 // ── BU chips ──────────────────────────────────────────────────────────────────
@@ -526,7 +621,7 @@ function renderBuChips() {
     const chips = _cfgBU.map(bu => {
         const active = _buFilters.size === 0 || _buFilters.has(bu);
         const c = buColor(bu);
-        return `<button class="bu-chip${active ? ' active' : ''}" style="border-color:${c};color:${c}" onclick="toggleBuChip('${esc(bu)}')">${esc(bu)}</button>`;
+        return `<button class="bu-chip${active ? ' active' : ''}" style="--chip-color:${c}" onclick="toggleBuChip('${esc(bu)}')">${esc(bu)}</button>`;
     }).join('');
     document.getElementById('buChipRow').innerHTML = chips + resetBtn;
 }
@@ -563,8 +658,8 @@ function resetAllFilters() {
     const now = new Date();
     _yearFilters = new Set([now.getFullYear()]);
     _monthFilters = new Set(ytdMonths());
-    _yearMS?.setValues([String(now.getFullYear())]);
-    _monthMS?.setValues(ytdMonths());
+    _rangePicker?.setValue({ year: now.getFullYear(), months: ytdMonths() });
+    setTrendGranularityState('month');
     saveFiltersToSession();
     renderBuChips();
     render();
@@ -937,47 +1032,157 @@ function trendLabels(keys) {
     });
 }
 
+// Same "always the full year(s), zero-filled" philosophy as
+// trend12MonthKeys, just bucketed by quarter instead of month.
+function trend4QuarterKeys() {
+    const years = _yearFilters.size ? [..._yearFilters].sort((a, b) => a - b) : [new Date().getFullYear()];
+    const keys = [];
+    years.forEach(year => {
+        for (let q = 1; q <= 4; q++) keys.push(`${year}-Q${q}`);
+    });
+    return keys;
+}
+
+// 'YYYY-Q1' → 'Q1 YY'
+function trendQuarterLabels(keys) {
+    return keys.map(k => {
+        const [y, q] = k.split('-');
+        return q + ' ' + y.slice(2);
+    });
+}
+
+function monthKeyToQuarterKey(monthKey) {
+    const [y, m] = monthKey.split('-');
+    return `${y}-Q${Math.ceil(+m / 3)}`;
+}
+
+// month -> {amt,gp} sums rolled up into their quarter — computeTrendMonthMap
+// itself stays month-keyed always; this is purely a display-time regroup,
+// so the underlying data-scan logic never has to know about granularity.
+function aggregateToQuarters(monthMap) {
+    const out = new Map();
+    for (const [month, rec] of monthMap) {
+        const qKey = monthKeyToQuarterKey(month);
+        if (!out.has(qKey)) out.set(qKey, { amt: 0, gp: 0 });
+        const q = out.get(qKey);
+        q.amt += rec.amt;
+        q.gp  += rec.gp;
+    }
+    return out;
+}
+
+// Same regroup as aggregateToQuarters, one level deeper (month -> BU -> {amt,gp}).
+function aggregateBUToQuarters(buMonthMap) {
+    const out = new Map();
+    for (const [month, byBu] of buMonthMap) {
+        const qKey = monthKeyToQuarterKey(month);
+        if (!out.has(qKey)) out.set(qKey, new Map());
+        const qByBu = out.get(qKey);
+        for (const [bu, rec] of byBu) {
+            if (!qByBu.has(bu)) qByBu.set(bu, { amt: 0, gp: 0 });
+            const q = qByBu.get(bu);
+            q.amt += rec.amt;
+            q.gp  += rec.gp;
+        }
+    }
+    return out;
+}
+
+// Bundles everything that depends on the Month/Quarter toggle — keys,
+// display labels, and a "hasn't happened yet" check — computed once per
+// render and threaded through, instead of each render function re-deriving
+// (and re-diverging) its own copy the way trend12MonthKeys/trendLabels/
+// nowKey used to be recomputed separately in each of the 3 render/table
+// functions below.
+function trendAxis() {
+    const isQuarter = _trendGranularity === 'quarter';
+    const keys = isQuarter ? trend4QuarterKeys() : trend12MonthKeys();
+    const labels = isQuarter ? trendQuarterLabels(keys) : trendLabels(keys);
+    const now = new Date();
+    const nowKey = isQuarter
+        ? `${now.getFullYear()}-Q${Math.ceil((now.getMonth() + 1) / 3)}`
+        : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return { keys, labels, isQuarter, isFuture: k => k > nowKey };
+}
+
+function setTrendGranularity(g) {
+    setTrendGranularityState(g);
+    renderTrendChart(); // also syncs both toggles' active class (see top of renderTrendChart)
+}
+
 function setTrendBreakdown(bd) {
     _trendBreakdown = bd;
-    document.querySelectorAll('#trendBreakdownGroup .trend-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.bd === bd));
-    // Line/Bar only applies to Amount/GP — By BU is always a stacked bar.
-    document.getElementById('trendChartTypeGroup').style.display = bd === 'bu' ? 'none' : '';
-    renderTrendChart();
+    renderTrendChart(); // also syncs the active class + repositions its slider (see top of renderTrendChart)
+}
+
+// Overview/BU isn't equal-width text, so the slider is positioned from the
+// active button's own measured box instead of a fixed 50/50 CSS split (see
+// the .trend-toggle-slider comment near its CSS for why). Month/Quarter
+// switched to the icon-button style (like Line/Bar) instead of a slider
+// pill, so this is single-purpose again.
+function repositionTrendBreakdownSlider() {
+    const wrap = document.getElementById('trendBreakdownGroup');
+    const active = wrap?.querySelector('.trend-mode-btn.active');
+    const slider = wrap?.querySelector('.trend-toggle-slider');
+    if (!active || !slider) return;
+    slider.style.left = active.offsetLeft + 'px';
+    slider.style.width = active.offsetWidth + 'px';
 }
 
 function setTrendChartType(ct) {
     _trendChartType = ct;
-    document.querySelectorAll('#trendChartTypeGroup .trend-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.ct === ct));
-    renderTrendChart();
+    renderTrendChart(); // also syncs the active class (see top of renderTrendChart)
 }
 
 // Computes each mode's month map exactly once per render cycle and hands it
 // to both the chart and the detail table below — they used to each call
 // computeTrendMonthMap()/computeTrendBUMap() independently, silently
 // running the same full scan over _opps/_qtMap/items twice per render.
+// Aggregation to quarters (when the Month/Quarter toggle is on Quarter)
+// happens once here too, on top of the always-month-keyed compute — see
+// trendAxis()/aggregateToQuarters().
 function renderTrendChart() {
+    // Keep all three toggles' active button in sync with state on every
+    // render — not just when their own button is clicked. _trendGranularity
+    // gets set from several other places now (range chips, the range
+    // picker, Reset), and _trendChartType now rides along with it too (see
+    // setTrendGranularityState) — without this, a toggle can freeze on a
+    // stale button (e.g. still showing "Month"/"Line" active after a Q1
+    // chip auto-switched to Quarter/Bar).
+    document.querySelectorAll('#trendGranularityGroup .trend-type-btn').forEach(b => b.classList.toggle('active', b.dataset.g === _trendGranularity));
+    document.querySelectorAll('#trendChartTypeGroup .trend-type-btn').forEach(b => b.classList.toggle('active', b.dataset.ct === _trendChartType));
+    document.querySelectorAll('#trendBreakdownGroup .trend-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.bd === _trendBreakdown));
     renderTrendLegend();
+    repositionTrendBreakdownSlider();
+    const axis = trendAxis();
     if (_trendBreakdown === 'bu') {
-        const buMonthMap = computeTrendBUMap();
-        renderTrendByBU(buMonthMap);
-        renderTrendRawTable('bu', buMonthMap);
+        let buMonthMap = computeTrendBUMap();
+        if (axis.isQuarter) buMonthMap = aggregateBUToQuarters(buMonthMap);
+        renderTrendByBU(buMonthMap, axis);
+        renderTrendRawTable('bu', buMonthMap, axis);
     } else {
-        const monthMap = computeTrendMonthMap();
-        renderTrendAmtGP(monthMap);
-        renderTrendRawTable('amtgp', monthMap);
+        let monthMap = computeTrendMonthMap();
+        if (axis.isQuarter) monthMap = aggregateToQuarters(monthMap);
+        renderTrendAmtGP(monthMap, axis);
+        renderTrendRawTable('amtgp', monthMap, axis);
     }
 }
 
 // Custom HTML legend living in the section header (next to the mode
 // toggle) — replaces Chart.js's own built-in legend so both can share one
-// row. By BU's own color key already lives in the top Filter Bar's BU
-// chips (that's the one place BU gets filtered from), so no second
-// interactive legend here — it would just be a redundant, confusing
-// duplicate "filter BU" control living in two different rows.
+// row. Shown in every mode now, always the same click-to-toggle behavior
+// (toggleTrendSeries by dataset index) regardless of what the datasets
+// actually are — this is a LOCAL, chart-only visibility toggle (declutter
+// this one chart), separate from the top Filter Bar's BU chips (a real
+// data filter affecting the whole dashboard, not just this chart) — same
+// relationship the Amount/GP legend already had to any other filter.
 function renderTrendLegend() {
     const el = document.getElementById('trendLegend');
     if (_trendBreakdown === 'bu') {
-        el.innerHTML = '';
+        const activeBUs = _cfgBU.filter(bu => buPasses(bu));
+        el.innerHTML = activeBUs.map((bu, i) =>
+            `<span class="trend-legend-item" onclick="toggleTrendSeries(${i}, this)"><span class="trend-legend-dot" style="background:${buColor(bu)}"></span>${esc(bu)}</span>`
+        ).join('');
     } else {
         el.innerHTML = `
             <span class="trend-legend-item" onclick="toggleTrendSeries(0, this)"><span class="trend-legend-dot" style="background:#3b82f6"></span>Amount</span>
@@ -996,21 +1201,47 @@ function toggleTrendSeries(index, el) {
     el.classList.toggle('is-hidden', wasVisible);
 }
 
-function renderTrendAmtGP(monthMap) {
-    const keys = trend12MonthKeys();
-    const labels = trendLabels(keys);
-    // Months that haven't happened yet get a null value (a real gap in the
+// Compact value label above every point/bar, in each dataset's own color —
+// for Overview (Amount/GP), works the same in both Line and Bar since it's
+// per-element, not a stacked total like trendTotalLabelPlugin (Amount and
+// GP aren't additive, so a combined "total" wouldn't mean anything here;
+// this labels each series' own value instead).
+const trendValueLabelPlugin = {
+    id: 'trendValueLabel',
+    afterDatasetsDraw(chart) {
+        const { ctx, data } = chart;
+        ctx.save();
+        ctx.font = "700 10px 'Inter', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        data.datasets.forEach((ds, dsIndex) => {
+            if (!chart.isDatasetVisible(dsIndex)) return; // respects the click-to-hide legend
+            const meta = chart.getDatasetMeta(dsIndex);
+            ds.data.forEach((val, i) => {
+                if (val == null || val === 0) return;
+                const el = meta.data[i];
+                if (!el) return;
+                ctx.fillStyle = ds.borderColor;
+                ctx.fillText(fmtK(val), el.x, el.y - 6);
+            });
+        });
+        ctx.restore();
+    }
+};
+
+function renderTrendAmtGP(monthMap, axis) {
+    const { keys, labels, isFuture } = axis;
+    // Periods that haven't happened yet get a null value (a real gap in the
     // line, not a misleading zero) but their label still shows on the axis.
-    const now = new Date();
-    const nowKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const amts = keys.map(m => m > nowKey ? null : (monthMap.get(m)?.amt ?? 0));
-    const gps  = keys.map(m => m > nowKey ? null : (monthMap.get(m)?.gp ?? 0));
+    const amts = keys.map(m => isFuture(m) ? null : (monthMap.get(m)?.amt ?? 0));
+    const gps  = keys.map(m => isFuture(m) ? null : (monthMap.get(m)?.gp ?? 0));
 
     const isBar = _trendChartType === 'bar';
     const ctx = document.getElementById('monthlyChart').getContext('2d');
     if (_chartMonthly) _chartMonthly.destroy();
     _chartMonthly = new Chart(ctx, {
         type: _trendChartType,
+        plugins: [trendValueLabelPlugin],
         data: {
             labels,
             datasets: [
@@ -1085,6 +1316,10 @@ function renderTrendAmtGP(monthMap) {
                     }
                 }
             },
+            // Headroom for trendValueLabelPlugin's labels sitting just
+            // above each point/bar — without it, a month near the chart's
+            // top edge clips its own label off the canvas.
+            layout: { padding: { top: 20 } },
             scales: {
                 x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94a3b8' } },
                 y: {
@@ -1097,27 +1332,69 @@ function renderTrendAmtGP(monthMap) {
     });
 }
 
+// Draws each month's stacked total just above its tallest segment — the
+// one thing a stacked bar is otherwise bad at showing at a glance (a
+// middle segment's own height reads fine, but the grand total needs
+// mentally adding up all of them). Line mode has no "top of stack" to
+// anchor this to and doesn't need it anyway (each BU's already its own
+// full-height line), so this plugin is only ever attached to the Bar chart.
+const trendTotalLabelPlugin = {
+    id: 'trendTotalLabel',
+    afterDatasetsDraw(chart) {
+        const { ctx, data } = chart;
+        ctx.save();
+        ctx.font = "700 11px 'Inter', sans-serif";
+        ctx.fillStyle = '#475569';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        data.labels.forEach((_, i) => {
+            let total = 0, topY = Infinity, x = null;
+            data.datasets.forEach((ds, dsIndex) => {
+                if (!chart.isDatasetVisible(dsIndex)) return; // hidden via the legend — leave it out of the total too
+                const val = ds.data[i] || 0;
+                total += val;
+                if (val > 0) {
+                    const bar = chart.getDatasetMeta(dsIndex).data[i];
+                    if (bar) { topY = Math.min(topY, bar.y); x = bar.x; }
+                }
+            });
+            if (total <= 0 || x == null) return;
+            ctx.fillText(fmtK(total), x, topY - 6);
+        });
+        ctx.restore();
+    }
+};
+
 // Stacked bar: one bar per month, one colored segment per BU. Only stacks
 // whichever BUs currently pass the BU chip filter (buPasses), same colors
 // as the BU cards/chips (buColor) so the two views read as one system.
-function renderTrendByBU(buMonthMap) {
-    const keys = trend12MonthKeys();
-    const labels = trendLabels(keys);
+function renderTrendByBU(buMonthMap, axis) {
+    const { keys, labels } = axis;
     const activeBUs = _cfgBU.filter(bu => buPasses(bu));
 
-    const datasets = activeBUs.map(bu => ({
-        label: bu,
-        data: keys.map(m => buMonthMap.get(m)?.get(bu)?.amt || 0),
-        backgroundColor: buColor(bu),
-        borderRadius: 3,
-        stack: 'trend'
-    }));
+    // Bar = stacked segments (one bar per month, one BU per segment). Line =
+    // one line per BU, not stacked — stacking lines on top of each other
+    // reads as area-chart clutter, not "compare BUs over time", which is
+    // what picking Line here is for.
+    const isBar = _trendChartType === 'bar';
+    const datasets = activeBUs.map(bu => {
+        const c = buColor(bu);
+        const data = keys.map(m => buMonthMap.get(m)?.get(bu)?.amt || 0);
+        return isBar
+            ? { label: bu, data, backgroundColor: c, borderRadius: 3, stack: 'trend' }
+            : { label: bu, data, borderColor: c, backgroundColor: c, borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: c, tension: 0.35, fill: false, spanGaps: false };
+    });
 
     const ctx = document.getElementById('monthlyChart').getContext('2d');
     if (_chartMonthly) _chartMonthly.destroy();
     _chartMonthly = new Chart(ctx, {
-        type: 'bar',
+        type: _trendChartType,
         data: { labels, datasets },
+        // Top-level plugins array (registers the custom total-label plugin
+        // itself), not to be confused with options.plugins below (which
+        // configures built-in plugins like legend/tooltip) — only attached
+        // in Bar mode, see trendTotalLabelPlugin's own comment for why.
+        plugins: isBar ? [trendTotalLabelPlugin] : [],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -1156,10 +1433,14 @@ function renderTrendByBU(buMonthMap) {
                     }
                 }
             },
+            // Headroom for the total label sitting just above the tallest
+            // bar — without it, a month that already reaches near the top
+            // of the chart clips its own total off the canvas.
+            layout: isBar ? { padding: { top: 20 } } : {},
             scales: {
-                x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 }, color: '#94a3b8' } },
+                x: { stacked: isBar, grid: { display: false }, ticks: { font: { size: 11 }, color: '#94a3b8' } },
                 y: {
-                    stacked: true,
+                    stacked: isBar,
                     grid: { color: '#f1f5f9' },
                     ticks: { font: { size: 10 }, color: '#94a3b8', callback: v => fmtK(v) },
                     beginAtZero: true
@@ -1169,14 +1450,12 @@ function renderTrendByBU(buMonthMap) {
     });
 }
 
-// Plain values table under the Amount/GP and By BU charts — same months
-// (and future-month "—") as whichever chart is showing, just laid out so
+// Plain values table under the Amount/GP and By BU charts — same periods
+// (and future-period "—") as whichever chart is showing, just laid out so
 // exact numbers are readable without hovering every point.
-function renderTrendRawTable(kind, monthMap) {
-    const keys = trend12MonthKeys();
-    const now = new Date();
-    const nowKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const labels = trendLabels(keys);
+function renderTrendRawTable(kind, monthMap, axis) {
+    const { keys, labels, isQuarter, isFuture } = axis;
+    const periodColLabel = isQuarter ? 'Quarter' : 'Month';
 
     // Fixed per-column widths (table-layout:fixed) instead of the browser's
     // auto layout stretching sparse "—" columns to fill 100% — that made
@@ -1198,7 +1477,7 @@ function renderTrendRawTable(kind, monthMap) {
 
         thead = `
             <tr>
-                <th rowspan="2" style="width:${MONTH_COL}px">Month</th>
+                <th rowspan="2" style="width:${MONTH_COL}px">${periodColLabel}</th>
                 ${activeBUs.map(bu => `<th colspan="3" class="c" style="border-left:2px solid #e2e8f0">${esc(bu)}</th>`).join('')}
             </tr>
             <tr>
@@ -1210,7 +1489,7 @@ function renderTrendRawTable(kind, monthMap) {
             </tr>
         `;
         rows = keys.map((m, i) => {
-            const future = m > nowKey;
+            const future = isFuture(m);
             const cells = activeBUs.map(bu => {
                 const rec = future ? null : buMonthMap.get(m)?.get(bu);
                 const pct = rec && rec.amt ? pctStr(rec.gp, rec.amt) : null;
@@ -1226,13 +1505,13 @@ function renderTrendRawTable(kind, monthMap) {
         const VAL_COL = 170, PCT_COL = 90;
         colWidths = MONTH_COL + VAL_COL * 2 + PCT_COL;
         thead = `<tr>
-            <th style="width:${MONTH_COL}px">Month</th>
+            <th style="width:${MONTH_COL}px">${periodColLabel}</th>
             <th class="r" style="width:${VAL_COL}px">Amount</th>
             <th class="r" style="width:${VAL_COL}px">GP</th>
             <th class="r" style="width:${PCT_COL}px">GP%</th>
         </tr>`;
         rows = keys.map((m, i) => {
-            const future = m > nowKey;
+            const future = isFuture(m);
             const amt = future ? null : (monthMap.get(m)?.amt ?? 0);
             const gp  = future ? null : (monthMap.get(m)?.gp ?? 0);
             return `<tr>

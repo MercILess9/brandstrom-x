@@ -60,16 +60,16 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 /* Shared filter components — full pill shape (20px radius, 38px tall),
    matching the rest of the platform's filter-zone convention (b-account.css
    .flt-select-box etc.) instead of this page's old boxier 10-12px corners. */
-/* Date range + This Month joined into one pill — exact recipe as B-Quest's
-   .flt-date-today-wrap/.flt-btn-today (left half rounded+no-right-border,
-   right half rounded+its-own-left-border makes the internal divider line),
-   not two separate floating pills like before. */
+/* Date range (date-picker.js) + This Month joined into one pill — left
+   half rounded+no-right-border, right half rounded+its-own-left-border
+   makes the internal divider line, not two separate floating pills. */
 .flt-date-today-wrap { display: flex; align-items: center; flex-shrink: 0; }
-.flt-date-group { display: flex; align-items: center; background: var(--c-bg); border: 1px solid var(--c-border); border-right: none; border-radius: 20px 0 0 20px; padding: 0 10px; height: 38px; flex-shrink: 0; transition: 0.2s; }
-.flt-date-group:focus-within { border-color: var(--c-accent); }
-.flt-date-group:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); transform: translateY(-1px); }
-.flt-date-today-wrap.active-filter .flt-date-group { background: var(--c-accent-light); border-color: var(--c-accent); }
-.flt-date-input { border: none; background: transparent; font-size: 0.78rem; color: var(--c-slate); outline: none; font-family: inherit; width: 108px; cursor: pointer; }
+/* Explicit width — .fin-toolbar-right has no generic .flt-select-box width
+   rule the way .flt-advanced-row does above, so this pill would otherwise
+   auto-size down to its "All" placeholder text (same issue just fixed on
+   b-quest-assignment.html's Deadline filter; same fix, matching List's
+   240px convention). */
+#wrap-filterBillDate { border-right: none; border-radius: 20px 0 0 20px; width: 240px; flex-shrink: 0; }
 
 .flt-btn-today { border: 1px solid var(--c-border); background: #fff; border-radius: 0 20px 20px 0; padding: 0 14px; height: 38px; font-size: 0.76rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; font-family: inherit; outline: none; flex-shrink: 0; }
 .flt-btn-today:hover { border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.2); transform: translateY(-1px); }

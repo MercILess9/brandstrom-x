@@ -355,6 +355,14 @@ const B_OPP_MODAL_HTML = `
 `;
 
 document.body.insertAdjacentHTML('beforeend', B_OPP_MODAL_HTML);
+// Turns the two plain inputs above into hidden ISO carriers + visible
+// DD-MM-YYYY masked fields + calendar icon (see system/date-picker.js).
+// Attached once here, not per modal open — same reasoning as B-Quest's
+// Publish Date (b-quest-modal.js): these two rows are static markup in
+// B_OPP_MODAL_HTML, not re-rendered per role/card like B-Quest's Deadline
+// fields are, so a one-time attach is enough.
+const signedDatePicker = attachDatePicker(document.getElementById('bopp-signed'));
+const launchDatePicker = attachDatePicker(document.getElementById('bopp-launch'));
 
 const BOppApp = (() => {
     const el = id => document.getElementById(id);
@@ -842,8 +850,14 @@ const BOppApp = (() => {
     function resetForm() {
         el('bopp-form').classList.remove('was-validated');
         ['bopp-editing-id','bopp-account-id','bopp-acc-name','bopp-opp-name',
-         'bopp-signed','bopp-launch','bopp-materials','bopp-proposal','bopp-campaign','bopp-remark']
+         'bopp-materials','bopp-proposal','bopp-campaign','bopp-remark']
             .forEach(id => { const e = el(id); if (e) e.value = ''; });
+        // Setting .value directly on bopp-signed/bopp-launch now (since
+        // attachDatePicker) would clear the hidden ISO carrier without
+        // touching what the visible masked field actually shows — and
+        // wouldn't clear a stale "Invalid date" custom-validity either.
+        signedDatePicker.setValue(null);
+        launchDatePicker.setValue(null);
         const companySel = el('bopp-company-sel');
         companySel.innerHTML = '<option value="">Select company...</option>';
         companySel.disabled = true;
@@ -891,8 +905,8 @@ const BOppApp = (() => {
          ['bopp-materials','materials'],['bopp-proposal','proposal'],['bopp-campaign','campaign'],['bopp-remark','remark']]
             .forEach(([id, field]) => { el(id).value = opp[field] || ''; });
 
-        el('bopp-signed').value = opp.signed_date ? String(opp.signed_date).slice(0,10) : '';
-        el('bopp-launch').value = opp.launch_date ? String(opp.launch_date).slice(0,10) : '';
+        signedDatePicker.setValue(opp.signed_date ? String(opp.signed_date).slice(0,10) : null);
+        launchDatePicker.setValue(opp.launch_date ? String(opp.launch_date).slice(0,10) : null);
         _churnDate = opp.churn_date ? String(opp.churn_date).slice(0,10) : '';
         el('bopp-status-sel').value = opp.status || (_statusList[0] || 'Active');
 
@@ -956,8 +970,8 @@ const BOppApp = (() => {
          ['bopp-materials','materials'],['bopp-proposal','proposal'],['bopp-campaign','campaign'],['bopp-remark','remark']]
             .forEach(([id, field]) => { el(id).value = opp[field] || ''; });
 
-        el('bopp-signed').value = opp.signed_date ? String(opp.signed_date).slice(0,10) : '';
-        el('bopp-launch').value = opp.launch_date ? String(opp.launch_date).slice(0,10) : '';
+        signedDatePicker.setValue(opp.signed_date ? String(opp.signed_date).slice(0,10) : null);
+        launchDatePicker.setValue(opp.launch_date ? String(opp.launch_date).slice(0,10) : null);
 
         // Copy QT items in full (bu/detail/qty/price/discount/gp) — only qt_number resets,
         // since each quotation needs its own fresh number
@@ -1023,16 +1037,11 @@ const BOppApp = (() => {
         }
         if (qtType === 'original') {
             const saleAmt = qt.items.reduce((s,i) => s + (+i.amount||0), 0);
-            // quotation_sub left blank — matches b-finance-list.html's own
-            // Add Sub behavior (no auto-generated label), user fills it in
-            // themselves. Previously defaulted to the QT's own number,
-            // which just showed the same code twice (QT header + this row).
-            // detail (finance row's own field, not qt.items[].detail above)
-            // defaults to the Opportunity Name so Finance sees which deal a
-            // sub-invoice belongs to without cross-checking the QT number.
-            const oppName = el('bopp-opp-name')?.value?.trim() || null;
+            // quotation_sub and detail both left blank — matches
+            // b-finance-list.html's own Add Sub behavior (no auto-generated
+            // values), user fills them in themselves.
             supabaseClient.from('b_finance_qt')
-                .insert({ qt_id: qtRow.qt_id, sub_index: 1, quotation_sub: null, actual_amount: saleAmt || null, detail: oppName })
+                .insert({ qt_id: qtRow.qt_id, sub_index: 1, quotation_sub: null, actual_amount: saleAmt || null, detail: null })
                 .then(({ error }) => { if (error) console.warn('[finance auto-create]', error); });
         }
     }

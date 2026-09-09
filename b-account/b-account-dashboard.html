@@ -395,12 +395,13 @@ let _buFilters    = new Set(); // empty = all BUs
 let _chartMonthly = null;
 let _chartType    = null;
 let _chartBU      = null;
-let _trendChartType = 'line'; // 'line' | 'bar' — Amount/GP mode only
+let _trendChartType = 'line'; // 'line' | 'bar' — both Overview and By BU
 let _chartLead    = null;
 let _trendBreakdown = 'amtgp'; // 'amtgp' | 'bu'
 // Time-axis bucketing for the chart — defaults from the active range chip
-// (see trendGranularityForRange) but is a free manual toggle after that,
-// not re-derived on every render (only when the date range itself changes).
+// (see applyQuickRange/isQuarterMonths) but is a free manual toggle after
+// that, not re-derived on every render (only when the date range itself
+// changes, or the toggle itself is clicked).
 let _trendGranularity = 'month'; // 'month' | 'quarter'
 // A year-over-year Compare mode (MoM/QoQ, with its own Normal/Compare and
 // granularity toggles) was built and rolled back for being confusing —
@@ -496,6 +497,17 @@ function isQuarterMonths(months) {
     return Object.values(QUARTER_MONTHS).some(qm => setsEqual(set, new Set(qm)));
 }
 
+// Sets _trendGranularity AND re-derives _trendChartType's default from it —
+// Quarter's discrete buckets read better as Bar, Month's continuous trend
+// reads better as Line. Same hybrid rule as granularity's own auto-default:
+// applies every time granularity changes (auto-detected or the toggle
+// clicked by hand), but the Line/Bar toggle stays freely clickable
+// afterward — this only sets where it LANDS, never locks it.
+function setTrendGranularityState(g) {
+    _trendGranularity = g;
+    _trendChartType = g === 'quarter' ? 'bar' : 'line';
+}
+
 // The picker's trigger shows the matching preset's name (YTD/Q1-4) when
 // the selection lands on one exactly, same as the chip row's own
 // active-state check below — so the two stay saying the same thing
@@ -536,7 +548,7 @@ function applyQuickRange(type) {
     _yearFilters = new Set([year]);
     _monthFilters = new Set(months);
     _rangePicker?.setValue({ year, months });
-    _trendGranularity = type === 'ytd' ? 'month' : 'quarter';
+    setTrendGranularityState(type === 'ytd' ? 'month' : 'quarter');
     saveFiltersToSession();
     render();
 }
@@ -567,7 +579,7 @@ function initFilterDropdowns() {
         onChange: ({ year, months }) => {
             _yearFilters  = new Set([year]);
             _monthFilters = new Set(months);
-            _trendGranularity = isQuarterMonths(months) ? 'quarter' : 'month';
+            setTrendGranularityState(isQuarterMonths(months) ? 'quarter' : 'month');
             saveFiltersToSession();
             render();
         },
@@ -599,7 +611,7 @@ function initFilterDropdowns() {
     // quarter's (e.g. Jan-Mar during Q1) without the user ever having
     // picked that quarter, and applyQuickRange('ytd') always forces
     // 'month' regardless, so the default here has to match that exactly.
-    _trendGranularity = (saved?.months?.length && isQuarterMonths(monthsToUse)) ? 'quarter' : 'month';
+    setTrendGranularityState((saved?.months?.length && isQuarterMonths(monthsToUse)) ? 'quarter' : 'month');
     _rangePicker.setValue({ year: yearToUse, months: monthsToUse });
 }
 
@@ -647,7 +659,7 @@ function resetAllFilters() {
     _yearFilters = new Set([now.getFullYear()]);
     _monthFilters = new Set(ytdMonths());
     _rangePicker?.setValue({ year: now.getFullYear(), months: ytdMonths() });
-    _trendGranularity = 'month';
+    setTrendGranularityState('month');
     saveFiltersToSession();
     renderBuChips();
     render();
@@ -1094,8 +1106,8 @@ function trendAxis() {
 }
 
 function setTrendGranularity(g) {
-    _trendGranularity = g;
-    renderTrendChart(); // also syncs the active class (see top of renderTrendChart)
+    setTrendGranularityState(g);
+    renderTrendChart(); // also syncs both toggles' active class (see top of renderTrendChart)
 }
 
 function setTrendBreakdown(bd) {
@@ -1119,8 +1131,7 @@ function repositionTrendBreakdownSlider() {
 
 function setTrendChartType(ct) {
     _trendChartType = ct;
-    document.querySelectorAll('#trendChartTypeGroup .trend-type-btn').forEach(b => b.classList.toggle('active', b.dataset.ct === ct));
-    renderTrendChart();
+    renderTrendChart(); // also syncs the active class (see top of renderTrendChart)
 }
 
 // Computes each mode's month map exactly once per render cycle and hands it
@@ -1131,13 +1142,15 @@ function setTrendChartType(ct) {
 // happens once here too, on top of the always-month-keyed compute — see
 // trendAxis()/aggregateToQuarters().
 function renderTrendChart() {
-    // Keep both toggles' active button in sync with state on every render —
-    // not just when their own button is clicked. _trendGranularity in
-    // particular gets set from several other places now (range chips,
-    // the range picker, Reset), so without this the Month/Quarter toggle
-    // can freeze on a stale button (e.g. still showing "Month" active
-    // after a Q1 chip auto-switched to Quarter).
+    // Keep all three toggles' active button in sync with state on every
+    // render — not just when their own button is clicked. _trendGranularity
+    // gets set from several other places now (range chips, the range
+    // picker, Reset), and _trendChartType now rides along with it too (see
+    // setTrendGranularityState) — without this, a toggle can freeze on a
+    // stale button (e.g. still showing "Month"/"Line" active after a Q1
+    // chip auto-switched to Quarter/Bar).
     document.querySelectorAll('#trendGranularityGroup .trend-type-btn').forEach(b => b.classList.toggle('active', b.dataset.g === _trendGranularity));
+    document.querySelectorAll('#trendChartTypeGroup .trend-type-btn').forEach(b => b.classList.toggle('active', b.dataset.ct === _trendChartType));
     document.querySelectorAll('#trendBreakdownGroup .trend-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.bd === _trendBreakdown));
     renderTrendLegend();
     repositionTrendBreakdownSlider();

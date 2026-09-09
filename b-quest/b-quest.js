@@ -1,6 +1,6 @@
 const B_QUEST_CONFIG = {
     projectName: "B-QUEST",
-    version: "3.1.2",
+    version: "3.1.3",
     accessKey: 'bquest',
     itemsPerPage_List: 10,
     itemsPerPage_Assign: 10,

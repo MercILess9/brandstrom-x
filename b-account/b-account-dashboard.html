@@ -27,6 +27,11 @@
         .dash-ctrl { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 10px 20px; position: sticky; top: 64px; z-index: 100; }
         .dash-ctrl-inner { max-width: 1320px; margin: 0 auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .dash-updated { font-size: 0.7rem; color: #94a3b8; white-space: nowrap; flex-shrink: 0; margin-left: auto; display: inline-flex; align-items: center; gap: 5px; }
+        /* What range the whole page is currently showing — sits right next
+           to the title since every card/chart below reads off the same
+           filter, not just the Sales Trend chart. Leaves the far-right slot
+           (next to Last Update) free for the planned Export button. */
+        .dash-period-badge { font-size: 0.7rem; font-weight: 800; color: var(--c-accent-dark); background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 20px; padding: 3px 12px; white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* ── Quick date-range chips (YTD/Q1-Q4) — shortcuts that just
@@ -99,17 +104,22 @@
         @media (max-width: 560px) { .bu-card-row { grid-template-columns: 1fr; } }
         .bu-card { background: #fff; border: 1px solid #eef2f7; border-left: 4px solid; border-radius: 16px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
         .bu-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
-        .bu-card-name { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .bu-card-pct { font-size: 0.72rem; font-weight: 800; color: #1e293b; flex-shrink: 0; }
+        .bu-card-name { font-size: 0.92rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bu-card-pct-wrap { display: flex; align-items: baseline; gap: 5px; flex-shrink: 0; }
+        .bu-card-pct-label { font-size: 0.55rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .bu-card-pct { font-size: 0.72rem; font-weight: 800; color: #94a3b8; }
         .bu-card-amt { font-size: 1.15rem; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
-        .bu-card-gp-row { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; color: #94a3b8; margin-bottom: 3px; }
+        .bu-card-gp-row { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; color: #16a34a; font-weight: 700; margin-bottom: 3px; }
         .bu-card-gp-badge { display: inline-flex; align-items: center; font-size: 0.65rem; font-weight: 800; padding: 1px 8px; border-radius: 20px; background: rgba(22,163,74,0.1); border: 1px solid rgba(22,163,74,0.35); color: #16a34a; }
-        .bu-card-deals { font-size: 0.68rem; color: #94a3b8; margin-bottom: 9px; }
-        .bu-card-bar { height: 4px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
-        .bu-card-bar-fill { height: 100%; border-radius: 99px; }
+        .bu-card-deals { font-size: 0.68rem; color: #94a3b8; }
 
         /* ── Main grid: Lead Source (chart | detail table) ── */
-        .split-grid { display: grid; grid-template-columns: 1fr 560px; gap: 14px; align-items: start; }
+        /* align-items:stretch (not start) + flex column cards so the
+           shorter side (the chart) fills up to match the taller one (the
+           table, height driven by however many lead sources there are)
+           instead of leaving a gap under the chart. */
+        .split-grid { display: grid; grid-template-columns: 1fr 560px; gap: 14px; align-items: stretch; }
+        .split-grid > .dash-card { display: flex; flex-direction: column; }
         @media (max-width: 900px) { .split-grid { grid-template-columns: 1fr; } }
 
         /* ── Two self-contained donut cards side by side (BU share | Business
@@ -128,15 +138,29 @@
         .leg-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
         .leg-name { font-size: 0.74rem; font-weight: 600; color: #475569; flex: 1; }
         .leg-pct  { font-size: 0.65rem; color: #94a3b8; width: 34px; text-align: right; }
-        /* BU legend dropped the count column — % should sit right next to
-           the name instead of being stranded at the far right edge, and
-           read clearly since it's now the only secondary value in the row. */
-        #buChartLegend .leg-name { flex: 0 0 auto; }
-        #buChartLegend .leg-pct { width: auto; margin-left: 8px; font-size: 0.85rem; font-weight: 800; color: #1e293b; }
+        /* BU legend's % reads bigger/bolder than the base legend (it's the
+           only secondary value in the row) but still needs a fixed-width
+           right-aligned column like the base .leg-pct — a name-hugging
+           width let each row's % land at a different x position depending
+           on how long that BU's name was, reading as misaligned. */
+        #buChartLegend .leg-pct { width: 52px; font-size: 0.85rem; font-weight: 800; color: #1e293b; }
 
         /* ── Monthly chart ── */
         .monthly-wrap { height: 320px; }
-        .lead-chart-wrap { height: 280px; }
+        /* Trend Detail accordion — same interaction as b-account-list.html's
+           .ac-card (chevron rotates, whole header row clickable, smooth
+           height reveal), scoped to this one section instead of reusing
+           the .ac-* classes directly since those assume a taller card-list
+           layout this isn't part of. */
+        .trend-detail-toggle { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 14px 0; border-top: 1px solid #f1f5f9; cursor: pointer; font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; user-select: none; transition: color 0.15s; }
+        .trend-detail-toggle:hover { color: var(--c-accent-dark); }
+        .trend-detail-toggle .bi-table { color: var(--c-accent); font-size: 0.8rem; }
+        .trend-detail-count { color: #94a3b8; font-weight: 700; text-transform: none; letter-spacing: normal; }
+        .trend-detail-chevron { margin-left: auto; font-size: 0.8rem; color: #94a3b8; transition: transform 0.25s; }
+        .trend-detail-accordion.open .trend-detail-chevron { transform: rotate(180deg); }
+        .trend-detail-body { max-height: 0; overflow: hidden; padding-top: 6px; transition: max-height 0.35s ease; }
+        .trend-detail-accordion.open .trend-detail-body { max-height: 2000px; }
+        .lead-chart-wrap { flex: 1; min-height: 280px; }
         /* Own header variant — wraps to a 2nd line instead of overflowing
            when By BU mode's legend has too many items (up to 7 BUs) to sit
            next to the title + toggle on one row. */
@@ -172,20 +196,50 @@
         .trend-mode-btn.active { color: var(--c-accent-dark); }
         .trend-mode-btn:not(.active):hover { color: var(--c-accent); }
 
-        /* ── Churn KPIs ── */
-        .churn-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
-        @media (max-width: 900px) { .churn-kpi-row { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 560px) { .churn-kpi-row { grid-template-columns: 1fr; } }
-        .churn-kpi-card { background: #fef2f2; border: 1px solid #fecaca; border-radius: 16px; padding: 15px 18px; }
-        .churn-kpi-label { font-size: 0.6rem; font-weight: 800; color: #b91c1c; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
-        .churn-kpi-val { font-size: 1.3rem; font-weight: 800; color: #991b1b; }
-        .churn-kpi-sub { font-size: 0.68rem; color: #b91c1c; opacity: 0.75; margin-top: 3px; }
+        /* ── Churn KPIs — hero stat as free-standing text (no box, stays
+           the one clear headline number) + 3 equal-width .bu-card-style
+           boxes filling the rest of the row, all with a red left edge
+           (this row is specifically about churn, unlike the mixed BU
+           section, so red across all 3 reads as one consistent zone
+           rather than diluting the alarm). ── */
+        .churn-hero-row { display: flex; align-items: stretch; gap: 24px; margin-bottom: 14px; flex-wrap: wrap; }
+        .churn-hero { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; }
+        .churn-hero-label { font-size: 0.72rem; font-weight: 800; color: #b91c1c; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap; }
+        .churn-hero-val { font-size: 2.2rem; font-weight: 800; color: #dc2626; line-height: 1; }
+        .churn-stat-list { flex: 1; display: flex; align-items: stretch; gap: 16px; min-width: 0; }
+        .churn-stat-item { flex: 1; min-width: 0; background: #fff; border: 1px solid #eef2f7; border-left: 4px solid #dc2626; border-radius: 16px; padding: 14px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+        .churn-stat-label { font-size: 0.65rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; }
+        .churn-stat-val { font-size: 1.1rem; font-weight: 800; color: #1e293b; white-space: nowrap; }
+        .churn-stat-badge { display: inline-flex; align-items: center; font-size: 0.62rem; font-weight: 800; padding: 1px 7px; border-radius: 20px; background: #e2e8f0; color: #475569; margin-left: 6px; }
+        @media (max-width: 640px) {
+            .churn-hero-row { flex-direction: column; align-items: stretch; gap: 14px; }
+            .churn-stat-list { flex-direction: column; gap: 12px; }
+        }
+        /* Same divider treatment as the Sales Trend card's Detail toggle —
+           a thin rule instead of a second bordered card, so the table
+           reads as this card's own sub-section, not a separate block. */
+        .churn-table-hd { margin-top: 14px; padding-top: 14px; border-top: 1px solid #f1f5f9; }
 
-        /* ── Generic dashboard table (Churn deals / Lead Source / Sales Rep / Top Clients) ── */
+        /* ── Generic dashboard table (Churn deals / Lead Source / Sales Rep / Top Partner) ── */
         .dash-tbl { width: 100%; border-collapse: collapse; }
         .dash-tbl th { font-size: 0.6rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; padding: 0 10px 10px; border-bottom: 2px solid #f1f5f9; white-space: nowrap; text-align: left; }
         .dash-tbl th.r, .dash-tbl td.r { text-align: right; }
         .dash-tbl th.c, .dash-tbl td.c { text-align: center; }
+        .dash-tbl th.sortable { cursor: pointer; user-select: none; transition: color 0.15s; }
+        .dash-tbl th.sortable:hover { color: var(--c-accent-dark); }
+        /* Sales Performance / Top Partner — max ~10 rows visible,
+           scroll for the rest, header pinned so column labels (and the
+           active sort arrow) stay visible while scrolling. */
+        .dash-tbl-scroll { max-height: 460px; overflow-y: auto; }
+        .dash-tbl-scroll thead th { position: sticky; top: 0; background: #fff; z-index: 1; }
+        /* Sales Performance — click a rep row to expand its per-BU
+           breakdown as extra rows directly underneath, chevron rotates
+           to show open/closed like the accordions elsewhere in the app. */
+        .rep-row { cursor: pointer; }
+        .rep-chevron { font-size: 0.6rem; color: #cbd5e1; margin-right: 6px; display: inline-block; transition: transform 0.15s; }
+        .rep-row.open .rep-chevron { transform: rotate(90deg); }
+        .rep-bu-row td { background: #fafbfc; font-size: 0.74rem; }
+        .rep-bu-row .bu-mini-badge { font-size: 0.62rem; margin-left: 20px; }
         .dash-tbl td { padding: 9px 10px; border-bottom: 1px solid #f8fafc; font-size: 0.79rem; vertical-align: middle; color: #475569; font-variant-numeric: tabular-nums; white-space: nowrap; }
         .dash-tbl td:first-child { font-variant-numeric: normal; }
         .dash-tbl tr:last-child td { border-bottom: none; }
@@ -194,19 +248,27 @@
         .dash-tbl .amt-red { color: #dc2626; font-weight: 700; }
         .dash-tbl .amt-green { color: #16a34a; font-weight: 700; }
         .bu-mini-badge { background: #f1f5f9; color: #64748b; font-size: 0.66rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+        /* Same pill treatment as .bu-card-gp-badge, red instead of green —
+           amount + its % share as one grouped unit instead of two separate
+           table columns. */
+        .churn-pct-badge { display: inline-flex; align-items: center; font-size: 0.65rem; font-weight: 800; padding: 1px 8px; border-radius: 20px; background: rgba(220,38,38,0.1); border: 1px solid rgba(220,38,38,0.35); color: #dc2626; margin-left: 2px; }
+        /* Same circle as .ac-action-view in b-opportunity-list.html's card
+           actions (same "Details" i-icon button) — width/height equal +
+           50% radius for a true circle, not just a rounded box. */
+        .churn-view-btn { background: none; border: none; color: #94a3b8; cursor: pointer; width: 31px; height: 31px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; text-decoration: none; transition: 0.15s; }
+        .churn-view-btn:hover { background: var(--c-accent-light); color: var(--c-accent-dark); }
 
-        /* ── Rank badges (Sales Rep / Top Clients) ── */
+        /* ── Rank badges (Sales Rep / Top Partner) ── */
         .rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; font-size: 0.72rem; font-weight: 800; color: #fff; }
         .rank-badge.r1 { background: #f59e0b; }
         .rank-badge.r2 { background: #94a3b8; }
         .rank-badge.r3 { background: #c2703d; }
         .rank-plain { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; font-size: 0.75rem; font-weight: 700; color: #94a3b8; }
 
-        /* ── Inline mini share bar (table cells) ── */
-        .cell-bar-row { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
-        .cell-bar-track { width: 60px; height: 5px; background: #f1f5f9; border-radius: 99px; overflow: hidden; flex-shrink: 0; }
-        .cell-bar-fill { height: 100%; border-radius: 99px; background: #1e293b; }
-        .cell-bar-pct { font-size: 0.7rem; color: #94a3b8; width: 36px; text-align: right; flex-shrink: 0; }
+        /* Share% columns (Sales Performance, Top Partner, Lead Source) — % of total
+           revenue, neutral badge (not green/red), same treatment as the
+           churn stat badges above. */
+        .share-badge { display: inline-flex; align-items: center; font-size: 0.65rem; font-weight: 800; padding: 2px 9px; border-radius: 20px; background: #e2e8f0; color: #475569; }
 
         /* ── Empty / loading ── */
         .dash-empty { display: flex; align-items: center; justify-content: center; height: 100px; color: #94a3b8; font-size: 0.78rem; gap: 7px; }
@@ -229,6 +291,7 @@
     <!-- KPIs -->
     <div class="sec-hd">
         <span class="sec-hd-title sec-hd-title-main"><i class="bi bi-bar-chart-fill" style="color:var(--c-accent)"></i> B-ACCOUNT Dashboard</span>
+        <span class="dash-period-badge" id="dashPeriodBadge"><i class="bi bi-calendar3"></i></span>
         <span class="dash-updated" id="dashUpdated"></span>
     </div>
     <div class="kpi-row" id="kpiRow">
@@ -246,9 +309,9 @@
             <!-- Icon toggle, not a text pill — sits right against the title
                  since it's reading as "what kind of chart is this", same
                  register as a label, not a filter control (those live on
-                 the right). Applies to both Overview and By BU now — By BU
-                 in Line mode draws one (non-stacked) line per active BU
-                 instead of the stacked bar, see renderTrendByBU. -->
+                 the right). Applies to every breakdown mode — BU in Line
+                 mode draws one (non-stacked) line per active BU instead of
+                 the stacked bar, see renderTrendByBU. -->
             <div class="trend-type-toggle" id="trendChartTypeGroup">
                 <button class="trend-type-btn active" data-ct="line" onclick="setTrendChartType('line')" title="Line chart"><i class="bi bi-graph-up"></i></button>
                 <button class="trend-type-btn" data-ct="bar" onclick="setTrendChartType('bar')" title="Bar chart"><i class="bi bi-bar-chart-fill"></i></button>
@@ -273,21 +336,34 @@
                     <div class="trend-toggle-slider"></div>
                     <button class="trend-mode-btn active" data-bd="amtgp" onclick="setTrendBreakdown('amtgp')">Overview</button>
                     <button class="trend-mode-btn" data-bd="bu" onclick="setTrendBreakdown('bu')">BU</button>
+                    <button class="trend-mode-btn" data-bd="rep" onclick="setTrendBreakdown('rep')">Sales Rep</button>
                 </div>
             </div>
             <div class="trend-legend" id="trendLegend"></div>
         </div>
         <div class="monthly-wrap" id="monthlyWrap"><canvas id="monthlyChart"></canvas></div>
-    </div>
 
-    <!-- Sales Trend — plain values table, its own card so the chart card
-         above doesn't grow tall/scrollable when there's 12+ rows to show. -->
-    <div class="dash-card sec-block">
-        <div class="sec-hd">
-            <div class="sec-hd-bar"></div>
-            <span class="sec-hd-title">Trend Detail</span>
+        <!-- Raw numbers behind the chart above, collapsed by default (same
+             accordion pattern as b-account-list.html's .ac-card — one .open
+             class toggled on the outer wrapper drives both the chevron
+             rotation and the max-height reveal, via descendant selectors,
+             so there's a single source of truth instead of syncing two
+             elements separately). Merged into the same card as the chart
+             instead of its own card below — this is the chart's own data,
+             not a separate section, so "click to see the numbers" should
+             read as opening a drawer on the chart, not scrolling to a
+             different block. -->
+        <div class="trend-detail-accordion" id="trendDetailAccordion">
+            <div class="trend-detail-toggle" onclick="toggleTrendDetail()">
+                <i class="bi bi-table"></i>
+                <span>Detail</span>
+                <span class="trend-detail-count" id="trendDetailCount"></span>
+                <i class="bi bi-chevron-down trend-detail-chevron"></i>
+            </div>
+            <div class="trend-detail-body">
+                <div id="trendTableWrap"></div>
+            </div>
         </div>
-        <div id="trendTableWrap"></div>
     </div>
 
     <!-- BU Breakdown -->
@@ -295,7 +371,6 @@
         <div class="sec-hd">
             <div class="sec-hd-bar"></div>
             <span class="sec-hd-title">Sales by Business Unit</span>
-            <span class="sec-hd-sub" id="buCount"></span>
         </div>
         <div class="bu-card-row" id="buCardRow">
             <div class="dash-empty"><i class="bi bi-arrow-repeat dash-spinner"></i> Loading…</div>
@@ -326,20 +401,19 @@
         </div>
     </div>
 
-    <!-- Churn Analysis -->
-    <div class="sec-block">
+    <!-- Churn Analysis — KPIs + table in one card (not two stacked cards)
+         so the section reads as one connected block instead of the KPI
+         row and the table looking like unrelated pieces. -->
+    <div class="dash-card sec-block">
         <div class="sec-hd">
             <div class="sec-hd-bar c-red"></div>
             <span class="sec-hd-title">Churn Analysis</span>
         </div>
-        <div class="churn-kpi-row" id="churnKpiRow"></div>
-        <div class="dash-card">
-            <div class="sec-hd">
-                <span class="sec-hd-title" style="text-transform:none;font-size:0.78rem">Churned Deals</span>
-                <span class="sec-hd-sub" id="churnCount"></span>
-            </div>
-            <div id="churnTableWrap"><div class="dash-empty"><i class="bi bi-arrow-repeat dash-spinner"></i></div></div>
+        <div id="churnKpiRow"></div>
+        <div class="churn-table-hd">
+            <span class="sec-hd-title" style="text-transform:none;font-size:0.78rem">Churned Opportunity</span>
         </div>
+        <div id="churnTableWrap"><div class="dash-empty"><i class="bi bi-arrow-repeat dash-spinner"></i></div></div>
     </div>
 
     <!-- Lead Source -->
@@ -360,22 +434,22 @@
         </div>
     </div>
 
-    <!-- Sales Rep Performance -->
+    <!-- Sales Performance -->
     <div class="dash-card sec-block">
         <div class="sec-hd">
             <div class="sec-hd-bar"></div>
-            <span class="sec-hd-title">Sales Rep Performance</span>
-            <span class="sec-hd-sub">Ranked by Amount</span>
+            <span class="sec-hd-title">Sales Performance</span>
+            <span class="sec-hd-sub" id="repSortLabel"></span>
         </div>
         <div id="repTableWrap"><div class="dash-empty"><i class="bi bi-arrow-repeat dash-spinner"></i></div></div>
     </div>
 
-    <!-- Top Clients -->
+    <!-- Top Partner -->
     <div class="dash-card sec-block">
         <div class="sec-hd">
             <div class="sec-hd-bar"></div>
-            <span class="sec-hd-title">Top Clients</span>
-            <span class="sec-hd-sub">Ranked by Amount</span>
+            <span class="sec-hd-title">Top Partner</span>
+            <span class="sec-hd-sub" id="clientSortLabel"></span>
         </div>
         <div id="clientTableWrap"><div class="dash-empty"><i class="bi bi-arrow-repeat dash-spinner"></i></div></div>
     </div>
@@ -397,7 +471,7 @@ let _chartType    = null;
 let _chartBU      = null;
 let _trendChartType = 'line'; // 'line' | 'bar' — both Overview and By BU
 let _chartLead    = null;
-let _trendBreakdown = 'amtgp'; // 'amtgp' | 'bu'
+let _trendBreakdown = 'amtgp'; // 'amtgp' | 'bu' | 'rep'
 // Time-axis bucketing for the chart — defaults from the active range chip
 // (see applyQuickRange/isQuarterMonths) but is a free manual toggle after
 // that, not re-derived on every render (only when the date range itself
@@ -522,6 +596,23 @@ function formatRangeLabel(year, months) {
         if (setsEqual(set, new Set(qm))) return key.toUpperCase();
     }
     return null;
+}
+
+// Header badge text for whatever range the whole page is currently scoped
+// to — reuses formatRangeLabel for the YTD/Q1-4 presets (same wording as
+// the picker trigger + range chips, plus the year since the badge has no
+// other context around it), falling back to the exact same "Mon–Mon
+// YYYY"/"Mon YYYY" text the picker itself builds for a custom range (see
+// month-picker.js's own updateLabel) so the two never say different things
+// for the same selection.
+function currentRangeLabel() {
+    const year = _yearFilters.size === 1 ? [..._yearFilters][0] : new Date().getFullYear();
+    const months = [..._monthFilters].sort();
+    const preset = formatRangeLabel(year, months);
+    if (preset) return `${preset} ${year}`;
+    if (!months.length) return 'All';
+    if (months.length === 1) return `${MONTHS[+months[0] - 1]} ${year}`;
+    return `${MONTHS[+months[0] - 1]}–${MONTHS[+months[months.length - 1] - 1]} ${year}`;
 }
 
 // Quarters apply to whatever year is currently selected (if exactly one is
@@ -777,37 +868,38 @@ function computeData() {
         const lead   = opp.lead_source   || 'Unknown';
         const accKey = opp.account_id || 'Unknown';
         const accName = _accMap.get(opp.account_id)?.account_name || 'Unknown';
+        // Churning creates one churn QT PER original QT (b-opportunity-
+        // modal.js: _churnQTs = _qts.map(...)), all sharing one churn_date
+        // — one real churn event, just split across QT records. Accumulate
+        // across all of them and push a single row per opportunity below,
+        // or remainAmt would be computed against the full original amount
+        // once per QT instead of what's actually left after all of them.
+        let oppChurnAmt = 0, oppChurnGP = 0;
+        const oppChurnBUs = new Set();
+        const hasChurnQT = qts.some(qt => qt.qt_type === 'churn');
+        // Only worth the extra scan for opportunities that actually churned.
+        const oppOrigAmt = !hasChurnQT ? 0 : qts
+            .filter(qt => qt.qt_type !== 'churn')
+            .flatMap(qt => (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other')))
+            .reduce((s, item) => s + Math.max(0, (+(item.qty) || 0) * (+(item.price) || 0) - (+(item.discount) || 0)), 0);
 
         for (const qt of qts) {
             const rawItems = (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other'));
             if (!rawItems.length) continue;
 
             if (qt.qt_type === 'churn') {
-                let churnAmtQT = 0, churnGPQT = 0;
-                const busInQT = new Set();
                 for (const item of rawItems) {
                     const amt = Math.max(0, (+(item.qty) || 0) * (+(item.price) || 0) - (+(item.discount) || 0));
                     const gp  = +(item.gp) || 0;
                     const bu  = item.bu || 'Other';
-                    churnAmtQT += amt;
-                    churnGPQT  += gp;
+                    oppChurnAmt += amt;
+                    oppChurnGP  += gp;
                     grandChurnAmt += amt;
                     grandChurnGP  += gp;
-                    busInQT.add(bu);
-                    if (!buMap.has(bu)) buMap.set(bu, { deals: new Set(), origAmt: 0, origGP: 0, churnAmt: 0 });
+                    oppChurnBUs.add(bu);
+                    if (!buMap.has(bu)) buMap.set(bu, { deals: new Set(), accounts: new Set(), origAmt: 0, origGP: 0, churnAmt: 0 });
                     buMap.get(bu).deals.add(opp.opportunity_id);
                     buMap.get(bu).churnAmt += amt;
-                }
-                if (churnAmtQT > 0) {
-                    churnRows.push({
-                        account: accName,
-                        opportunity: opp.opportunity_name || opp.opportunity_id,
-                        bu: [...busInQT].join(', '),
-                        amt: churnAmtQT,
-                        gp: churnGPQT,
-                        owner,
-                        date: opp.churn_date
-                    });
                 }
                 continue;
             }
@@ -817,8 +909,9 @@ function computeData() {
                 const gp  = +(item.gp) || 0;
                 const bu  = item.bu || 'Other';
 
-                if (!buMap.has(bu)) buMap.set(bu, { deals: new Set(), origAmt: 0, origGP: 0, churnAmt: 0 });
+                if (!buMap.has(bu)) buMap.set(bu, { deals: new Set(), accounts: new Set(), origAmt: 0, origGP: 0, churnAmt: 0 });
                 buMap.get(bu).deals.add(opp.opportunity_id);
+                buMap.get(bu).accounts.add(accKey);
                 buMap.get(bu).origAmt += amt;
                 buMap.get(bu).origGP  += gp;
 
@@ -828,8 +921,14 @@ function computeData() {
                 if (!typeMap.has(type)) typeMap.set(type, { count: 0, amt: 0, gp: 0, deals: new Set() });
                 typeMap.get(type).amt += amt; typeMap.get(type).gp += gp; typeMap.get(type).deals.add(opp.opportunity_id);
 
-                if (!ownerMap.has(owner)) ownerMap.set(owner, { count: 0, amt: 0, gp: 0, deals: new Set() });
+                if (!ownerMap.has(owner)) ownerMap.set(owner, { count: 0, amt: 0, gp: 0, deals: new Set(), accounts: new Set(), byBU: new Map() });
                 ownerMap.get(owner).amt += amt; ownerMap.get(owner).gp += gp; ownerMap.get(owner).deals.add(opp.opportunity_id);
+                ownerMap.get(owner).accounts.add(accKey);
+                const ownerBU = ownerMap.get(owner).byBU;
+                if (!ownerBU.has(bu)) ownerBU.set(bu, { amt: 0, gp: 0, deals: new Set() });
+                ownerBU.get(bu).amt += amt;
+                ownerBU.get(bu).gp  += gp;
+                ownerBU.get(bu).deals.add(opp.opportunity_id);
 
                 if (!leadMap.has(lead)) leadMap.set(lead, { count: 0, amt: 0, gp: 0, deals: new Set() });
                 leadMap.get(lead).amt += amt; leadMap.get(lead).gp += gp; leadMap.get(lead).deals.add(opp.opportunity_id);
@@ -838,11 +937,29 @@ function computeData() {
                 accountMap.get(accKey).amt += amt; accountMap.get(accKey).gp += gp; accountMap.get(accKey).deals.add(opp.opportunity_id);
             }
         }
+
+        if (oppChurnAmt > 0) {
+            churnRows.push({
+                opportunity: opp.opportunity_name || opp.opportunity_id,
+                opportunity_id: opp.opportunity_id,
+                bu: [...oppChurnBUs].join(', '),
+                amt: oppChurnAmt,
+                origAmt: oppOrigAmt,
+                remainAmt: oppOrigAmt - oppChurnAmt,
+                gp: oppChurnGP,
+                owner,
+                date: opp.churn_date
+            });
+        }
     }
 
     // Finalize deal counts from the Sets built above
     typeMap.forEach(d => { d.count = d.deals.size; });
-    ownerMap.forEach(d => { d.count = d.deals.size; });
+    ownerMap.forEach(d => {
+        d.count = d.deals.size;
+        d.accountCount = d.accounts.size;
+        d.byBU.forEach(bd => { bd.count = bd.deals.size; });
+    });
     leadMap.forEach(d => { d.count = d.deals.size; });
     accountMap.forEach(d => { d.count = d.deals.size; });
 
@@ -858,29 +975,45 @@ function trendFilteredOpps() {
     return _opps.filter(o => yearPasses(o.signed_date));
 }
 
+// opps/accounts are Sets, not running counts — an opportunity with several
+// QT items, or several opportunities under the same account, must not be
+// double-counted, and (unlike amt/gp) their per-month counts can't just be
+// summed when rolled up to quarters either — see aggregateToQuarters,
+// which unions these Sets across a quarter's 3 months instead of adding
+// month totals, so an account with deals in both Jan and Feb of the same
+// quarter still counts once, not twice.
 function computeTrendMonthMap() {
     const monthMap = new Map();
     for (const opp of trendFilteredOpps()) {
         const month = (opp.signed_date || '').slice(0, 7);
         if (!month) continue;
         const qts = _qtMap.get(opp.opportunity_id) || [];
+        let hasItem = false;
         for (const qt of qts) {
             if (qt.qt_type === 'churn') continue;
             const items = (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other'));
             for (const item of items) {
                 const amt = Math.max(0, (+(item.qty) || 0) * (+(item.price) || 0) - (+(item.discount) || 0));
                 const gp  = +(item.gp) || 0;
-                if (!monthMap.has(month)) monthMap.set(month, { amt: 0, gp: 0 });
-                monthMap.get(month).amt += amt;
-                monthMap.get(month).gp  += gp;
+                if (!monthMap.has(month)) monthMap.set(month, { amt: 0, gp: 0, opps: new Set(), accounts: new Set() });
+                const rec = monthMap.get(month);
+                rec.amt += amt;
+                rec.gp  += gp;
+                hasItem = true;
             }
+        }
+        if (hasItem) {
+            const rec = monthMap.get(month);
+            rec.opps.add(opp.opportunity_id);
+            rec.accounts.add(opp.account_id || 'Unknown');
         }
     }
     return monthMap;
 }
 
-// month → Map(bu → amt) — only counts BUs that currently pass the BU chip
-// filter, so "By BU" mode stacks exactly whichever BUs are selected there.
+// month → Map(bu → {amt, gp}) — only counts BUs that currently pass the BU
+// chip filter, so "By BU" mode stacks exactly whichever BUs are selected
+// there.
 function computeTrendBUMap() {
     const map = new Map();
     for (const opp of trendFilteredOpps()) {
@@ -906,9 +1039,72 @@ function computeTrendBUMap() {
     return map;
 }
 
+// rep → {amt, gp} — unlike every other trend metric, Sales Rep mode is NOT
+// a time series: one snapshot bar per rep, scoped to whatever the main
+// Year/Month filter bar is currently set to (YTD, a quarter chip, or a
+// hand-picked range) via yearPasses+_monthFilters — same scope computeData()
+// uses for the Sales Performance table below — instead of the trend
+// chart's own independent "always the full year(s)" window that
+// trendFilteredOpps()/trendAxis() give Overview and BU mode.
+function computeTrendRepSnapshotMap() {
+    const map = new Map();
+    for (const opp of _opps) {
+        if (!yearPasses(opp.signed_date)) continue;
+        if (_monthFilters.size && !_monthFilters.has((opp.signed_date || '').slice(5, 7))) continue;
+        const rep = opp.owner || 'Unknown';
+        const qts = _qtMap.get(opp.opportunity_id) || [];
+        for (const qt of qts) {
+            if (qt.qt_type === 'churn') continue;
+            const items = (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other'));
+            for (const item of items) {
+                const amt = Math.max(0, (+(item.qty) || 0) * (+(item.price) || 0) - (+(item.discount) || 0));
+                const gp  = +(item.gp) || 0;
+                if (!map.has(rep)) map.set(rep, { amt: 0, gp: 0 });
+                const rec = map.get(rep);
+                rec.amt += amt;
+                rec.gp  += gp;
+            }
+        }
+    }
+    return map;
+}
+
+// month → rep → {amt, gp} — same top-filter scope as
+// computeTrendRepSnapshotMap (yearPasses+_monthFilters, not the "always
+// full year" axis Overview/BU use), just broken out by month too. Powers
+// the Sales Rep Trend Detail table only — the chart itself stays a single
+// snapshot bar per rep, see computeTrendRepSnapshotMap's own comment.
+function computeTrendRepMonthMap() {
+    const map = new Map();
+    for (const opp of _opps) {
+        if (!yearPasses(opp.signed_date)) continue;
+        const month = (opp.signed_date || '').slice(0, 7);
+        if (!month) continue;
+        if (_monthFilters.size && !_monthFilters.has(month.slice(5, 7))) continue;
+        const rep = opp.owner || 'Unknown';
+        const qts = _qtMap.get(opp.opportunity_id) || [];
+        for (const qt of qts) {
+            if (qt.qt_type === 'churn') continue;
+            const items = (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other'));
+            for (const item of items) {
+                const amt = Math.max(0, (+(item.qty) || 0) * (+(item.price) || 0) - (+(item.discount) || 0));
+                const gp  = +(item.gp) || 0;
+                if (!map.has(month)) map.set(month, new Map());
+                const byRep = map.get(month);
+                if (!byRep.has(rep)) byRep.set(rep, { amt: 0, gp: 0 });
+                const rec = byRep.get(rep);
+                rec.amt += amt;
+                rec.gp  += gp;
+            }
+        }
+    }
+    return map;
+}
+
 // ── Render all ────────────────────────────────────────────────────────────────
 function render() {
     renderRangeChips();
+    document.getElementById('dashPeriodBadge').innerHTML = `<i class="bi bi-calendar3"></i> ${esc(currentRangeLabel())}`;
     const d = computeData();
     renderKPIs(d);
     renderBUCards(d);
@@ -981,7 +1177,6 @@ function renderBUCards({ buMap, grandOrigAmt }) {
     const rows = [...buMap.entries()]
         .filter(([bu]) => _cfgBU.includes(bu))
         .sort((a, b) => b[1].origAmt - a[1].origAmt);
-    document.getElementById('buCount').textContent = rows.length + (rows.length === 1 ? ' BU' : ' BUs');
 
     if (!rows.length) {
         document.getElementById('buCardRow').innerHTML = '<div class="dash-empty">No data</div>';
@@ -991,20 +1186,21 @@ function renderBUCards({ buMap, grandOrigAmt }) {
     document.getElementById('buCardRow').innerHTML = rows.map(([bu, d]) => {
         const gPct = pctStr(d.origGP, d.origAmt);
         const share = grandOrigAmt > 0 ? pctStr(d.origAmt, grandOrigAmt) : null;
-        const barW = grandOrigAmt > 0 ? Math.min(100, Math.round(d.origAmt / grandOrigAmt * 100)) : 0;
         const c = buColor(bu);
         return `<div class="bu-card" style="border-left-color:${c}">
             <div class="bu-card-top">
                 <span class="bu-card-name" style="color:${c}">${esc(bu)}</span>
-                <span class="bu-card-pct">${share || '—'}</span>
+                <span class="bu-card-pct-wrap">
+                    <span class="bu-card-pct-label">Share</span>
+                    <span class="bu-card-pct">${share || '—'}</span>
+                </span>
             </div>
             <div class="bu-card-amt">${fmtN(d.origAmt)} ฿</div>
             <div class="bu-card-gp-row">
                 <span>GP ${fmtN(d.origGP)} ฿</span>
                 ${gPct ? `<span class="bu-card-gp-badge">${gPct}</span>` : ''}
             </div>
-            <div class="bu-card-deals">Opportunity : ${d.deals.size}</div>
-            <div class="bu-card-bar"><div class="bu-card-bar-fill" style="width:${barW}%;background:${c}"></div></div>
+            <div class="bu-card-deals">Account : ${d.accounts.size} &nbsp;|&nbsp; Opportunity : ${d.deals.size}</div>
         </div>`;
     }).join('');
 }
@@ -1056,17 +1252,22 @@ function monthKeyToQuarterKey(monthKey) {
     return `${y}-Q${Math.ceil(+m / 3)}`;
 }
 
-// month -> {amt,gp} sums rolled up into their quarter — computeTrendMonthMap
-// itself stays month-keyed always; this is purely a display-time regroup,
-// so the underlying data-scan logic never has to know about granularity.
+// month -> {amt,gp,opps,accounts} rolled up into their quarter —
+// computeTrendMonthMap itself stays month-keyed always; this is purely a
+// display-time regroup, so the underlying data-scan logic never has to
+// know about granularity. amt/gp sum normally; opps/accounts UNION their
+// Sets instead (see computeTrendMonthMap's comment for why a straight sum
+// would double-count).
 function aggregateToQuarters(monthMap) {
     const out = new Map();
     for (const [month, rec] of monthMap) {
         const qKey = monthKeyToQuarterKey(month);
-        if (!out.has(qKey)) out.set(qKey, { amt: 0, gp: 0 });
+        if (!out.has(qKey)) out.set(qKey, { amt: 0, gp: 0, opps: new Set(), accounts: new Set() });
         const q = out.get(qKey);
         q.amt += rec.amt;
         q.gp  += rec.gp;
+        for (const id of rec.opps) q.opps.add(id);
+        for (const id of rec.accounts) q.accounts.add(id);
     }
     return out;
 }
@@ -1112,6 +1313,12 @@ function setTrendGranularity(g) {
 
 function setTrendBreakdown(bd) {
     _trendBreakdown = bd;
+    // Same hybrid rule as the Month/Quarter -> Line/Bar default (see
+    // setTrendGranularityState): clicking a breakdown tab re-derives the
+    // chart type's default — Overview reads better as a continuous Line,
+    // BU/Sales Rep as discrete Bar comparisons — but the Line/Bar toggle
+    // itself stays freely clickable afterward, this only sets where it lands.
+    _trendChartType = bd === 'amtgp' ? 'line' : 'bar';
     renderTrendChart(); // also syncs the active class + repositions its slider (see top of renderTrendChart)
 }
 
@@ -1152,8 +1359,26 @@ function renderTrendChart() {
     document.querySelectorAll('#trendGranularityGroup .trend-type-btn').forEach(b => b.classList.toggle('active', b.dataset.g === _trendGranularity));
     document.querySelectorAll('#trendChartTypeGroup .trend-type-btn').forEach(b => b.classList.toggle('active', b.dataset.ct === _trendChartType));
     document.querySelectorAll('#trendBreakdownGroup .trend-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.bd === _trendBreakdown));
-    renderTrendLegend();
     repositionTrendBreakdownSlider();
+
+    // Sales Rep mode has no time axis (see computeTrendRepSnapshotMap) —
+    // the Month/Quarter toggle would have zero effect there, so hide it
+    // rather than leave a control that looks live but silently does
+    // nothing. The Trend Detail table stays visible in every mode, just
+    // with a different shape for Sales Rep (see renderTrendRepTable).
+    document.getElementById('trendGranularityGroup').style.display = _trendBreakdown === 'rep' ? 'none' : 'flex';
+    renderTrendLegend();
+
+    if (_trendBreakdown === 'rep') {
+        const repMap = computeTrendRepSnapshotMap();
+        const reps = [...repMap.keys()].sort((a, b) => repMap.get(b).amt - repMap.get(a).amt);
+        renderTrendAmtGP(reps, reps.map(r => repMap.get(r).amt), reps.map(r => repMap.get(r).gp));
+        const repYear = _yearFilters.size === 1 ? [..._yearFilters][0] : new Date().getFullYear();
+        const repMonthKeys = [..._monthFilters].sort().map(mo => `${repYear}-${mo}`);
+        renderTrendRepTable(reps, computeTrendRepMonthMap(), repMonthKeys);
+        return;
+    }
+
     const axis = trendAxis();
     if (_trendBreakdown === 'bu') {
         let buMonthMap = computeTrendBUMap();
@@ -1163,7 +1388,10 @@ function renderTrendChart() {
     } else {
         let monthMap = computeTrendMonthMap();
         if (axis.isQuarter) monthMap = aggregateToQuarters(monthMap);
-        renderTrendAmtGP(monthMap, axis);
+        const { keys, labels, isFuture } = axis;
+        const amts = keys.map(m => isFuture(m) ? null : (monthMap.get(m)?.amt ?? 0));
+        const gps  = keys.map(m => isFuture(m) ? null : (monthMap.get(m)?.gp ?? 0));
+        renderTrendAmtGP(labels, amts, gps);
         renderTrendRawTable('amtgp', monthMap, axis);
     }
 }
@@ -1176,6 +1404,10 @@ function renderTrendChart() {
 // this one chart), separate from the top Filter Bar's BU chips (a real
 // data filter affecting the whole dashboard, not just this chart) — same
 // relationship the Amount/GP legend already had to any other filter.
+// BU mode gets a colored dot per active BU; Overview AND Sales Rep mode
+// both fall back to the plain Amount/GP legend — Sales Rep isn't grouped
+// by category the way BU is, it's the same two series (Amount, GP) just
+// snapshotted per rep instead of per month.
 function renderTrendLegend() {
     const el = document.getElementById('trendLegend');
     if (_trendBreakdown === 'bu') {
@@ -1229,13 +1461,13 @@ const trendValueLabelPlugin = {
     }
 };
 
-function renderTrendAmtGP(monthMap, axis) {
-    const { keys, labels, isFuture } = axis;
-    // Periods that haven't happened yet get a null value (a real gap in the
-    // line, not a misleading zero) but their label still shows on the axis.
-    const amts = keys.map(m => isFuture(m) ? null : (monthMap.get(m)?.amt ?? 0));
-    const gps  = keys.map(m => isFuture(m) ? null : (monthMap.get(m)?.gp ?? 0));
-
+// Two-series Amount/GP bar or line chart — shared by Overview mode (a real
+// time series: labels are month/quarter keys, amts/gps built by the caller
+// with future periods nulled out) and Sales Rep mode (a snapshot: labels
+// are rep names sorted by amount, nothing nulled since there's no
+// "hasn't happened yet" concept for a person). Either way this function
+// only ever sees three plain arrays, not what they represent.
+function renderTrendAmtGP(labels, amts, gps) {
     const isBar = _trendChartType === 'bar';
     const ctx = document.getElementById('monthlyChart').getContext('2d');
     if (_chartMonthly) _chartMonthly.destroy();
@@ -1365,17 +1597,17 @@ const trendTotalLabelPlugin = {
     }
 };
 
-// Stacked bar: one bar per month, one colored segment per BU. Only stacks
+// Stacked bar: one bar per period, one colored segment per BU. Only stacks
 // whichever BUs currently pass the BU chip filter (buPasses), same colors
 // as the BU cards/chips (buColor) so the two views read as one system.
 function renderTrendByBU(buMonthMap, axis) {
     const { keys, labels } = axis;
     const activeBUs = _cfgBU.filter(bu => buPasses(bu));
 
-    // Bar = stacked segments (one bar per month, one BU per segment). Line =
-    // one line per BU, not stacked — stacking lines on top of each other
-    // reads as area-chart clutter, not "compare BUs over time", which is
-    // what picking Line here is for.
+    // Bar = stacked segments (one bar per period, one BU per segment).
+    // Line = one line per BU, not stacked — stacking lines on top of each
+    // other reads as area-chart clutter, not "compare BUs over time",
+    // which is what picking Line here is for.
     const isBar = _trendChartType === 'bar';
     const datasets = activeBUs.map(bu => {
         const c = buColor(bu);
@@ -1450,6 +1682,10 @@ function renderTrendByBU(buMonthMap, axis) {
     });
 }
 
+function toggleTrendDetail() {
+    document.getElementById('trendDetailAccordion').classList.toggle('open');
+}
+
 // Plain values table under the Amount/GP and By BU charts — same periods
 // (and future-period "—") as whichever chart is showing, just laid out so
 // exact numbers are readable without hovering every point.
@@ -1502,20 +1738,25 @@ function renderTrendRawTable(kind, monthMap, axis) {
             return `<tr><td class="strong">${esc(labels[i])}</td>${cells}</tr>`;
         }).join('');
     } else {
-        const VAL_COL = 170, PCT_COL = 90;
-        colWidths = MONTH_COL + VAL_COL * 2 + PCT_COL;
+        const CNT_COL = 90, VAL_COL = 170, PCT_COL = 90;
+        colWidths = MONTH_COL + CNT_COL * 2 + VAL_COL * 2 + PCT_COL;
         thead = `<tr>
             <th style="width:${MONTH_COL}px">${periodColLabel}</th>
+            <th class="r" style="width:${CNT_COL}px">Account</th>
+            <th class="r" style="width:${CNT_COL}px">Opportunity</th>
             <th class="r" style="width:${VAL_COL}px">Amount</th>
             <th class="r" style="width:${VAL_COL}px">GP</th>
             <th class="r" style="width:${PCT_COL}px">GP%</th>
         </tr>`;
         rows = keys.map((m, i) => {
             const future = isFuture(m);
-            const amt = future ? null : (monthMap.get(m)?.amt ?? 0);
-            const gp  = future ? null : (monthMap.get(m)?.gp ?? 0);
+            const rec = future ? null : monthMap.get(m);
+            const amt = rec ? rec.amt : null;
+            const gp  = rec ? rec.gp : null;
             return `<tr>
                 <td class="strong">${esc(labels[i])}</td>
+                <td class="r">${rec?.accounts?.size ? rec.accounts.size.toLocaleString('en-US') : '—'}</td>
+                <td class="r">${rec?.opps?.size ? rec.opps.size.toLocaleString('en-US') : '—'}</td>
                 <td class="r">${amt == null ? '—' : fmtN(amt) + ' ฿'}</td>
                 <td class="r amt-green">${gp == null ? '—' : fmtN(gp) + ' ฿'}</td>
                 <td class="r">${amt == null || gp == null ? '—' : (pctStr(gp, amt) || '—')}</td>
@@ -1531,6 +1772,62 @@ function renderTrendRawTable(kind, monthMap, axis) {
             </table>
         </div>
     `;
+    document.getElementById('trendDetailCount').textContent = `(${keys.length})`;
+}
+
+// Sales Rep mode's own Trend Detail — kept separate from renderTrendRawTable
+// since that one is built entirely around trendAxis()'s period keys/
+// isFuture, neither of which apply to a rep snapshot.
+// Rows = reps (same order as the chart), columns = grouped by month with
+// its own Amount/GP/GP% trio — the exact transpose of 'bu' mode's table
+// (there: rows=period, column-groups=BU; here: rows=rep, column-groups=
+// month), same grouped-header pattern. Unlike the chart above (one
+// snapshot total per rep for the whole filtered range), this breaks that
+// same total down by month so its makeup is visible — but still only the
+// months actually in the current Year/Month filter, not a full calendar
+// year like Overview/BU's independent axis.
+function renderTrendRepTable(reps, repMonthMap, monthKeys) {
+    const NAME_COL = 140;
+    const AMT_COL = 110, GP_COL = 110, PCT_COL = 60;
+    const groupWidth = AMT_COL + GP_COL + PCT_COL;
+    const colWidths = NAME_COL + monthKeys.length * groupWidth;
+    const monthLabels = trendLabels(monthKeys);
+
+    const thead = `
+        <tr>
+            <th rowspan="2" style="width:${NAME_COL}px">Sales Rep</th>
+            ${monthLabels.map(lbl => `<th colspan="3" class="c" style="border-left:2px solid #e2e8f0">${lbl}</th>`).join('')}
+        </tr>
+        <tr>
+            ${monthKeys.map(() => `
+                <th class="r" style="width:${AMT_COL}px;border-left:2px solid #e2e8f0">Amount</th>
+                <th class="r" style="width:${GP_COL}px">GP</th>
+                <th class="r" style="width:${PCT_COL}px">GP%</th>
+            `).join('')}
+        </tr>
+    `;
+    const rows = reps.map(rep => {
+        const cells = monthKeys.map(mk => {
+            const rec = repMonthMap.get(mk)?.get(rep);
+            const pct = rec && rec.amt ? pctStr(rec.gp, rec.amt) : null;
+            return `
+                <td class="r" style="border-left:2px solid #f1f5f9">${rec?.amt ? fmtN(rec.amt) + ' ฿' : '—'}</td>
+                <td class="r amt-green">${rec?.gp ? fmtN(rec.gp) + ' ฿' : '—'}</td>
+                <td class="r">${pct || '—'}</td>
+            `;
+        }).join('');
+        return `<tr><td class="strong">${esc(rep)}</td>${cells}</tr>`;
+    }).join('');
+
+    document.getElementById('trendTableWrap').innerHTML = `
+        <div style="overflow-x:auto">
+            <table class="dash-tbl" style="width:${colWidths}px;table-layout:fixed">
+                <thead>${thead}</thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+    document.getElementById('trendDetailCount').textContent = `(${reps.length})`;
 }
 
 // ── Sales by Business Unit: donut + legend, self-contained in one card ────────
@@ -1618,26 +1915,28 @@ function renderChurnSection({ churnRows, grandChurnAmt, grandOrigAmt, grandChurn
     const rate   = pctStr(grandChurnAmt, grandOrigAmt + grandChurnAmt);
     const gpRate = pctStr(grandChurnGP, grandOrigGP + grandChurnGP);
     document.getElementById('churnKpiRow').innerHTML = `
-        <div class="churn-kpi-card">
-            <div class="churn-kpi-label">Churned Deals</div>
-            <div class="churn-kpi-val">${churnRows.length}</div>
-        </div>
-        <div class="churn-kpi-card">
-            <div class="churn-kpi-label">Churned Revenue</div>
-            <div class="churn-kpi-val">${fmtN(grandChurnAmt)} ฿</div>
-        </div>
-        <div class="churn-kpi-card">
-            <div class="churn-kpi-label">Churned GP</div>
-            <div class="churn-kpi-val">${fmtN(grandChurnGP)} ฿</div>
-            <div class="churn-kpi-sub">${gpRate || '0%'} of total GP</div>
-        </div>
-        <div class="churn-kpi-card">
-            <div class="churn-kpi-label">Churn Rate</div>
-            <div class="churn-kpi-val">${rate || '0%'}</div>
+        <div class="churn-hero-row">
+            <div class="churn-hero">
+                <div class="churn-hero-label">Rate</div>
+                <div class="churn-hero-val">${rate || '0%'}</div>
+            </div>
+            <div class="churn-stat-list">
+                <div class="churn-stat-item">
+                    <span class="churn-stat-label">Churned Opportunity</span>
+                    <span class="churn-stat-val">${churnRows.length}</span>
+                </div>
+                <div class="churn-stat-item">
+                    <span class="churn-stat-label">Churn Amount</span>
+                    <span class="churn-stat-val">${fmtN(grandChurnAmt)} ฿</span>
+                </div>
+                <div class="churn-stat-item">
+                    <span class="churn-stat-label">Churned GP</span>
+                    <span class="churn-stat-val">${fmtN(grandChurnGP)} ฿${gpRate ? `<span class="churn-stat-badge">${gpRate}</span>` : ''}</span>
+                </div>
+            </div>
         </div>
     `;
 
-    document.getElementById('churnCount').textContent = churnRows.length + ' รายการ';
     if (!churnRows.length) {
         document.getElementById('churnTableWrap').innerHTML = '<div class="dash-empty">No churned deals in this range</div>';
         return;
@@ -1646,16 +1945,37 @@ function renderChurnSection({ churnRows, grandChurnAmt, grandOrigAmt, grandChurn
     const sorted = [...churnRows].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     document.getElementById('churnTableWrap').innerHTML = `
         <table class="dash-tbl">
-            <thead><tr><th>Account</th><th>Opportunity</th><th>BU</th><th class="r">Amount</th><th>Owner</th><th>Date</th></tr></thead>
+            <thead>
+                <tr>
+                    <th rowspan="2">Opportunity</th>
+                    <th rowspan="2" class="c">BU</th>
+                    <th colspan="4" class="c" style="border-left:2px solid #e2e8f0">Amount</th>
+                    <th rowspan="2" class="c">Owner</th>
+                    <th rowspan="2" class="c">Date</th>
+                    <th rowspan="2"></th>
+                </tr>
+                <tr>
+                    <th class="r" style="border-left:2px solid #e2e8f0">Sign</th>
+                    <th class="r">Net</th>
+                    <th class="r">Churn</th>
+                    <th class="c">Churn%</th>
+                </tr>
+            </thead>
             <tbody>
-                ${sorted.map(r => `<tr>
-                    <td class="strong">${esc(r.account)}</td>
-                    <td>${esc(r.opportunity)}</td>
-                    <td><span class="bu-mini-badge">${esc(r.bu || '—')}</span></td>
-                    <td class="r amt-red">${fmtN(r.amt)} ฿</td>
-                    <td>${esc(r.owner)}</td>
-                    <td>${esc(r.date) || '—'}</td>
-                </tr>`).join('')}
+                ${sorted.map(r => {
+                    const pct = pctStr(r.amt, r.origAmt);
+                    return `<tr>
+                    <td class="strong">${esc(r.opportunity)}</td>
+                    <td class="c"><span class="bu-mini-badge">${esc(r.bu || '—')}</span></td>
+                    <td class="r" style="border-left:2px solid #f1f5f9">${fmtN(r.origAmt)} ฿</td>
+                    <td class="r">${fmtN(r.remainAmt)} ฿</td>
+                    <td class="r amt-red">-${fmtN(r.amt)} ฿</td>
+                    <td class="c">${pct ? `<span class="churn-pct-badge">-${pct}</span>` : '—'}</td>
+                    <td class="c">${esc(r.owner)}</td>
+                    <td class="c">${esc(r.date) || '—'}</td>
+                    <td class="c"><a class="churn-view-btn" href="b-opportunity-view.html?id=${encodeURIComponent(r.opportunity_id)}" target="_blank" rel="noopener" title="Details"><i class="bi bi-info-circle"></i></a></td>
+                </tr>`;
+                }).join('')}
             </tbody>
         </table>
     `;
@@ -1696,15 +2016,15 @@ function renderLeadSource({ leadMap }) {
 
     document.getElementById('leadTableWrap').innerHTML = `
         <table class="dash-tbl">
-            <thead><tr><th>Source</th><th class="r">Amount</th><th class="r">Deals</th><th class="r">Share</th></tr></thead>
+            <thead><tr><th>Source</th><th class="r">Amount</th><th class="r">Opportunity</th><th class="r">Share%</th></tr></thead>
             <tbody>
                 ${rows.map(([s, d]) => {
-                    const pct = total ? Math.round(d.amt / total * 100) : 0;
+                    const pct = total ? (d.amt / total * 100).toFixed(1) : '0.0';
                     return `<tr>
                         <td class="strong">${esc(s)}</td>
                         <td class="r">${fmtN(d.amt)} ฿</td>
                         <td class="r">${d.count}</td>
-                        <td class="r"><div class="cell-bar-row"><div class="cell-bar-track"><div class="cell-bar-fill" style="width:${pct}%"></div></div><span class="cell-bar-pct">${pct}%</span></div></td>
+                        <td class="r"><span class="share-badge">${pct}%</span></td>
                     </tr>`;
                 }).join('')}
             </tbody>
@@ -1712,7 +2032,7 @@ function renderLeadSource({ leadMap }) {
     `;
 }
 
-// ── Sales Rep Performance ─────────────────────────────────────────────────────
+// ── Sales Performance ─────────────────────────────────────────────────────
 function rankBadge(i) {
     if (i === 0) return '<span class="rank-badge r1">1</span>';
     if (i === 1) return '<span class="rank-badge r2">2</span>';
@@ -1720,55 +2040,179 @@ function rankBadge(i) {
     return `<span class="rank-plain">${i+1}</span>`;
 }
 
-function renderRepTable({ ownerMap }) {
-    const rows = [...ownerMap.entries()].sort((a, b) => b[1].amt - a[1].amt);
+// Click a column header to sort by it — no toggle, every column has one
+// fixed direction: value columns always biggest-first (this is a
+// leaderboard, "who's worst" isn't a reading anyone needs), Rep always
+// A-Z since "descending" doesn't mean anything for a name. That keeps #1
+// always meaning "the top performer by whatever's currently sorted" with
+// no ambiguity about which direction is active.
+const REP_SORT_FIELDS = {
+    rep:     { label: 'Codename',    get: (owner, d) => owner,          type: 'string' },
+    amt:     { label: 'Amount',      get: (owner, d) => d.amt,          type: 'number' },
+    gp:      { label: 'GP',          get: (owner, d) => d.gp,           type: 'number' },
+    gpPct:   { label: 'GP%',         get: (owner, d) => d.amt ? d.gp / d.amt : -1, type: 'number' },
+    account: { label: 'Account',     get: (owner, d) => d.accountCount, type: 'number' },
+    opp:     { label: 'Opportunity', get: (owner, d) => d.count,        type: 'number' }
+};
+let _repSortKey = 'amt';
+let _repOwnerMap = null; // last-rendered data, so a sort click can re-render without recomputing the whole dashboard
+let _repGrandAmt = 0;
+let _repExpanded = new Set(); // codenames currently showing their per-BU breakdown
+
+function toggleRepRow(owner) {
+    if (_repExpanded.has(owner)) _repExpanded.delete(owner);
+    else _repExpanded.add(owner);
+    renderRepTable({ ownerMap: _repOwnerMap, grandOrigAmt: _repGrandAmt });
+}
+
+function setRepSort(key) {
+    _repSortKey = key;
+    renderRepTable({ ownerMap: _repOwnerMap, grandOrigAmt: _repGrandAmt });
+}
+
+// Shared by Sales Performance and Top Partner's click-to-sort tables —
+// sorts [key, data] entries (as from a Map's .entries()) by one field's
+// own fixed direction (see field.type in *_SORT_FIELDS above).
+function sortTableRows(entries, field) {
+    const dir = field.type === 'string' ? 1 : -1;
+    return entries.sort((a, b) => {
+        const av = field.get(...a), bv = field.get(...b);
+        return field.type === 'string' ? dir * av.localeCompare(bv) : dir * (av - bv);
+    });
+}
+
+function renderRepTable({ ownerMap, grandOrigAmt }) {
+    _repOwnerMap = ownerMap;
+    _repGrandAmt = grandOrigAmt;
+    const field = REP_SORT_FIELDS[_repSortKey];
+    const rows = sortTableRows([...ownerMap.entries()], field);
     if (!rows.length) { document.getElementById('repTableWrap').innerHTML = '<div class="dash-empty">No data</div>'; return; }
-    const maxAmt = Math.max(...rows.map(r => r[1].amt), 1);
+
+    document.getElementById('repSortLabel').textContent = `Top of ${field.label}`;
+    const arrow = key => _repSortKey === key ? (REP_SORT_FIELDS[key].type === 'string' ? ' ▴' : ' ▾') : '';
+    const th = (key, cls) => `<th class="${cls || ''} sortable" onclick="setRepSort('${key}')">${REP_SORT_FIELDS[key].label}${arrow(key)}</th>`;
 
     document.getElementById('repTableWrap').innerHTML = `
+        <div class="dash-tbl-scroll">
         <table class="dash-tbl">
-            <thead><tr><th class="c">#</th><th>Rep</th><th class="r">Deals</th><th class="r">Amount</th><th class="r">GP</th><th class="r">Margin</th><th class="r">Share</th></tr></thead>
+            <thead><tr>
+                <th class="c">#</th>
+                ${th('rep')}
+                <th class="r">Share%</th>
+                ${th('amt', 'r')}
+                ${th('gp', 'r')}
+                ${th('gpPct', 'r')}
+                ${th('account', 'r')}
+                ${th('opp', 'r')}
+            </tr></thead>
             <tbody>
                 ${rows.map(([owner, d], i) => {
                     const margin = pctStr(d.gp, d.amt);
-                    const pct = Math.round(d.amt / maxAmt * 100);
-                    return `<tr>
+                    // % of TOTAL revenue across every rep — same definition
+                    // as Lead Source Detail's own Share column, not "% of
+                    // whoever's on top" (that was the confusing version,
+                    // see the column's earlier "Top of Amount" naming).
+                    const pct = grandOrigAmt > 0 ? (d.amt / grandOrigAmt * 100).toFixed(1) : '0.0';
+                    const isOpen = _repExpanded.has(owner);
+                    // Per-BU breakdown, only built when actually expanded —
+                    // Share%/Account don't have a clean per-BU meaning here
+                    // (Share% is "of company total", Account isn't tracked
+                    // per-BU-per-rep) so those two cells stay blank.
+                    const buRows = !isOpen ? '' : [...d.byBU.entries()]
+                        .sort((a, b) => b[1].amt - a[1].amt)
+                        .map(([bu, bd]) => {
+                            const buMargin = pctStr(bd.gp, bd.amt);
+                            return `<tr class="rep-bu-row">
+                                <td></td>
+                                <td><span class="bu-mini-badge" style="color:${buColor(bu)}">${esc(bu)}</span></td>
+                                <td></td>
+                                <td class="r">${fmtN(bd.amt)} ฿</td>
+                                <td class="r amt-green">${fmtN(bd.gp)} ฿</td>
+                                <td class="r">${buMargin || '—'}</td>
+                                <td></td>
+                                <td class="r">${bd.count}</td>
+                            </tr>`;
+                        }).join('');
+                    return `<tr class="rep-row${isOpen ? ' open' : ''}" onclick="toggleRepRow('${esc(owner).replace(/'/g, "\\'")}')">
                         <td class="c">${rankBadge(i)}</td>
-                        <td class="strong">${esc(owner)}</td>
-                        <td class="r">${d.count}</td>
+                        <td class="strong"><i class="bi bi-chevron-right rep-chevron"></i>${esc(owner)}</td>
+                        <td class="r"><span class="share-badge">${pct}%</span></td>
                         <td class="r strong">${fmtN(d.amt)} ฿</td>
                         <td class="r amt-green">${fmtN(d.gp)} ฿</td>
                         <td class="r">${margin || '—'}</td>
-                        <td class="r"><div class="cell-bar-row"><div class="cell-bar-track"><div class="cell-bar-fill" style="width:${pct}%"></div></div><span class="cell-bar-pct">${pct}%</span></div></td>
-                    </tr>`;
+                        <td class="r">${d.accountCount}</td>
+                        <td class="r">${d.count}</td>
+                    </tr>${buRows}`;
                 }).join('')}
             </tbody>
         </table>
+        </div>
     `;
 }
 
-// ── Top Clients ───────────────────────────────────────────────────────────────
-function renderClientTable({ accountMap }) {
-    const rows = [...accountMap.entries()].sort((a, b) => b[1].amt - a[1].amt).slice(0, 10);
+// ── Top Partner ───────────────────────────────────────────────────────────────
+// Same sortable/scrollable pattern as Sales Performance — click a
+// header to sort by it (fixed direction per column, no toggle), max ~10
+// rows visible with the rest reachable by scroll instead of a hard
+// slice(0, 10) cutoff. Share% stays non-clickable for the same reason as
+// the Rep table's: it's a direct function of Amount, so sorting by it
+// would just reproduce Amount's own order under a different-looking header.
+const CLIENT_SORT_FIELDS = {
+    name:  { label: 'Partner',     get: (key, d) => d.name, type: 'string' },
+    opp:   { label: 'Opportunity', get: (key, d) => d.count, type: 'number' },
+    amt:   { label: 'Amount',      get: (key, d) => d.amt,  type: 'number' },
+    gp:    { label: 'GP',          get: (key, d) => d.gp,   type: 'number' },
+    gpPct: { label: 'GP%',         get: (key, d) => d.amt ? d.gp / d.amt : -1, type: 'number' }
+};
+let _clientSortKey = 'amt';
+let _clientAccountMap = null;
+let _clientGrandAmt = 0;
+
+function setClientSort(key) {
+    _clientSortKey = key;
+    renderClientTable({ accountMap: _clientAccountMap, grandOrigAmt: _clientGrandAmt });
+}
+
+function renderClientTable({ accountMap, grandOrigAmt }) {
+    _clientAccountMap = accountMap;
+    _clientGrandAmt = grandOrigAmt;
+    const field = CLIENT_SORT_FIELDS[_clientSortKey];
+    const rows = sortTableRows([...accountMap.entries()], field);
     if (!rows.length) { document.getElementById('clientTableWrap').innerHTML = '<div class="dash-empty">No data</div>'; return; }
 
+    document.getElementById('clientSortLabel').textContent = `Top of ${field.label}`;
+    const arrow = key => _clientSortKey === key ? (CLIENT_SORT_FIELDS[key].type === 'string' ? ' ▴' : ' ▾') : '';
+    const th = (key, cls) => `<th class="${cls || ''} sortable" onclick="setClientSort('${key}')">${CLIENT_SORT_FIELDS[key].label}${arrow(key)}</th>`;
+
     document.getElementById('clientTableWrap').innerHTML = `
+        <div class="dash-tbl-scroll">
         <table class="dash-tbl">
-            <thead><tr><th class="c">#</th><th>Client</th><th class="r">Deals</th><th class="r">Amount</th><th class="r">GP</th><th class="r">Margin</th></tr></thead>
+            <thead><tr>
+                <th class="c">#</th>
+                ${th('name')}
+                ${th('amt', 'r')}
+                ${th('gp', 'r')}
+                ${th('gpPct', 'r')}
+                ${th('opp', 'r')}
+                <th class="r">Share%</th>
+            </tr></thead>
             <tbody>
                 ${rows.map(([, d], i) => {
                     const margin = pctStr(d.gp, d.amt);
+                    const pct = grandOrigAmt > 0 ? (d.amt / grandOrigAmt * 100).toFixed(1) : '0.0';
                     return `<tr>
                         <td class="c">${rankBadge(i)}</td>
                         <td class="strong">${esc(d.name)}</td>
-                        <td class="r">${d.count}</td>
                         <td class="r strong">${fmtN(d.amt)} ฿</td>
                         <td class="r amt-green">${fmtN(d.gp)} ฿</td>
                         <td class="r">${margin || '—'}</td>
+                        <td class="r">${d.count}</td>
+                        <td class="r"><span class="share-badge">${pct}%</span></td>
                     </tr>`;
                 }).join('')}
             </tbody>
         </table>
+        </div>
     `;
 }
 

@@ -55,6 +55,14 @@ All table names are `snake_case` (no hyphens) — standardized 2026-08-27, see [
 
 `b_quest_capacity` (role, max_capacity) and 14 legacy flat designer_*/creative_* columns on `b_quest_list` were dropped 2026-08-27 — dead since the task-role cutover, nothing in the codebase read them anymore.
 
+### Codename Cascade
+
+`profiles.codename` is used as a soft join key (plain string match, no FK) across several tables. An `AFTER UPDATE` trigger on `profiles` (`trg_profiles_cascade_codename` → `fn_cascade_codename_rename()`, current version in `supabase/migrations/20260910000001_cascade_codename_opportunity.sql`) auto-propagates a codename rename into every table below — this is automatic, no manual step needed when a codename actually changes.
+
+Tables currently covered: `setting_project.codename`, `b_account_setting.codename`, `b_finance_setting.codename`, `b_quest_member_role.codename`, `b_quest_member.codename`, `b_quest_task_role.assign`, `b_quest_list.owner`, `b_account_list.create_by`/`update_by`, `b_opportunity_list.owner`/`am`/`sub_am`/`create_by`/`update_by`.
+
+**Standing rule:** any new table/column that stores a person's codename as free text (not a `profiles.id` FK) MUST be added to `fn_cascade_codename_rename()` in the same migration that creates it — otherwise a future codename rename will silently leave that column stale (this already happened once, after the 2026-08-27 snake_case table rename). When adding schema, check new column names like `codename`/`owner`/`assign`/`create_by` against this list, not just when a bug is reported.
+
 ## Auth & Permission System
 
 **Auth guard:** `initLayout()` → `initAuthGuard()` called on every page. Redirects to `/auth/login.html` if no session.

@@ -170,6 +170,13 @@
         .trend-legend-item:hover { opacity: 0.75; }
         .trend-legend-item.is-hidden { opacity: 0.4; text-decoration: line-through; }
         .trend-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+        /* Compare mode's headline number — first vs last selected year,
+           green/up or red/down. Sits in the legend row (margin-left:auto
+           already pushes that whole row right), ahead of the Amount/GP or
+           BU dots so it reads as the summary, not just another item. */
+        .trend-growth-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 800; padding: 3px 10px; border-radius: 20px; }
+        .trend-growth-badge.up { background: rgba(22,163,74,0.1); color: #16a34a; }
+        .trend-growth-badge.down { background: rgba(220,38,38,0.1); color: #dc2626; }
         /* Compact toggle box — shared by Line/Bar (icon glyphs, fixed 26px
            square) and Month/Quarter (.wide modifier, text sized to its own
            word). Sits next to the title, not styled as the big filter pill
@@ -181,6 +188,9 @@
         .trend-type-btn.wide { width: auto; padding: 0 10px; white-space: nowrap; }
         .trend-type-btn:hover { color: var(--c-accent-dark); }
         .trend-type-btn.active { background: #fff; color: var(--c-accent-dark); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+        /* Line/Bar toggle during Compare (always bars there) — dimmed and
+           inert in place, not hidden, so the rest of the row never shifts. */
+        .trend-type-toggle.is-disabled { opacity: 0.35; pointer-events: none; }
         /* Sliding-pill toggle — "Overview" and "BU" aren't the same length,
            so a fixed 50/50 split (flex:1 + translateX(100%)) either left
            the highlight not matching the short label's width or let the
@@ -338,6 +348,21 @@
                     <button class="trend-mode-btn" data-bd="bu" onclick="setTrendBreakdown('bu')">BU</button>
                     <button class="trend-mode-btn" data-bd="rep" onclick="setTrendBreakdown('rep')">Sales Rep</button>
                 </div>
+                <!-- Compare — grouped-bar year-over-year view, across every
+                     breakdown mode. Sits after every other toggle, never
+                     before, so turning it on only ever APPENDS the year
+                     picker to the right — nothing already on screen shifts
+                     position. (Compare being bar-only just dims
+                     #trendChartTypeGroup in place instead of hiding it —
+                     hiding/showing was exactly what made this feel janky
+                     the first pass.) An earlier, separate attempt at this
+                     same feature got fully reverted for a cluttered
+                     3-toggle-row control surface — keeping this one to a
+                     single small addition at a fixed position. -->
+                <div class="trend-type-toggle" id="trendCompareGroup">
+                    <button class="trend-type-btn" id="trendCompareBtn" onclick="toggleTrendCompare()" title="Compare years"><i class="bi bi-bar-chart-steps"></i></button>
+                </div>
+                <div class="flt-select-box" id="wrap-compareYears" style="width:150px;height:32px;display:none"></div>
             </div>
             <div class="trend-legend" id="trendLegend"></div>
         </div>
@@ -477,9 +502,15 @@ let _trendBreakdown = 'amtgp'; // 'amtgp' | 'bu' | 'rep'
 // that, not re-derived on every render (only when the date range itself
 // changes, or the toggle itself is clicked).
 let _trendGranularity = 'month'; // 'month' | 'quarter'
-// A year-over-year Compare mode (MoM/QoQ, with its own Normal/Compare and
-// granularity toggles) was built and rolled back for being confusing —
-// keeping this section to the plain trend only, on purpose, for now.
+// Compare mode — grouped bars, one group per period (respecting the
+// existing Month/Quarter granularity toggle above) with one bar per
+// selected year. An earlier attempt at this exact feature was built and
+// reverted for a cluttered 3-toggle-row control surface — this version
+// reuses the existing Line/Bar slot instead of adding a new row, see the
+// HTML comment on #trendCompareGroup.
+let _trendCompare = false;
+let _compareYears = new Set();
+let _compareYearPicker = null; // createMultiSelect instance, built lazily on first toggleTrendCompare()
 
 const TYPE_CLR = { 'New Business': '#1d4ed8', 'Retention': '#6d28d9', 'Up Sale': '#0d7a70' }; // ref .op-type badge colors in b-opportunity-list.html
 const STATUS_CLR = { 'Churn': '#f97316', 'End Contact': '#64748b' }; // ref .op-card.churn/.ended — everything else uses the brand accent
@@ -1306,6 +1337,148 @@ function trendAxis() {
     return { keys, labels, isQuarter, isFuture: k => k > nowKey };
 }
 
+// ── Compare mode ─────────────────────────────────────────────────────────────
+// Unlike every other trend mode (always the full year(s), independent of
+// the top filter), Compare deliberately DOES respect the top Month filter
+// — "which months" comes from _monthFilters as usual, "which years" comes
+// from _compareYears, so picking Q1 up top + years {2025,2026} compares
+// Jan-Mar 2025 vs Jan-Mar 2026, not full calendar years.
+function compareMonthKeys() {
+    return [...(_monthFilters.size ? _monthFilters : ytdMonths())].sort();
+}
+function monthNumToQuarter(m) { return 'Q' + Math.ceil(+m / 3); }
+
+// keys/labels for the period axis (X-axis in Overview/BU compare, column
+// groups in every compare Detail table) — quarters only include a quarter
+// if at least one of its months is in the current selection.
+function compareAxisKeys() {
+    const months = compareMonthKeys();
+    if (_trendGranularity !== 'quarter') {
+        return { keys: months, labels: months.map(m => MONTHS[+m - 1]) };
+    }
+    const keys = [...new Set(months.map(monthNumToQuarter))].sort();
+    return { keys, labels: keys };
+}
+
+// 'MM' → year → {amt, gp}
+function computeCompareMonthMap(years) {
+    const map = new Map();
+    const months = new Set(compareMonthKeys());
+    for (const opp of _opps) {
+        const y = +(opp.signed_date || '').slice(0, 4);
+        const m = (opp.signed_date || '').slice(5, 7);
+        if (!years.has(y) || !months.has(m)) continue;
+        const qts = _qtMap.get(opp.opportunity_id) || [];
+        for (const qt of qts) {
+            if (qt.qt_type === 'churn') continue;
+            const items = (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other'));
+            for (const item of items) {
+                const amt = Math.max(0, (+(item.qty) || 0) * (+(item.price) || 0) - (+(item.discount) || 0));
+                const gp  = +(item.gp) || 0;
+                if (!map.has(m)) map.set(m, new Map());
+                const byYear = map.get(m);
+                if (!byYear.has(y)) byYear.set(y, { amt: 0, gp: 0 });
+                byYear.get(y).amt += amt;
+                byYear.get(y).gp  += gp;
+            }
+        }
+    }
+    return map;
+}
+
+// 'MM' → year → bu → {amt, gp} — same scope as computeCompareMonthMap, one
+// level deeper for BU mode's stacked-per-year bars.
+function computeCompareBUMap(years) {
+    const map = new Map();
+    const months = new Set(compareMonthKeys());
+    for (const opp of _opps) {
+        const y = +(opp.signed_date || '').slice(0, 4);
+        const m = (opp.signed_date || '').slice(5, 7);
+        if (!years.has(y) || !months.has(m)) continue;
+        const qts = _qtMap.get(opp.opportunity_id) || [];
+        for (const qt of qts) {
+            if (qt.qt_type === 'churn') continue;
+            const items = (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other'));
+            for (const item of items) {
+                const amt = Math.max(0, (+(item.qty) || 0) * (+(item.price) || 0) - (+(item.discount) || 0));
+                const gp  = +(item.gp) || 0;
+                const bu  = item.bu || 'Other';
+                if (!map.has(m)) map.set(m, new Map());
+                const byYear = map.get(m);
+                if (!byYear.has(y)) byYear.set(y, new Map());
+                const byBu = byYear.get(y);
+                if (!byBu.has(bu)) byBu.set(bu, { amt: 0, gp: 0 });
+                byBu.get(bu).amt += amt;
+                byBu.get(bu).gp  += gp;
+            }
+        }
+    }
+    return map;
+}
+
+// owner → year → {amt, gp} — Sales Rep compare has no period axis (same
+// snapshot nature as its non-compare mode, see computeTrendRepSnapshotMap),
+// just one total per rep per selected year.
+function computeCompareRepMap(years) {
+    const map = new Map();
+    const months = new Set(compareMonthKeys());
+    for (const opp of _opps) {
+        const y = +(opp.signed_date || '').slice(0, 4);
+        const m = (opp.signed_date || '').slice(5, 7);
+        if (!years.has(y) || !months.has(m)) continue;
+        const owner = opp.owner || 'Unknown';
+        const qts = _qtMap.get(opp.opportunity_id) || [];
+        for (const qt of qts) {
+            if (qt.qt_type === 'churn') continue;
+            const items = (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other'));
+            for (const item of items) {
+                const amt = Math.max(0, (+(item.qty) || 0) * (+(item.price) || 0) - (+(item.discount) || 0));
+                const gp  = +(item.gp) || 0;
+                if (!map.has(owner)) map.set(owner, new Map());
+                const byYear = map.get(owner);
+                if (!byYear.has(y)) byYear.set(y, { amt: 0, gp: 0 });
+                byYear.get(y).amt += amt;
+                byYear.get(y).gp  += gp;
+            }
+        }
+    }
+    return map;
+}
+
+function aggregateCompareToQuarters(monthMap) {
+    const out = new Map();
+    for (const [m, byYear] of monthMap) {
+        const q = monthNumToQuarter(m);
+        if (!out.has(q)) out.set(q, new Map());
+        const qByYear = out.get(q);
+        for (const [y, rec] of byYear) {
+            if (!qByYear.has(y)) qByYear.set(y, { amt: 0, gp: 0 });
+            qByYear.get(y).amt += rec.amt;
+            qByYear.get(y).gp  += rec.gp;
+        }
+    }
+    return out;
+}
+
+function aggregateCompareBUToQuarters(buMonthMap) {
+    const out = new Map();
+    for (const [m, byYear] of buMonthMap) {
+        const q = monthNumToQuarter(m);
+        if (!out.has(q)) out.set(q, new Map());
+        const qByYear = out.get(q);
+        for (const [y, byBu] of byYear) {
+            if (!qByYear.has(y)) qByYear.set(y, new Map());
+            const qByBu = qByYear.get(y);
+            for (const [bu, rec] of byBu) {
+                if (!qByBu.has(bu)) qByBu.set(bu, { amt: 0, gp: 0 });
+                qByBu.get(bu).amt += rec.amt;
+                qByBu.get(bu).gp  += rec.gp;
+            }
+        }
+    }
+    return out;
+}
+
 function setTrendGranularity(g) {
     setTrendGranularityState(g);
     renderTrendChart(); // also syncs both toggles' active class (see top of renderTrendChart)
@@ -1359,6 +1532,7 @@ function renderTrendChart() {
     document.querySelectorAll('#trendGranularityGroup .trend-type-btn').forEach(b => b.classList.toggle('active', b.dataset.g === _trendGranularity));
     document.querySelectorAll('#trendChartTypeGroup .trend-type-btn').forEach(b => b.classList.toggle('active', b.dataset.ct === _trendChartType));
     document.querySelectorAll('#trendBreakdownGroup .trend-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.bd === _trendBreakdown));
+    document.getElementById('trendCompareBtn').classList.toggle('active', _trendCompare);
     repositionTrendBreakdownSlider();
 
     // Sales Rep mode has no time axis (see computeTrendRepSnapshotMap) —
@@ -1367,6 +1541,17 @@ function renderTrendChart() {
     // nothing. The Trend Detail table stays visible in every mode, just
     // with a different shape for Sales Rep (see renderTrendRepTable).
     document.getElementById('trendGranularityGroup').style.display = _trendBreakdown === 'rep' ? 'none' : 'flex';
+    // Compare is always bars (no meaningful "Compare line chart") — dimmed
+    // in place rather than hidden, so nothing else in the row shifts when
+    // Compare toggles on/off (see the HTML comment on #trendCompareGroup).
+    document.getElementById('trendChartTypeGroup').classList.toggle('is-disabled', _trendCompare);
+    document.getElementById('wrap-compareYears').style.display = _trendCompare ? 'flex' : 'none';
+
+    if (_trendCompare) {
+        renderTrendCompare();
+        return;
+    }
+
     renderTrendLegend();
 
     if (_trendBreakdown === 'rep') {
@@ -1684,6 +1869,257 @@ function renderTrendByBU(buMonthMap, axis) {
 
 function toggleTrendDetail() {
     document.getElementById('trendDetailAccordion').classList.toggle('open');
+}
+
+// ── Compare charts ───────────────────────────────────────────────────────────
+// Year-by-year color — no fixed meaning per year (unlike BU, which has a
+// stable config order), so it's just position-in-the-sorted-years-array
+// indexed into the same palette BU uses.
+function compareYearColor(years, y) {
+    const idx = years.indexOf(y);
+    return CAT_PALETTE[(idx >= 0 ? idx : 0) % CAT_PALETTE.length];
+}
+
+// Overview/Sales Rep compare share this: one dataset per year, grouped
+// (not stacked) bars, X-axis is periods for Overview or rep names for
+// Sales Rep — the function doesn't care which, it's just given labels/a
+// value-lookup callback.
+function renderCompareGroupedChart(keys, labels, years, getVal) {
+    const datasets = years.map(y => ({
+        label: String(y),
+        data: keys.map(k => getVal(k, y)),
+        backgroundColor: compareYearColor(years, y),
+        borderRadius: 3
+    }));
+    const ctx = document.getElementById('monthlyChart').getContext('2d');
+    if (_chartMonthly) _chartMonthly.destroy();
+    _chartMonthly = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1e293b', cornerRadius: 10, padding: 12, boxPadding: 4,
+                    bodySpacing: 5, bodyAlign: 'right', titleColor: '#fff', titleFont: { size: 13, weight: '700' },
+                    bodyColor: '#e2e8f0', bodyFont: { size: 12 },
+                    callbacks: { label: c => c.raw === 0 ? null : ` ${c.dataset.label}: ${Math.round(c.raw).toLocaleString('en-US')} ฿` }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94a3b8' } },
+                y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 }, color: '#94a3b8', callback: v => fmtK(v) }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+// BU compare: same grouped-by-year bars as above, but each year's bar is
+// itself stacked by BU (reusing the same stacked-by-BU-color convention as
+// non-compare BU mode) — one dataset per (BU, year) pair, grouped via a
+// per-year `stack` id so Chart.js groups the years side by side and stacks
+// each year's BUs within it.
+function renderCompareBUChart(keys, labels, years, buMonthMap) {
+    const activeBUs = _cfgBU.filter(bu => buPasses(bu));
+    const datasets = years.flatMap(y => activeBUs.map(bu => ({
+        label: bu,
+        data: keys.map(k => buMonthMap.get(k)?.get(y)?.get(bu)?.amt || 0),
+        backgroundColor: buColor(bu),
+        stack: `y${y}`,
+        borderRadius: 3,
+        // Only used by the tooltip below — Chart.js datasets don't carry
+        // arbitrary metadata natively past what callbacks can already see
+        // via context, but stack id alone doesn't say the year in plain
+        // text, so stash it directly on the dataset.
+        _year: y
+    })));
+    const ctx = document.getElementById('monthlyChart').getContext('2d');
+    if (_chartMonthly) _chartMonthly.destroy();
+    _chartMonthly = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1e293b', cornerRadius: 10, padding: 12, boxPadding: 4,
+                    bodySpacing: 5, bodyAlign: 'right', titleColor: '#fff', titleFont: { size: 13, weight: '700' },
+                    bodyColor: '#e2e8f0', bodyFont: { size: 12 },
+                    callbacks: {
+                        label: c => c.raw === 0 ? null : ` ${c.dataset.label} ${c.dataset._year}: ${Math.round(c.raw).toLocaleString('en-US')} ฿`
+                    }
+                }
+            },
+            scales: {
+                x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 }, color: '#94a3b8' } },
+                y: { stacked: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 }, color: '#94a3b8', callback: v => fmtK(v) }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+// Shared by Overview/Sales Rep compare — a plain year color-dot legend
+// (BU compare keeps its own per-BU legend instead, via renderTrendLegend).
+function renderCompareYearLegend(years) {
+    document.getElementById('trendLegend').innerHTML = years.map(y =>
+        `<span class="trend-legend-item"><span class="trend-legend-dot" style="background:${compareYearColor(years, y)}"></span>${y}</span>`
+    ).join('');
+}
+
+// Head (earliest selected) vs tail (latest selected) year, summed across
+// whatever's on screen — same definition regardless of breakdown mode.
+function renderCompareGrowthBadge(years, totalByYear) {
+    const el = document.getElementById('trendLegend');
+    if (years.length < 2) return; // nothing to compare with just one year
+    const headTotal = totalByYear(years[0]);
+    const tailTotal = totalByYear(years[years.length - 1]);
+    const growth = headTotal > 0 ? (tailTotal - headTotal) / headTotal * 100 : null;
+    if (growth == null) return;
+    const up = growth >= 0;
+    el.insertAdjacentHTML('afterbegin',
+        `<span class="trend-growth-badge ${up ? 'up' : 'down'}"><i class="bi bi-arrow-${up ? 'up' : 'down'}-short"></i>${Math.abs(growth).toFixed(1)}%</span>`);
+}
+
+function toggleTrendCompare() {
+    _trendCompare = !_trendCompare;
+    if (_trendCompare && !_compareYearPicker) {
+        const thisYear = new Date().getFullYear();
+        _compareYears = new Set([thisYear - 1, thisYear]);
+        _compareYearPicker = createMultiSelect({
+            trigger: document.getElementById('wrap-compareYears'),
+            label: 'Years',
+            showTag: false,
+            getOptions: () => {
+                const known = new Set([...new Set(_opps.map(o => +(o.signed_date || '').slice(0, 4)))].filter(Boolean));
+                known.add(thisYear); known.add(thisYear - 1);
+                return [...known].sort((a, b) => b - a).map(y => ({ value: String(y), label: String(y) }));
+            },
+            onChange: values => {
+                _compareYears = new Set(values.map(Number));
+                renderTrendChart();
+            }
+        });
+        _compareYearPicker.setValues([...(_compareYears)].map(String));
+    }
+    renderTrendChart();
+}
+
+// Shared by every Compare breakdown mode — rowKeys/rowLabels are periods
+// for Overview/BU or rep names for Sales Rep, getYearData(key, year)
+// looks up {amt, gp} for that row's year column. Growth% (head vs tail
+// selected year) is per-row here, same head/tail definition as the
+// header badge (see renderCompareGrowthBadge) which shows the same thing
+// totaled across every row.
+function renderCompareDetailTable(rowKeys, rowLabels, years, rowColLabel, getYearData) {
+    const NAME_COL = 100, AMT_COL = 110, GP_COL = 110, GROWTH_COL = 90;
+    const colWidths = NAME_COL + years.length * (AMT_COL + GP_COL) + GROWTH_COL;
+    const thead = `
+        <tr>
+            <th rowspan="2" style="width:${NAME_COL}px">${rowColLabel}</th>
+            ${years.map(y => `<th colspan="2" class="c" style="border-left:2px solid #e2e8f0">${y}</th>`).join('')}
+            <th rowspan="2" class="r" style="width:${GROWTH_COL}px">Growth%</th>
+        </tr>
+        <tr>
+            ${years.map(() => `
+                <th class="r" style="width:${AMT_COL}px;border-left:2px solid #e2e8f0">Amount</th>
+                <th class="r" style="width:${GP_COL}px">GP</th>
+            `).join('')}
+        </tr>
+    `;
+    const rows = rowKeys.map((k, i) => {
+        const cells = years.map(y => {
+            const d = getYearData(k, y);
+            return `
+                <td class="r" style="border-left:2px solid #f1f5f9">${d.amt ? fmtN(d.amt) + ' ฿' : '—'}</td>
+                <td class="r amt-green">${d.gp ? fmtN(d.gp) + ' ฿' : '—'}</td>
+            `;
+        }).join('');
+        let growthCell = '—';
+        if (years.length >= 2) {
+            const headAmt = getYearData(k, years[0]).amt, tailAmt = getYearData(k, years[years.length - 1]).amt;
+            if (headAmt > 0) {
+                const growth = (tailAmt - headAmt) / headAmt * 100;
+                growthCell = `<span class="${growth >= 0 ? 'amt-green' : 'amt-red'}">${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%</span>`;
+            }
+        }
+        return `<tr><td class="strong">${esc(rowLabels[i])}</td>${cells}<td class="r">${growthCell}</td></tr>`;
+    }).join('');
+
+    document.getElementById('trendTableWrap').innerHTML = `
+        <div style="overflow-x:auto">
+            <table class="dash-tbl" style="width:${colWidths}px;table-layout:fixed">
+                <thead>${thead}</thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+    document.getElementById('trendDetailCount').textContent = `(${rowKeys.length})`;
+}
+
+// BU compare's own legend — plain color dots, not clickable. The normal
+// BU-mode legend's toggleTrendSeries(index) assumes one dataset per BU;
+// compare mode has one dataset per (BU, year) pair, so a legend index
+// would only ever hide the first year's copy of that BU — wrong. Kept
+// simple/static here rather than write a toggle that finds every year's
+// copy of one BU, until this mode actually needs the hide/show feature.
+function renderCompareBULegend() {
+    const activeBUs = _cfgBU.filter(bu => buPasses(bu));
+    document.getElementById('trendLegend').innerHTML = activeBUs.map(bu =>
+        `<span class="trend-legend-item"><span class="trend-legend-dot" style="background:${buColor(bu)}"></span>${esc(bu)}</span>`
+    ).join('');
+}
+
+// Orchestrates all three breakdown modes under Compare — mirrors
+// renderTrendChart's own if/else-if shape below, just for the Compare
+// data/chart/table variants.
+function renderTrendCompare() {
+    const years = [...(_compareYears.size ? _compareYears : [new Date().getFullYear() - 1, new Date().getFullYear()])].sort();
+    const yearSet = new Set(years);
+
+    if (_trendBreakdown === 'rep') {
+        const repMap = computeCompareRepMap(yearSet);
+        const total = (rep, y) => repMap.get(rep)?.get(y)?.amt || 0;
+        const reps = [...repMap.keys()].sort((a, b) =>
+            years.reduce((s, y) => s + total(b, y), 0) - years.reduce((s, y) => s + total(a, y), 0));
+        renderCompareYearLegend(years);
+        renderCompareGroupedChart(reps, reps, years, total);
+        renderCompareGrowthBadge(years, y => reps.reduce((s, rep) => s + total(rep, y), 0));
+        renderCompareDetailTable(reps, reps, years, 'Sales Rep', (rep, y) => repMap.get(rep)?.get(y) || { amt: 0, gp: 0 });
+        return;
+    }
+
+    const { keys, labels } = compareAxisKeys();
+    const periodLabel = _trendGranularity === 'quarter' ? 'Quarter' : 'Month';
+
+    if (_trendBreakdown === 'bu') {
+        let buMonthMap = computeCompareBUMap(yearSet);
+        if (_trendGranularity === 'quarter') buMonthMap = aggregateCompareBUToQuarters(buMonthMap);
+        const yearTotal = (k, y) => {
+            const byBu = buMonthMap.get(k)?.get(y);
+            if (!byBu) return { amt: 0, gp: 0 };
+            let amt = 0, gp = 0;
+            byBu.forEach(r => { amt += r.amt; gp += r.gp; });
+            return { amt, gp };
+        };
+        renderCompareBULegend();
+        renderCompareBUChart(keys, labels, years, buMonthMap);
+        renderCompareGrowthBadge(years, y => keys.reduce((s, k) => s + yearTotal(k, y).amt, 0));
+        renderCompareDetailTable(keys, labels, years, periodLabel, yearTotal);
+        return;
+    }
+
+    let monthMap = computeCompareMonthMap(yearSet);
+    if (_trendGranularity === 'quarter') monthMap = aggregateCompareToQuarters(monthMap);
+    renderCompareYearLegend(years);
+    renderCompareGroupedChart(keys, labels, years, (k, y) => monthMap.get(k)?.get(y)?.amt || 0);
+    renderCompareGrowthBadge(years, y => keys.reduce((s, k) => s + (monthMap.get(k)?.get(y)?.amt || 0), 0));
+    renderCompareDetailTable(keys, labels, years, periodLabel, (k, y) => monthMap.get(k)?.get(y) || { amt: 0, gp: 0 });
 }
 
 // Plain values table under the Amount/GP and By BU charts — same periods

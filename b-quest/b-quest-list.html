@@ -242,7 +242,7 @@
 </button>
 
 <script>
-    const SEARCH_COLUMNS = ['account_name', 'opportunity_name', 'task_name', 'detail', 'owner'];
+    const SEARCH_COLUMNS = ['id', 'account_name', 'opportunity_name', 'task_name', 'detail', 'owner'];
     let dataList = [];
     let roleList = [];       // [{id, name, color, active}]
     let roleColorMap = {};   // role_id -> color
@@ -540,6 +540,28 @@
         return ids;
     }
 
+    // The assignee codename lives on "b_quest_task_role".assign, a separate
+    // table from "b_quest_list" — SEARCH_COLUMNS' single-table .or() can't
+    // reach it, so resolve matching quest_ids here and fold them into the
+    // same .or() clause as an `id.in.(...)` branch.
+    async function getSearchAssignMatchIds(search) {
+        if (!search) return [];
+        const { data } = await supabaseClient.from('b_quest_task_role').select('quest_id').ilike('assign', `%${search}%`);
+        return [...new Set((data || []).map(r => r.quest_id))];
+    }
+
+    // Same matching rule as fetchQuests()'s SEARCH_COLUMNS .or() + assignee
+    // check, evaluated in JS against a single already-fetched row (which
+    // already carries roles:"b_quest_task_role" via its select) instead of
+    // a second query — used by fetchQuestById(), which only ever handles
+    // one known row.
+    function matchesSearch(task, search) {
+        if (!search) return true;
+        const term = search.toLowerCase();
+        if (SEARCH_COLUMNS.some(col => (task[col] || '').toLowerCase().includes(term))) return true;
+        return (task.roles || []).some(r => (r.assign || '').toLowerCase().includes(term));
+    }
+
     // render=false lets a caller (pull-to-refresh) get the fetched rows
     // back without renderCards() touching the DOM yet — so the old cards
     // stay visible on screen for the whole fetch instead of a blank flash
@@ -575,7 +597,12 @@
             if (finalIds !== null) query = query.in('id', finalIds);
 
             const search = document.getElementById('globalSearch').value.trim();
-            if (search) query = query.or(SEARCH_COLUMNS.map(col => `${col}.ilike.%${search}%`).join(','));
+            if (search) {
+                const assignMatchIds = await getSearchAssignMatchIds(search);
+                const orParts = SEARCH_COLUMNS.map(col => `${col}.ilike.%${search}%`);
+                if (assignMatchIds.length) orParts.push(`id.in.(${assignMatchIds.join(',')})`);
+                query = query.or(orParts.join(','));
+            }
 
             const val = (id) => document.getElementById(id)?.value || "";
             const owners = ownerFilter?.getValues() || [];
@@ -622,11 +649,12 @@
         // against, so fall back to the flat permission instead of leaving
         // it permanently stuck with neither button ever showing.
         if (!roles.length) return { canEdit: canBquest('edit'), canDel: canBquest('delete') };
+        const isOwner = task.owner === getBxUser()?.codename;
         let editable = 0, deletable = 0;
         roles.forEach(r => {
             const roleName = roleNameMap[r.role_id];
-            if (canBquestActOnRole(roleName, r.assign, 'edit')) editable++;
-            if (canBquestActOnRole(roleName, r.assign, 'delete')) deletable++;
+            if (canBquestActOnRole(roleName, r.assign, 'edit', isOwner)) editable++;
+            if (canBquestActOnRole(roleName, r.assign, 'delete', isOwner)) deletable++;
         });
         return { canEdit: editable > 0, canDel: deletable === roles.length };
     }
@@ -774,14 +802,15 @@
         if (finalIds !== null && !finalIds.includes(id)) return null; // already excluded, skip the query entirely
 
         let query = supabaseClient.from('b_quest_list').select('*, roles:"b_quest_task_role"(*)').eq('id', id);
-        const search = document.getElementById('globalSearch').value.trim();
-        if (search) query = query.or(SEARCH_COLUMNS.map(col => `${col}.ilike.%${search}%`).join(','));
         const owners = ownerFilter?.getValues() || [];
         if (owners.length) query = query.in('owner', owners);
 
         const { data, error } = await query;
         if (error) { console.error(error); return null; }
-        return data?.[0] || null;
+        const task = data?.[0] || null;
+        const search = document.getElementById('globalSearch').value.trim();
+        if (task && !matchesSearch(task, search)) return null; // assignee lives cross-table, so this checks task.roles in JS instead of another .or()
+        return task;
     }
 
     window.refreshSingleCard = async function refreshSingleCard(id) {

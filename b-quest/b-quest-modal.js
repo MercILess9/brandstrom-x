@@ -944,8 +944,9 @@ const BQuestApp = (() => {
                     // EVERY role row present, same rule as the List page's
                     // Delete button. Partial coverage means using Edit to
                     // drop just their own role instead (see submitForm).
+                    const isOwner = data.owner === getBxUser()?.codename;
                     const canDeleteTask = roleRows.length > 0 && typeof canBquestActOnRole === 'function'
-                        && roleRows.every(r => canBquestActOnRole(State.roleNameById[r.role_id], r.assign, 'delete'));
+                        && roleRows.every(r => canBquestActOnRole(State.roleNameById[r.role_id], r.assign, 'delete', isOwner));
                     show('btn-delete-task', canDeleteTask);
 
                     State.visibleRoles.forEach(role => {
@@ -969,7 +970,7 @@ const BQuestApp = (() => {
                         // on the task is a fresh add, gated by 'new' alone
                         // (already true, or the card wouldn't be visible).
                         const canEditRole = hasRoleData
-                            ? (typeof canBquestActOnRole === 'function' ? canBquestActOnRole(role.name, row.assign, 'edit') : true)
+                            ? (typeof canBquestActOnRole === 'function' ? canBquestActOnRole(role.name, row.assign, 'edit', isOwner) : true)
                             : (typeof canBquestEditRole === 'function' ? canBquestEditRole(role.name) : true);
                         const card = el(`card-${role.id}`);
                         card.querySelectorAll('input, select, textarea').forEach(inp => inp.disabled = !canEditRole);

@@ -88,17 +88,21 @@ function canBquestEditRole(roleName, action = 'edit') {
 // Scope-aware edit/delete check for a SPECIFIC role-row on a task (as
 // opposed to canBquestEditRole, which only answers "does this user have
 // edit/delete on this role at all"). assign is that row's
-// b-quest-task-role.assign value. 'own' scope only grants access when
-// assign matches the current user — an unassigned row isn't "yours"
-// either; claiming one is a separate Accept flow, not modeled here yet.
-function canBquestActOnRole(roleName, assign, action) {
+// b-quest-task-role.assign value; isOwner is whether the current user is
+// the task's creator (b-quest-list.owner). Per the documented scope design
+// (see 20260814000001_bquest_member_role_edit_delete_scope.sql and
+// [[bquest-settings-roadmap]]) 'own' is asymmetric: edit grants to the
+// creator OR the assignee, delete grants to the creator ONLY — merely
+// being assigned isn't enough to delete the whole task.
+function canBquestActOnRole(roleName, assign, action, isOwner) {
     const p = getBquestPerms();
     if (!p) return false;
     if (p._god) return true;
     const r = p.roles?.[roleName];
     if (!r?.[action]) return false;
     if (r[`${action}_scope`] !== 'own') return true; // 'all'
-    return !!assign && assign === getBxUser()?.codename;
+    if (action === 'delete') return !!isOwner;
+    return !!isOwner || (!!assign && assign === getBxUser()?.codename);
 }
 
 function guardBquestPage(perm) {

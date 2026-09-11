@@ -29,7 +29,13 @@
         .settings-tab.active { background: var(--c-dark); color: var(--c-accent); border-color: var(--c-dark); }
 
         .section { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; margin-bottom: 20px; overflow: hidden; }
-        .section-header { display: flex; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--c-border); }
+        /* Sticky (not the inner box-scroll b-quest-settings.html's sections
+           use) — this page has exactly one section and nothing below it to
+           compete for space, so the member list grows with the page instead
+           of scrolling inside a fixed-height box (see .mem-matrix-wrap
+           below). top:64px matches the fixed site header's height (same
+           value system.js injects for .flt-wrapper elsewhere). */
+        .section-header { display: flex; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--c-border); position: sticky; top: 64px; z-index: 50; background: #fff; }
         .section-title { font-size: 0.82rem; font-weight: 800; color: var(--c-dark); text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 8px; }
         .section-title i { font-size: 1rem; }
         .section-body { padding: 20px 24px; }
@@ -121,7 +127,15 @@
            Assign) is its own independent toggle, grouped visually under a
            2-row header (role name spanning its 4 action sub-columns). What
            you see IS the stored booleans, one-to-one. */
-        .mem-matrix-wrap { overflow: auto; max-height: 560px; border-radius: 12px; }
+        /* Horizontal scroll only now (see .section-header above for why the
+           vertical max-height/scroll box was removed) — kept for the many
+           role columns, with Trash/Member pinned via position:sticky+left
+           below while scrolling sideways through them. overflow-y:visible
+           is NOT redundant — CSS silently computes an unset overflow-y as
+           auto whenever overflow-x isn't visible, which would make this
+           box its own sticky containing block instead of the page, and the
+           thead's sticky top would stop working against page scroll. */
+        .mem-matrix-wrap { overflow-x: auto; overflow-y: visible; border-radius: 12px; }
         /* table-layout: fixed is load-bearing here — under the default
            "auto" layout, a column's content (e.g. "DELETE"/"ASSIGN" being
            longer than "NEW"/"EDIT") can always force it wider than any
@@ -131,12 +145,16 @@
            needs an explicit width below, and text that doesn't fit truncates
            (ellipsis) instead of expanding its column. */
         .mem-matrix { border-collapse: collapse; width: 100%; font-size: 0.8rem; table-layout: fixed; }
-        .mem-matrix thead th { position: sticky; top: 0; background: #fff; z-index: 2; text-align: center; font-size: 0.62rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 8px; border-bottom: 1px solid var(--c-border); white-space: nowrap; box-sizing: border-box; }
+        /* top is 64px (fixed site header) + .section-header's own measured
+           height, computed at runtime into --mem-sticky-top by
+           syncStickyOffsets() — the 70px fallback only covers the instant
+           before that first measurement lands. */
+        .mem-matrix thead th { position: sticky; top: var(--mem-sticky-top, 70px); background: #fff; z-index: 2; text-align: center; font-size: 0.62rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 8px; border-bottom: 1px solid var(--c-border); white-space: nowrap; box-sizing: border-box; }
         /* Only the role-group headers (colspan, no rowspan) get a fixed
            height — Member/Settings/trailing cells span both header rows via
            rowspan and should size naturally to match that combined height. */
         .mem-matrix th.mem-role-group-head { height: 34px; font-size: 0.68rem; text-transform: none; letter-spacing: normal; border-left: 1px solid var(--c-border); }
-        .mem-matrix thead tr:last-child th { top: 34px; height: 26px; padding: 0 6px; font-size: 0.6rem; border-top: 1px solid var(--c-bg); overflow: hidden; text-overflow: ellipsis; }
+        .mem-matrix thead tr:last-child th { top: calc(var(--mem-sticky-top, 70px) + 34px); height: 26px; padding: 0 6px; font-size: 0.6rem; border-top: 1px solid var(--c-bg); overflow: hidden; text-overflow: ellipsis; }
         .mem-matrix th.mem-role-group-head i { margin-right: 4px; }
         /* Trash column (40px, fixed so its width is known) and Member both
            stay pinned while scrolling sideways through the role columns —
@@ -478,6 +496,21 @@
         setupAddSearch();
         setupTableSearch();
         setupCarouselFade('mem-list', 'memCarouselWrap');
+        syncStickyOffsets();
+        window.addEventListener('resize', syncStickyOffsets);
+    }
+
+    // .section-header is sticky at top:64px (below the fixed site header);
+    // the matrix's own thead needs to stick right below THAT, but its
+    // height isn't a fixed constant (padding + content), so measure it
+    // instead of guessing a px value that'd drift out of sync — sets
+    // --mem-sticky-top, which the thead th rules read via var(). Re-run on
+    // resize in case the header row ever wraps to two lines on a narrow
+    // viewport.
+    function syncStickyOffsets() {
+        const header = document.querySelector('.section-header');
+        if (!header) return;
+        document.documentElement.style.setProperty('--mem-sticky-top', `${64 + header.offsetHeight}px`);
     }
 
     // Generic left/right scroll-fade hint — same .cfg-carousel-wrap CSS the

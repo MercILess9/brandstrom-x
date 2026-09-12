@@ -34,14 +34,6 @@
         .section-title { font-size: 0.82rem; font-weight: 800; color: var(--c-dark); text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 8px; }
         .section-title i { font-size: 1rem; }
 
-        /* Table toolbar */
-        .table-toolbar { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-wrap: wrap; }
-        .table-search-wrap { position: relative; margin-left: 6px; }
-        .table-search-input { width: 200px; border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 12px 7px 32px; font-size: 0.82rem; color: var(--c-dark); background: var(--c-bg); outline: none; font-family: inherit; transition: 0.2s; }
-        .table-search-input:focus { border-color: var(--c-accent); background: #fff; }
-        .table-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.8rem; pointer-events: none; }
-        .table-count { font-size: 0.75rem; font-weight: 700; color: var(--c-muted); white-space: nowrap; }
-
         /* Dept filter dropdown */
         .dept-filter { width: 140px; flex-shrink: 0; border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 28px 7px 12px; font-size: 0.82rem; color: var(--c-dark); background: var(--c-bg); outline: none; font-family: inherit; transition: 0.2s; appearance: none; cursor: pointer; text-align: center; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
         .dept-filter:focus { border-color: var(--c-accent); background-color: #fff; }
@@ -69,60 +61,86 @@
         .btn-dept-undo:hover { color: #dc2626; }
         .dept-empty { grid-column: 1 / -1; padding: 32px 20px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
 
-        /* Users Table */
-        /* Grid: Codename(130px) | NickName/FullName(190px) | Dept(1fr) | EmpID(100px) | Projects(80px x5) | System(80px) | Actions(44px) */
-        .usr-scroll-body { max-height: 900px; overflow-y: auto; }
-        .usr-thead-sticky { position: sticky; top: 0; background: #fff; z-index: 2; padding: 16px 0 0; }
+        /* Users Table — same mem-matrix recipe as b-quest-members.html
+           (real <table>, sticky-left Trash+Member, grouped 2-row header),
+           ported here for visual/behavioral parity per the user's explicit
+           ask. Column widths set via <colgroup> in the HTML, not here. */
+        .table-search-wrap { position: relative; flex: 1; max-width: 260px; }
+        .section-header .table-search-wrap { max-width: 340px; }
+        /* Auto margins on both sides center this within the header's
+           leftover space (between the title and the right-hand group). */
+        .usr-search-centered { margin-left: auto; margin-right: auto; }
+        .table-search-input { width: 100%; border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 12px 7px 32px; font-size: 0.82rem; color: var(--c-dark); background: var(--c-bg); outline: none; font-family: inherit; transition: 0.2s; }
+        .table-search-input:focus { border-color: var(--c-accent); background: #fff; }
+        .table-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.8rem; pointer-events: none; }
+        .usr-header-right-group { display: flex; align-items: center; gap: 12px; }
+        .cfg-count-badge { font-size: 0.66rem; font-weight: 700; color: var(--c-slate); text-transform: none; letter-spacing: 0; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 1px 8px; }
 
-        .usr-cols { grid-template-columns: 130px 1fr 1fr 100px repeat(5, 80px) 80px 44px; }
-
-        .usr-table-head {
-            display: grid;
-            align-items: center; padding: 0 4px;
-            height: 36px; background: var(--c-bg);
-            border-radius: 10px; margin-bottom: 4px;
-        }
-        .usr-group-head {
-            display: grid;
-            align-items: center; padding: 0 4px; margin-bottom: 2px;
-        }
-        .group-label {
-            font-size: 0.6rem; font-weight: 800; text-transform: uppercase;
-            letter-spacing: 1px; text-align: center;
-            padding: 4px 0; border-radius: 6px; margin: 0 3px;
-        }
+        .usr-matrix-wrap { overflow-x: auto; overflow-y: visible; border-radius: 12px; }
+        .usr-matrix { border-collapse: collapse; width: 100%; font-size: 0.8rem; table-layout: fixed; }
+        .usr-matrix thead th { background: #fff; z-index: 2; text-align: center; font-size: 0.62rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 8px; border-bottom: 1px solid var(--c-border); white-space: nowrap; box-sizing: border-box; }
+        .usr-matrix th.usr-group-head { height: 34px; font-size: 0.68rem; text-transform: none; letter-spacing: normal; border-left: 1px solid var(--c-border); }
+        .usr-matrix thead tr:last-child th { height: 26px; padding: 0 6px; font-size: 0.6rem; border-top: 1px solid var(--c-bg); overflow: hidden; text-overflow: ellipsis; }
         .group-access { background: #eff6ff; color: #2563eb; }
         .group-sys    { background: var(--c-accent-light); color: var(--c-accent-dark); }
 
-        .usr-col-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; text-align: center; line-height: 1.3; }
-        .usr-col-name  { font-size: 0.68rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.8px; padding-left: 8px; }
+        /* Trash (40px) and Member both stay pinned while scrolling
+           sideways through the project-access columns. */
+        .usr-matrix th.usr-col-trash, .usr-matrix td.usr-col-trash { position: sticky; left: 0; z-index: 1; background: #fff; width: 40px; }
+        .usr-matrix th.usr-col-trash { z-index: 3; }
+        .usr-matrix th.usr-col-name, .usr-matrix td.usr-col-name { position: sticky; left: 40px; z-index: 1; background: #fff; text-align: left; width: 210px; }
+        .usr-matrix th.usr-col-name { z-index: 3; }
+        .usr-matrix td { padding: 11px 16px; text-align: center; border-bottom: 1px solid var(--c-bg); vertical-align: middle; }
+        .usr-matrix td.usr-col-name { white-space: nowrap; padding: 10px 16px; }
+        .usr-matrix .usr-zone-divider { border-left: 1px solid var(--c-border); }
 
-        .usr-row {
-            display: grid;
-            align-items: center; padding: 0 4px;
-            min-height: 56px; border-bottom: 1px solid #f8fafc;
-            transition: background 0.15s; border-radius: 8px;
-        }
-        .usr-row:last-child { border-bottom: none; }
-        .usr-row:hover { background: #fafbff; }
-        .usr-row.is-deleted { opacity: 0.75; background: #fef2f2; text-decoration: line-through; text-decoration-color: #ef4444; text-decoration-thickness: 1.5px; pointer-events: none; }
-        .usr-row.is-deleted .btn-undo-del { pointer-events: all; }
-        .usr-row.is-deleted .usr-codename,
-        .usr-row.is-deleted .inline-input { color: #ef4444; }
+        .usr-matrix .usr-header-sortable { cursor: pointer; user-select: none; transition: color 0.15s; }
+        .usr-matrix .usr-header-sortable:hover { color: var(--c-dark); }
+        .usr-sort-icon { font-size: 0.7rem; margin-left: 2px; opacity: 0.35; }
+        .usr-sort-icon.active { opacity: 1; color: var(--c-accent-dark); }
+        .usr-filter-icon { font-size: 0.62rem; margin-left: 3px; opacity: 0.35; }
+        .usr-filter-icon.active { opacity: 1; color: var(--c-accent-dark); }
 
-        /* Visual separators — floating via padding so they don't touch cell edges */
-        .usr-table-head > :nth-child(2),
-        .usr-row > :nth-child(2) { border-left: 1px solid var(--c-border); padding-left: 12px; }
-        .usr-table-head > :nth-child(5),
-        .usr-row > :nth-child(5) { border-left: 1px solid var(--c-border); }
-        .usr-table-head > :nth-child(10),
-        .usr-row > :nth-child(10) { border-left: 1px solid var(--c-border); }
+        /* Column filter popup — same recipe as B-Quest Members' Excel-style
+           header filter: click a column, get a search+sort+checkbox-list
+           modal instead of a separate dropdown floating in the toolbar. */
+        .usr-filter-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 1100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .usr-filter-overlay.show { opacity: 1; pointer-events: all; }
+        .usr-filter-modal { background: #fff; border-radius: 20px; width: 420px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.18); transform: translateY(12px); transition: transform 0.2s; overflow: hidden; }
+        .usr-filter-overlay.show .usr-filter-modal { transform: translateY(0); }
+        .usr-filter-modal-header { padding: 22px 26px 18px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .usr-filter-modal-title { font-size: 1rem; font-weight: 800; color: var(--c-dark); display: flex; align-items: center; gap: 8px; }
+        .usr-filter-header-actions { display: flex; align-items: center; gap: 8px; }
+        .usr-filter-reset-link { background: none; border: 1px solid transparent; color: var(--c-muted); font-size: 0.7rem; font-weight: 700; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 7px; transition: 0.15s; opacity: 0.5; }
+        .usr-filter-reset-link:hover { background: var(--c-bg); color: var(--c-dark); opacity: 1; }
+        .usr-filter-reset-link.active { opacity: 1; background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
+        .usr-filter-reset-link.active:hover { background: var(--c-accent); color: var(--c-on-accent); }
+        .usr-filter-modal-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--c-muted); transition: 0.2s; }
+        .usr-filter-modal-close:hover { background: var(--c-border); color: var(--c-dark); }
+        .usr-filter-modal-body { padding: 20px 26px 24px; overflow-y: auto; }
+        .usr-filter-search-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .usr-filter-search-row .usr-filter-search-wrap { flex: 1; margin-bottom: 0; }
+        .cfg-btn-sort { background: none; border: 1px solid var(--c-border); color: var(--c-slate); border-radius: 9px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; flex-shrink: 0; transition: 0.15s; }
+        .cfg-btn-sort:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
+        .usr-filter-search-wrap { position: relative; }
+        .usr-filter-search-input { width: 100%; border: 1px solid var(--c-border); border-radius: 12px; padding: 9px 34px 9px 36px; font-size: 0.85rem; outline: none; font-family: inherit; transition: 0.2s; background: var(--c-bg); box-sizing: border-box; }
+        .usr-filter-search-input:focus { border-color: var(--c-accent); background: #fff; }
+        .usr-filter-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.85rem; pointer-events: none; }
+        .usr-filter-search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--c-muted); font-size: 1rem; cursor: pointer; padding: 3px; display: flex; align-items: center; transition: 0.15s; }
+        .usr-filter-search-clear:hover { color: var(--c-dark); }
+        .usr-filter-count { font-size: 0.72rem; font-weight: 700; color: var(--c-muted); margin-left: 2px; }
+        .usr-filter-list { max-height: 260px; overflow-y: auto; border-top: 1px solid var(--c-border); padding-top: 4px; }
+        .usr-filter-select-all { font-weight: 800; border-bottom: 1px solid var(--c-border); margin-bottom: 4px; padding-bottom: 12px; }
+        .usr-filter-item { display: flex; align-items: center; gap: 12px; padding: 9px 10px; font-size: 0.82rem; font-weight: 600; color: var(--c-dark); cursor: pointer; border-radius: 12px; transition: background 0.15s, opacity 0.15s; }
+        .usr-filter-item:hover { background: var(--c-bg); }
+        .usr-filter-item:has(.modern-checkbox:not(:checked)) { opacity: 0.5; }
+        .usr-filter-item.usr-filter-select-all { opacity: 1; }
+        .cfg-empty { padding: 20px; text-align: center; color: var(--c-muted); font-size: 0.8rem; font-weight: 600; }
 
-        .usr-name-zone { display: flex; align-items: center; justify-content: center; min-width: 0; padding: 0 4px; }
-        .usr-codename { font-size: 0.82rem; font-weight: 700; color: #508faf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+        .usr-codename { font-size: 0.82rem; font-weight: 700; color: var(--c-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .usr-nick-input { font-size: 0.68rem; font-weight: 600; color: var(--c-muted); margin-top: 1px; }
 
         /* Inline editable cells */
-        .usr-nickfull { display: flex; flex-direction: column; gap: 1px; padding: 4px 0; min-width: 0; }
         .inline-input {
             border: 1px solid transparent; border-radius: 6px;
             padding: 3px 7px; font-size: 0.82rem; font-weight: 600;
@@ -132,14 +150,43 @@
         .inline-input.muted { font-size: 0.75rem; font-weight: 400; color: var(--c-muted); }
         .inline-input:hover { border-color: var(--c-border); background: var(--c-bg); }
         .inline-input:focus { border-color: var(--c-accent); background: #fff; }
-
-        .usr-empid-cell { display: flex; justify-content: center; align-items: center; }
         .inline-input.center { text-align: center; }
-        .usr-dept-cell { display: flex; align-items: center; justify-content: center; }
-        .usr-dept-cell select.inline-input { appearance: none; cursor: pointer; padding-right: 8px; }
 
-        .check-cell { display: flex; justify-content: center; align-items: center; }
-        .action-cell { display: flex; justify-content: center; align-items: center; gap: 2px; }
+        /* Department picker — replaces a native <select> (unstyleable
+           popup, same theme mismatch as a browser date picker) with a
+           custom dropdown matching the app's own multi-select/filter
+           panels (search box + list, anchored to the clicked trigger). */
+        .usr-dept-trigger {
+            border: 1px solid transparent; border-radius: 6px;
+            padding: 3px 20px 3px 7px; font-size: 0.82rem; font-weight: 600;
+            color: var(--c-dark); background: transparent; outline: none;
+            width: 100%; text-align: center; cursor: pointer;
+            transition: 0.15s; font-family: inherit; position: relative;
+        }
+        .usr-dept-trigger:hover { border-color: var(--c-border); background: var(--c-bg); }
+        .usr-dept-trigger:disabled { cursor: not-allowed; }
+        .usr-dept-trigger::after {
+            content: ''; position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+            width: 8px; height: 8px; opacity: 0.5; pointer-events: none;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat center / contain;
+        }
+        .usr-picker-panel { position: fixed; z-index: 1050; background: #fff; border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.16); border: 1px solid var(--c-border); width: 220px; max-height: min(320px, calc(100vh - 24px)); display: flex; flex-direction: column; overflow: hidden; }
+        .usr-picker-search-wrap { padding: 10px; border-bottom: 1px solid #f1f5f9; position: relative; flex-shrink: 0; }
+        .usr-picker-search { width: 100%; box-sizing: border-box; border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 10px 7px 30px; font-size: 0.78rem; outline: none; font-family: inherit; background: var(--c-bg); transition: 0.2s; }
+        .usr-picker-search:focus { border-color: var(--c-accent); background: #fff; }
+        .usr-picker-search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.75rem; pointer-events: none; }
+        .usr-picker-list { overflow-y: auto; padding: 6px; flex: 1; min-height: 0; }
+        .usr-picker-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; color: var(--c-dark); transition: background 0.12s; }
+        .usr-picker-item:hover { background: var(--c-bg); }
+        .usr-picker-item.selected { font-weight: 700; color: var(--c-accent-dark); background: var(--c-accent-light); }
+        .usr-picker-check { width: 14px; flex-shrink: 0; color: var(--c-accent-dark); }
+        .usr-picker-empty { padding: 20px; text-align: center; color: var(--c-muted); font-size: 0.78rem; }
+
+        .usr-row.is-deleted { opacity: 0.75; background: #fef2f2 !important; text-decoration: line-through; text-decoration-color: #ef4444; text-decoration-thickness: 1.5px; pointer-events: none; }
+        .usr-row.is-deleted .btn-undo-del { pointer-events: all; }
+        .usr-row.is-deleted .usr-codename,
+        .usr-row.is-deleted .inline-input { color: #ef4444; }
+        .usr-row.is-deleted td.usr-col-trash, .usr-row.is-deleted td.usr-col-name { background: #fef2f2; }
 
         /* Toggle */
         .bq-toggle { position: relative; display: inline-block; width: 34px; height: 19px; }
@@ -189,7 +236,7 @@
         .btn-del-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* ── Top-level tab switcher — Settings (Departments + Holidays)
-           vs Users & Access, its own tab. Same split as b-quest-settings
+           vs Members, its own tab. Same split as b-quest-settings
            vs b-quest-members: config on one side, the member/user list on
            the other. ── */
         .top-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
@@ -204,11 +251,12 @@
            into it (see saveHolidayForm), no separate "add year" action. ── */
         .holiday-total-badge { font-size: 0.78rem; font-weight: 700; color: var(--c-slate); background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 6px 14px; white-space: nowrap; }
 
-        /* ── Holiday list — CSS Grid rows, same recipe as .usr-table-head/
-           .usr-row elsewhere on this page, instead of a plain <table>.
-           A real <table> let the browser auto-layout stretch Description
+        /* ── Holiday list — CSS Grid rows instead of a plain <table>: a
+           real <table> let the browser auto-layout stretch Description
            into a huge gap since only No/Day-Type had explicit widths —
-           fixed grid columns keep everything proportioned and dense. ── */
+           fixed grid columns keep everything proportioned and dense.
+           (Members below is a real <table>, but every one of its columns
+           has an explicit width too, so it doesn't hit this problem.) ── */
         .holiday-list-wrap { padding: 16px 24px 20px; overflow-x: auto; }
         /* Description fixed (not 1fr) so short names don't leave a gap in
            the middle of the row. The last column absorbs the rest of the
@@ -354,7 +402,7 @@
 
     <div class="top-tabs">
         <button class="top-tab-btn active" id="top-tab-settings" onclick="switchTopTab('settings')"><i class="bi bi-sliders"></i> Settings</button>
-        <button class="top-tab-btn" id="top-tab-access" onclick="switchTopTab('access')"><i class="bi bi-people-fill"></i> Users & Access</button>
+        <button class="top-tab-btn" id="top-tab-access" onclick="switchTopTab('access')"><i class="bi bi-people-fill"></i> Members</button>
     </div>
 
     <div id="tab-settings">
@@ -407,18 +455,20 @@
     </div>
     <!-- /#tab-settings -->
 
-    <!-- Tab: Users & Access -->
+    <!-- Tab: Members -->
     <div id="tab-access" style="display:none;">
         <div class="section" id="section-users">
             <div class="section-header">
                 <div class="section-title">
-                    <i class="bi bi-people-fill"></i> Users & Access
+                    <i class="bi bi-people-fill"></i> Members
+                    <span class="cfg-count-badge" id="table-count"></span>
                     <span class="dirty-dot"></span>
                 </div>
-                <div class="table-toolbar">
-                    <select id="dept-filter" class="dept-filter" onchange="applyFilters()">
-                        <option value="">All Departments</option>
-                    </select>
+                <div class="table-search-wrap usr-search-centered">
+                    <i class="bi bi-search table-search-icon"></i>
+                    <input type="text" id="table-search" class="table-search-input" placeholder="Search..." oninput="applyFilters()">
+                </div>
+                <div class="usr-header-right-group">
                     <select id="project-filter" class="dept-filter" onchange="applyFilters()">
                         <option value="">All Projects</option>
                         <option value="bquest">B-QUEST</option>
@@ -427,39 +477,46 @@
                         <option value="bcommission">Commission</option>
                         <option value="bfinance">Finance</option>
                     </select>
-                    <div class="table-search-wrap">
-                        <i class="bi bi-search table-search-icon"></i>
-                        <input type="text" id="table-search" class="table-search-input" placeholder="Search..." oninput="applyFilters()">
-                    </div>
-                    <span class="table-count" id="table-count"></span>
                 </div>
             </div>
-            <div class="usr-scroll-body" style="padding: 0 24px 20px;">
-                <div class="usr-thead-sticky">
-                    <!-- Group header -->
-                    <div class="usr-group-head usr-cols">
-                        <div></div>
-                        <div></div><div></div><div></div>
-                        <div class="group-label group-access" style="grid-column: 5 / 10;">PROJECT ACCESS</div>
-                        <div class="group-label group-sys" style="grid-column: 10 / 11;">SYSTEM</div>
-                        <div></div>
-                    </div>
-                    <!-- Column labels -->
-                    <div class="usr-table-head usr-cols">
-                        <div class="usr-col-name" style="text-align:center; padding-left:0;">Codename</div>
-                        <div class="usr-col-name">Full Name</div>
-                        <div class="usr-col-label">Department</div>
-                        <div class="usr-col-label">Employee ID</div>
-                        <div class="usr-col-label">B-QUEST</div>
-                        <div class="usr-col-label">Dashboard</div>
-                        <div class="usr-col-label">B-ACCOUNT</div>
-                        <div class="usr-col-label">Commission</div>
-                        <div class="usr-col-label">Finance</div>
-                        <div class="usr-col-label">Setting</div>
-                        <div></div>
-                    </div>
+            <div class="section-body" style="padding: 20px 24px;">
+                <div class="usr-matrix-wrap" id="usr-list-wrap">
+                    <table class="usr-matrix">
+                        <colgroup>
+                            <col style="width:40px">
+                            <col style="width:210px">
+                            <col style="width:150px">
+                            <col style="width:150px">
+                            <col style="width:100px">
+                            <col style="width:80px">
+                            <col style="width:80px">
+                            <col style="width:80px">
+                            <col style="width:80px">
+                            <col style="width:80px">
+                            <col style="width:80px">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th class="usr-col-trash" rowspan="2"></th>
+                                <th class="usr-col-name usr-header-sortable" rowspan="2" style="text-align:left" onclick="openColumnFilterPopup('codename', 'Member')">Member<span id="usr-sort-codename"></span><span id="usr-filter-codename"></span></th>
+                                <th class="usr-header-sortable" rowspan="2" onclick="openColumnFilterPopup('full_name', 'Full Name')">Full Name<span id="usr-sort-full_name"></span><span id="usr-filter-full_name"></span></th>
+                                <th class="usr-zone-divider usr-header-sortable" rowspan="2" onclick="openColumnFilterPopup('department', 'Department')">Department<span id="usr-sort-department"></span><span id="usr-filter-department"></span></th>
+                                <th class="usr-header-sortable" rowspan="2" onclick="openColumnFilterPopup('employee_id', 'Employee ID')">Employee ID<span id="usr-sort-employee_id"></span><span id="usr-filter-employee_id"></span></th>
+                                <th class="usr-group-head" colspan="5"><span class="group-label group-access">PROJECT ACCESS</span></th>
+                                <th class="usr-group-head"><span class="group-label group-sys">SYSTEM</span></th>
+                            </tr>
+                            <tr>
+                                <th>B-QUEST</th>
+                                <th>Dashboard</th>
+                                <th>B-ACCOUNT</th>
+                                <th>Commission</th>
+                                <th>Finance</th>
+                                <th>Setting</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-list"></tbody>
+                    </table>
                 </div>
-                <div id="user-list"></div>
             </div>
         </div>
     </div>
@@ -538,6 +595,35 @@
     </div>
 </div>
 
+<!-- Column Filter Popup (Member/Full Name/Department/Employee ID headers) -->
+<div class="usr-filter-overlay" id="usr-filter-overlay" onclick="closeColumnFilterPopup(event)">
+    <div class="usr-filter-modal" onclick="event.stopPropagation()">
+        <div class="usr-filter-modal-header">
+            <div class="usr-filter-modal-title">
+                <i class="bi bi-funnel-fill" style="color:var(--c-accent)"></i>
+                <span id="usr-filter-title"></span>
+                <span class="usr-filter-count" id="usr-filter-count"></span>
+            </div>
+            <div class="usr-filter-header-actions">
+                <button class="usr-filter-reset-link" id="usr-filter-reset-btn" onclick="resetColumnFilter()"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+                <button class="usr-filter-modal-close" onclick="closeColumnFilterPopup()"><i class="bi bi-x"></i></button>
+            </div>
+        </div>
+        <div class="usr-filter-modal-body">
+            <div class="usr-filter-search-row">
+                <div class="usr-filter-search-wrap">
+                    <i class="bi bi-search usr-filter-search-icon"></i>
+                    <input type="text" id="usr-filter-search" class="usr-filter-search-input" placeholder="Search..." autocomplete="off" oninput="renderColumnFilterList(this.value); toggleSearchClearBtn(this.value);">
+                    <button class="usr-filter-search-clear" id="usr-filter-search-clear" onclick="clearColumnFilterSearch()" title="Clear search" style="display:none;"><i class="bi bi-x-circle-fill"></i></button>
+                </div>
+                <button class="cfg-btn-sort" onclick="setUsrSortDirect(filterPopupField, 'asc')" title="Sort A → Z"><i class="bi bi-sort-alpha-down"></i></button>
+                <button class="cfg-btn-sort" onclick="setUsrSortDirect(filterPopupField, 'desc')" title="Sort Z → A"><i class="bi bi-sort-alpha-up"></i></button>
+            </div>
+            <div class="usr-filter-list" id="usr-filter-list"></div>
+        </div>
+    </div>
+</div>
+
 <!-- Delete Confirm Modal -->
 <div class="del-overlay" id="del-overlay">
     <div class="del-modal">
@@ -583,6 +669,9 @@
     let accessData = {};     // codename -> access row
     let accessChanges = {};  // codename -> changed fields
     let pendingDeleteUser = null;
+    let usrSort = { field: null, dir: 'asc' }; // field: null | 'codename' | 'full_name' | 'department' | 'employee_id'
+    let filterPopupField = null; // which column's popup is currently open
+    let usrColumnFilters = { codename: null, full_name: null, department: null, employee_id: null }; // field -> Set of allowed values, or null = no filter
 
     // ── Shared Save Bar (createSaveBar from /system/save-bar.js) ──
     let saveBar = null;
@@ -604,7 +693,6 @@
         guardSystemSetting();
         saveBar = createSaveBar({ label: 'System Settings', onSave: saveAll, onCancel: cancelAllChanges, onUndo: undoLastChange });
         await Promise.all([loadUsers(), loadAccessData(), loadDepartments(), loadHolidays()]);
-        buildDeptFilter();
         renderUsers();
     }
 
@@ -818,7 +906,7 @@
         reconcileUsersDisplay();
         renderDepartments();
         renderHolidays();
-        renderUsers(document.getElementById('table-search').value.trim().toLowerCase(), document.getElementById('dept-filter').value, document.getElementById('project-filter').value);
+        renderUsers(document.getElementById('table-search').value.trim().toLowerCase(), document.getElementById('project-filter').value);
         recomputeSaveBarCount();
         saveBar.setUndoAvailable(undoStack.length > 0);
     }
@@ -835,7 +923,6 @@
         undoStack = [];
         document.querySelectorAll('.section').forEach(el => el.classList.remove('is-dirty'));
         await Promise.all([loadUsers(), loadAccessData(), loadDepartments(), loadHolidays()]);
-        buildDeptFilter();
         renderUsers();
     }
 
@@ -1569,8 +1656,30 @@
     }
 
     // ── Render ──
-    function renderUsers(q = '', dept = '', project = '') {
+    // Sort direction is set explicitly from the column filter popup's two
+    // buttons (A→Z / Z→A) — same as B-Quest Members, no separate toggle
+    // click on the header itself (the header click opens the popup instead).
+    function setUsrSortDirect(field, dir) {
+        usrSort = { field, dir };
+        closeColumnFilterPopup();
+        applyFilters();
+    }
+
+    function updateUsrSortIcons() {
+        ['codename', 'full_name', 'department', 'employee_id'].forEach(field => {
+            const el = document.getElementById(`usr-sort-${field}`);
+            if (!el) return;
+            if (usrSort.field !== field) { el.innerHTML = '<i class="bi bi-chevron-expand usr-sort-icon"></i>'; return; }
+            el.innerHTML = usrSort.dir === 'asc'
+                ? '<i class="bi bi-chevron-up usr-sort-icon active"></i>'
+                : '<i class="bi bi-chevron-down usr-sort-icon active"></i>';
+        });
+    }
+
+    function renderUsers(q = '', project = '') {
         const container = document.getElementById('user-list');
+        updateUsrSortIcons();
+        updateUsrFilterIcons();
 
         let rows = allUsers.filter(u => {
             const matchQ = !q ||
@@ -1579,16 +1688,25 @@
                 u.full_name?.toLowerCase().includes(q) ||
                 u.employee_id?.toLowerCase().includes(q) ||
                 u.department?.toLowerCase().includes(q);
-            const matchDept = !dept || u.department === dept;
             const acc = accessData[u.codename] || {};
             const matchProject = !project || !!acc[project];
-            return matchQ && matchDept && matchProject;
+            const matchColumnFilters = Object.entries(usrColumnFilters).every(([field, allowed]) => !allowed || allowed.has(u[field] || ''));
+            return matchQ && matchProject && matchColumnFilters;
         });
+
+        if (usrSort.field) {
+            rows = [...rows].sort((a, b) => {
+                const va = (a[usrSort.field] || '').toLowerCase();
+                const vb = (b[usrSort.field] || '').toLowerCase();
+                const cmp = va.localeCompare(vb);
+                return usrSort.dir === 'asc' ? cmp : -cmp;
+            });
+        }
 
         updateCount(rows.length, allUsers.length);
 
         if (!rows.length) {
-            container.innerHTML = `<div class="usr-empty"><i class="bi bi-people"></i><p>No users found</p></div>`;
+            container.innerHTML = `<tr><td colspan="11" class="usr-empty"><i class="bi bi-people"></i><p>No users found</p></td></tr>`;
             return;
         }
 
@@ -1598,76 +1716,244 @@
             const isDeleted = ch?._delete;
 
             const projectToggles = PROJECT_COLS.map(p => `
-                <div class="check-cell">
+                <td>
                     <label class="bq-toggle t-access">
                         <input type="checkbox" ${acc[p.key] ? 'checked' : ''} onchange="onAccessChange('${u.codename}','${p.key}',this.checked)" ${isDeleted ? 'disabled' : ''}>
                         <span class="bq-slider"></span>
                     </label>
-                </div>`).join('');
+                </td>`).join('');
 
             const sysToggle = `
-                <div class="check-cell">
+                <td>
                     <label class="bq-toggle t-sys">
                         <input type="checkbox" ${acc.system_setting ? 'checked' : ''} onchange="onAccessChange('${u.codename}','system_setting',this.checked)" ${isDeleted ? 'disabled' : ''}>
                         <span class="bq-slider"></span>
                     </label>
-                </div>`;
+                </td>`;
 
             const dis = isDeleted ? 'disabled' : '';
-            const actionBtns = isDeleted
+            const actionBtn = isDeleted
                 ? `<button class="btn-undo-del" onclick="undoDelete('${u.codename}')" title="Undo delete"><i class="bi bi-arrow-counterclockwise"></i></button>`
                 : `<button class="btn-remove" onclick="openDelModal('${u.codename}','${u.codename}')" title="Remove user"><i class="bi bi-trash3"></i></button>`;
 
             return `
-            <div class="usr-row usr-cols ${isDeleted ? 'is-deleted' : ''}" data-uid="${u.id}">
-                <div class="usr-name-zone">
-                    <span class="usr-codename">${u.codename || '-'}</span>
-                </div>
-                <div class="usr-nickfull">
-                    <input class="inline-input" value="${(u.nick_name || '').replace(/"/g,'&quot;')}" placeholder="Nick Name" ${dis}
+            <tr class="usr-row ${isDeleted ? 'is-deleted' : ''}" data-uid="${u.id}">
+                <td class="usr-col-trash">${actionBtn}</td>
+                <td class="usr-col-name">
+                    <div class="usr-codename">${esc(u.codename) || '-'}</div>
+                    <input class="inline-input muted usr-nick-input" value="${(u.nick_name || '').replace(/"/g,'&quot;')}" placeholder="Nick Name" ${dis}
                         onchange="onNickChange('${u.id}',this.value)">
-                    <input class="inline-input muted" value="${(u.full_name || '').replace(/"/g,'&quot;')}" placeholder="Full Name" ${dis}
+                </td>
+                <td>
+                    <input class="inline-input center" value="${(u.full_name || '').replace(/"/g,'&quot;')}" placeholder="Full Name" ${dis}
                         onchange="onProfileChange('${u.id}','full_name',this.value)">
-                </div>
-                <div class="usr-dept-cell">
-                    <select class="inline-input center" ${dis} onchange="onProfileChange('${u.id}','department',this.value)">
-                        <option value="">— Select —</option>
-                        ${deptData.map(d => `<option value="${d.name}" ${u.department === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
-                    </select>
-                </div>
-                <div class="usr-empid-cell">
-                    <span class="inline-input center" style="display:block;color:var(--c-muted);cursor:default;">${u.employee_id || '-'}</span>
-                </div>
+                </td>
+                <td class="usr-zone-divider">
+                    <button type="button" class="usr-dept-trigger" data-uid="${u.id}" ${dis} onclick="openDeptPicker(this, '${u.id}')">${esc(u.department) || '— Select —'}</button>
+                </td>
+                <td style="color:var(--c-muted);">${esc(u.employee_id) || '-'}</td>
                 ${projectToggles}
                 ${sysToggle}
-                <div class="action-cell">${actionBtns}</div>
-            </div>`;
+            </tr>`;
         }).join('');
-    }
-
-    function buildDeptFilter() {
-        const depts = [...new Set(allUsers.map(u => u.department).filter(Boolean))].sort();
-        const sel = document.getElementById('dept-filter');
-        sel.querySelectorAll('option:not([value=""])').forEach(o => o.remove()); // safe to call again (e.g. after Cancel reloads), don't duplicate
-        depts.forEach(d => {
-            const opt = document.createElement('option');
-            opt.value = d; opt.textContent = d;
-            sel.appendChild(opt);
-        });
     }
 
     function applyFilters() {
         const q = document.getElementById('table-search').value.trim().toLowerCase();
-        const dept = document.getElementById('dept-filter').value;
         const project = document.getElementById('project-filter').value;
-        document.getElementById('dept-filter').classList.toggle('active', !!dept);
         document.getElementById('project-filter').classList.toggle('active', !!project);
-        renderUsers(q, dept, project);
+        renderUsers(q, project);
     }
 
     function updateCount(shown, total) {
         document.getElementById('table-count').textContent = shown === total
-            ? `${total} users` : `${shown} / ${total} users`;
+            ? `${total}` : `${shown} / ${total}`;
+    }
+
+    // ── Column filter popup (Member/Full Name/Department/Employee ID) —
+    // same Excel-style recipe as B-Quest Members: click a header, get a
+    // search+sort+checkbox-list modal instead of a separate dropdown. ──
+    function columnValues(field) {
+        return [...new Set(allUsers.map(u => u[field] || '').filter(Boolean))].sort();
+    }
+
+    function filterIcon(field) {
+        const active = !!usrColumnFilters[field];
+        return `<i class="bi ${active ? 'bi-funnel-fill' : 'bi-funnel'} usr-filter-icon ${active ? 'active' : ''}"></i>`;
+    }
+
+    function updateUsrFilterIcons() {
+        ['codename', 'full_name', 'department', 'employee_id'].forEach(field => {
+            const el = document.getElementById(`usr-filter-${field}`);
+            if (el) el.innerHTML = filterIcon(field);
+        });
+    }
+
+    function openColumnFilterPopup(field, label) {
+        filterPopupField = field;
+        document.getElementById('usr-filter-title').textContent = label;
+        document.getElementById('usr-filter-search').value = '';
+        toggleSearchClearBtn('');
+        renderColumnFilterList('');
+        document.getElementById('usr-filter-overlay').classList.add('show');
+        lockBodyScroll();
+        setTimeout(() => document.getElementById('usr-filter-search').focus(), 100);
+    }
+
+    function closeColumnFilterPopup(e) {
+        if (e && e.target !== document.getElementById('usr-filter-overlay')) return;
+        document.getElementById('usr-filter-overlay').classList.remove('show');
+        unlockBodyScroll();
+    }
+
+    function toggleSearchClearBtn(val) {
+        const btn = document.getElementById('usr-filter-search-clear');
+        if (btn) btn.style.display = val ? 'flex' : 'none';
+    }
+
+    function clearColumnFilterSearch() {
+        const input = document.getElementById('usr-filter-search');
+        input.value = '';
+        input.focus();
+        toggleSearchClearBtn('');
+        renderColumnFilterList('');
+    }
+
+    function renderColumnFilterList(searchQ) {
+        const field = filterPopupField;
+        const all = columnValues(field);
+        const ql = searchQ.trim().toLowerCase();
+        const visible = ql ? all.filter(v => v.toLowerCase().includes(ql)) : all;
+        const selected = usrColumnFilters[field];
+        const list = document.getElementById('usr-filter-list');
+
+        const selectedTotal = selected ? selected.size : all.length;
+        document.getElementById('usr-filter-count').textContent = selectedTotal === all.length ? '' : `${selectedTotal}/${all.length} selected`;
+        document.getElementById('usr-filter-reset-btn')?.classList.toggle('active', !!selected);
+
+        if (!visible.length) { list.innerHTML = '<div class="cfg-empty">No matches</div>'; return; }
+        const checkedCount = visible.filter(v => !selected || selected.has(v)).length;
+        list.innerHTML = `
+            <label class="usr-filter-item usr-filter-select-all">
+                <input type="checkbox" class="modern-checkbox" id="usr-filter-select-all-cb" ${checkedCount === visible.length ? 'checked' : ''} onchange="toggleAllVisible(this.checked)">
+                <span>Select All${ql ? ` (${visible.length} matching)` : ''}</span>
+            </label>
+            ${visible.map(v => `
+            <label class="usr-filter-item">
+                <input type="checkbox" class="modern-checkbox" ${!selected || selected.has(v) ? 'checked' : ''} onchange="toggleColumnValue('${esc(v)}', this.checked)">
+                <span>${esc(v)}</span>
+            </label>`).join('')}
+        `;
+        const selectAllCb = document.getElementById('usr-filter-select-all-cb');
+        if (selectAllCb) selectAllCb.indeterminate = checkedCount > 0 && checkedCount < visible.length;
+    }
+
+    function toggleColumnValue(value, checked) {
+        const field = filterPopupField;
+        if (usrColumnFilters[field] === null) usrColumnFilters[field] = new Set(columnValues(field));
+        checked ? usrColumnFilters[field].add(value) : usrColumnFilters[field].delete(value);
+        if (usrColumnFilters[field].size === columnValues(field).length) usrColumnFilters[field] = null;
+        applyFilters();
+        renderColumnFilterList(document.getElementById('usr-filter-search')?.value || '');
+    }
+
+    function toggleAllVisible(checked) {
+        const field = filterPopupField;
+        const ql = (document.getElementById('usr-filter-search')?.value || '').trim().toLowerCase();
+        const all = columnValues(field);
+        const visible = ql ? all.filter(v => v.toLowerCase().includes(ql)) : all;
+        if (usrColumnFilters[field] === null) usrColumnFilters[field] = new Set(all);
+        visible.forEach(v => checked ? usrColumnFilters[field].add(v) : usrColumnFilters[field].delete(v));
+        if (usrColumnFilters[field].size === all.length) usrColumnFilters[field] = null;
+        applyFilters();
+        renderColumnFilterList(document.getElementById('usr-filter-search')?.value || '');
+    }
+
+    function resetColumnFilter() {
+        usrColumnFilters[filterPopupField] = null;
+        document.getElementById('usr-filter-search').value = '';
+        toggleSearchClearBtn('');
+        applyFilters();
+        renderColumnFilterList('');
+    }
+
+    // ── Department picker (replaces the native <select> per row) ──
+    let deptPickerUid = null;
+    let deptPickerPanel = null;
+
+    function openDeptPicker(btn, uid) {
+        if (deptPickerPanel) closeDeptPicker();
+        deptPickerUid = uid;
+        deptPickerPanel = document.createElement('div');
+        deptPickerPanel.className = 'usr-picker-panel';
+        deptPickerPanel.innerHTML = `
+            <div class="usr-picker-search-wrap">
+                <i class="bi bi-search usr-picker-search-icon"></i>
+                <input type="text" class="usr-picker-search" placeholder="Search...">
+            </div>
+            <div class="usr-picker-list"></div>
+        `;
+        document.body.appendChild(deptPickerPanel);
+        const r = btn.getBoundingClientRect();
+        deptPickerPanel.style.left = r.left + 'px';
+        deptPickerPanel.style.top = (r.bottom + 4) + 'px';
+        renderDeptPickerList('');
+        // Flip above the trigger if the panel would otherwise run off the
+        // bottom of the viewport — same rule as the multi-select filter panels.
+        const panelRect = deptPickerPanel.getBoundingClientRect();
+        if (panelRect.bottom > window.innerHeight - 12) {
+            deptPickerPanel.style.top = Math.max(12, r.top - panelRect.height - 4) + 'px';
+        }
+        deptPickerPanel.querySelector('.usr-picker-search').addEventListener('input', e => renderDeptPickerList(e.target.value));
+        lockBodyScroll();
+        // Deferred so the click that opened the panel doesn't immediately
+        // bubble into this same-tick listener and close it right away.
+        setTimeout(() => {
+            document.addEventListener('click', onDeptPickerDocClick, true);
+            document.addEventListener('scroll', onDeptPickerScroll, true);
+        }, 0);
+        setTimeout(() => deptPickerPanel.querySelector('.usr-picker-search').focus(), 100);
+    }
+
+    function renderDeptPickerList(q) {
+        const u = allUsers.find(x => x.id === deptPickerUid);
+        const ql = q.trim().toLowerCase();
+        const opts = deptData.filter(d => d.name.toLowerCase().includes(ql));
+        const list = deptPickerPanel.querySelector('.usr-picker-list');
+        if (!opts.length) { list.innerHTML = '<div class="usr-picker-empty">No matches</div>'; return; }
+        list.innerHTML = opts.map(d => {
+            const isSel = u?.department === d.name;
+            return `
+            <div class="usr-picker-item ${isSel ? 'selected' : ''}" onclick="selectDept('${esc(d.name).replace(/'/g, "\\'")}')">
+                <i class="bi bi-check usr-picker-check" style="visibility:${isSel ? 'visible' : 'hidden'}"></i>
+                <span>${esc(d.name)}</span>
+            </div>`;
+        }).join('');
+    }
+
+    function selectDept(name) {
+        const uid = deptPickerUid;
+        onProfileChange(uid, 'department', name);
+        const trigger = document.querySelector(`.usr-dept-trigger[data-uid="${uid}"]`);
+        if (trigger) trigger.textContent = name;
+        closeDeptPicker();
+    }
+
+    function onDeptPickerDocClick(e) {
+        if (deptPickerPanel && !deptPickerPanel.contains(e.target) && !e.target.closest('.usr-dept-trigger')) closeDeptPicker();
+    }
+    function onDeptPickerScroll(e) {
+        if (deptPickerPanel && !deptPickerPanel.contains(e.target)) closeDeptPicker();
+    }
+
+    function closeDeptPicker() {
+        if (!deptPickerPanel) return;
+        deptPickerPanel.remove();
+        deptPickerPanel = null;
+        deptPickerUid = null;
+        document.removeEventListener('click', onDeptPickerDocClick, true);
+        document.removeEventListener('scroll', onDeptPickerScroll, true);
+        unlockBodyScroll();
     }
 
     // ── Access Changes ──
@@ -1791,7 +2077,7 @@
             delete accessChanges[codename];
 
             closeDelModal();
-            renderUsers(document.getElementById('table-search').value.trim().toLowerCase(), document.getElementById('dept-filter').value);
+            renderUsers(document.getElementById('table-search').value.trim().toLowerCase(), document.getElementById('project-filter').value);
             notify('Removed', `${codename} has been removed from the system.`, 'success');
         } catch (e) {
             Swal.fire('Error', e.message, 'error');
@@ -1805,7 +2091,7 @@
         delete accessChanges[codename];
         const anyDirty = Object.keys(accessChanges).length > 0;
         if (!anyDirty) clearDirty();
-        renderUsers(document.getElementById('table-search').value.trim().toLowerCase(), document.getElementById('dept-filter').value);
+        renderUsers(document.getElementById('table-search').value.trim().toLowerCase(), document.getElementById('project-filter').value);
     }
 
     // ── Save All ──

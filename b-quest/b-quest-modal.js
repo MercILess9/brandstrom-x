@@ -44,6 +44,33 @@ const B_QUEST_MODAL_HTML = `
     .was-validated .bq-input-modern:invalid { border-color: #dc3545 !important; background-color: #fff8f8; }
     .bq-input-detail { flex-grow: 1; min-height: 100px; text-align: left !important; text-align-last: left !important; resize: none; padding-top: 10px; }
 
+    /* Type/Work custom picker — same idea as System Settings' Department
+       picker: a native <select> can't be restyled (its open popup always
+       renders in the OS/browser's own look), so the select stays as the
+       real form control (kept "rendered" via opacity:0 rather than
+       display:none/visibility:hidden, which the constraint-validation spec
+       excludes from validation entirely — required would silently stop
+       working) and a styled button drives it via .value + a dispatched
+       change event, so every existing onchange side effect (Work's
+       weight/day/maxPerDay fill, capacity check) keeps firing unchanged. */
+    .bq-picker-wrap { position: relative; margin-bottom: 10px; }
+    .bq-picker-wrap .bq-input-modern { position: absolute; inset: 0; opacity: 0; pointer-events: none; margin: 0; }
+    .bq-picker-trigger { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 12px; font-size: 0.85rem; color: #334155; text-align: center; height: 35px; transition: 0.2s; font-family: inherit; cursor: pointer; }
+    .bq-picker-trigger.placeholder { color: #94a3b8; }
+    .bq-picker-trigger.open, .bq-picker-trigger:focus { outline: none; border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
+    .was-validated .bq-picker-wrap:has(.bq-input-modern:invalid) .bq-picker-trigger { border-color: #dc3545 !important; background-color: #fff8f8; }
+    .bq-picker-panel { position: fixed; z-index: 1200; background: #fff; border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.16); border: 1px solid #e2e8f0; width: 220px; max-height: min(320px, calc(100vh - 24px)); display: flex; flex-direction: column; overflow: hidden; }
+    .bq-picker-search-wrap { padding: 10px; border-bottom: 1px solid #f1f5f9; position: relative; flex-shrink: 0; }
+    .bq-picker-search { width: 100%; box-sizing: border-box; border: 1px solid #e2e8f0; border-radius: 10px; padding: 7px 10px 7px 30px; font-size: 0.78rem; outline: none; font-family: inherit; background: #f8fafc; transition: 0.2s; }
+    .bq-picker-search:focus { border-color: var(--c-accent); background: #fff; }
+    .bq-picker-search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.75rem; pointer-events: none; }
+    .bq-picker-list { overflow-y: auto; padding: 6px; flex: 1; min-height: 0; }
+    .bq-picker-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; color: #334155; transition: background 0.12s; }
+    .bq-picker-item:hover { background: #e2e8f0; }
+    .bq-picker-item.selected { font-weight: 700; color: var(--c-accent-dark); background: var(--c-accent-light); }
+    .bq-picker-check { width: 14px; flex-shrink: 0; color: var(--c-accent-dark); }
+    .bq-picker-empty { padding: 20px; text-align: center; color: #94a3b8; font-size: 0.78rem; }
+
     /* Search button — a soft accent tint so it still reads as "clickable"
        at a glance (unlike a fully gray/quiet icon button), but restrained
        rather than the old solid lime-highlighter block — blooms into the
@@ -435,8 +462,16 @@ const BQuestApp = (() => {
             <div class="role-card-body">
                 <div class="row g-3">
                     <div class="col-6">
-                        <label class="bq-label-modern">Type</label><select class="bq-input-modern" id="b-quest-modal-${role.id}-type"></select>
-                        <label class="bq-label-modern">Work</label><select class="bq-input-modern m-0" id="b-quest-modal-${role.id}-work"></select>
+                        <label class="bq-label-modern">Type</label>
+                        <div class="bq-picker-wrap">
+                            <select class="bq-input-modern" id="b-quest-modal-${role.id}-type"></select>
+                            <button type="button" class="bq-picker-trigger placeholder" id="b-quest-modal-${role.id}-type-trigger" onclick="BQuestApp.openBqPicker(this, 'b-quest-modal-${role.id}-type')">Select...</button>
+                        </div>
+                        <label class="bq-label-modern">Work</label>
+                        <div class="bq-picker-wrap m-0">
+                            <select class="bq-input-modern" id="b-quest-modal-${role.id}-work"></select>
+                            <button type="button" class="bq-picker-trigger placeholder" id="b-quest-modal-${role.id}-work-trigger" onclick="BQuestApp.openBqPicker(this, 'b-quest-modal-${role.id}-work')">Select...</button>
+                        </div>
                     </div>
                     <div class="col-6">
                         <div class="timeline-zone">
@@ -499,10 +534,12 @@ const BQuestApp = (() => {
                 el(`b-quest-modal-${role.id}-maxperday`).value = selected.dataset.maxPerDay || '';
                 checkCapacity(role.id);
             };
+            syncBqPickerTrigger(workSelect.id);
 
             const typeSelect = el(`b-quest-modal-${role.id}-type`);
             typeSelect.innerHTML = '<option value="" selected disabled>Select...</option>';
             State.typeList.forEach(t => typeSelect.add(new Option(t.name, t.name)));
+            syncBqPickerTrigger(typeSelect.id);
 
             // Role cards are torn down and rebuilt (renderRoleCards()'s
             // innerHTML replace) on every modal open, so this — like the
@@ -533,7 +570,9 @@ const BQuestApp = (() => {
 
     function fillRoleCardData(roleId, row) {
         el(`b-quest-modal-${roleId}-type`).value = row?.type || '';
+        syncBqPickerTrigger(`b-quest-modal-${roleId}-type`);
         el(`b-quest-modal-${roleId}-work`).value = row?.work || '';
+        syncBqPickerTrigger(`b-quest-modal-${roleId}-work`);
         State.deadlinePickers[roleId]?.setValue(row?.deadline || null);
         el(`b-quest-modal-${roleId}-weight`).value = row?.weight ?? 0;
         el(`b-quest-modal-${roleId}-day`).value = row?.day ?? 1;
@@ -541,6 +580,100 @@ const BQuestApp = (() => {
         el(`b-quest-modal-${roleId}-assign`).value = row?.assign || '';
         const statusEl = el(`b-quest-modal-${roleId}-status`);
         if (row?.status_id) statusEl.value = row.status_id;
+    }
+
+    // ── Type/Work custom picker — a real <select> stays the source of
+    // truth (value, required, native validation); this just drives it from
+    // a styled popup instead of the select's own unstyleable native one.
+    let bqPickerSelectId = null;
+    let bqPickerPanel = null;
+
+    function syncBqPickerTrigger(selectId) {
+        const select = document.getElementById(selectId);
+        const trigger = document.getElementById(`${selectId}-trigger`);
+        if (!select || !trigger) return;
+        const opt = select.options[select.selectedIndex];
+        const hasValue = opt && opt.value !== '';
+        trigger.textContent = hasValue ? opt.textContent : 'Select...';
+        trigger.classList.toggle('placeholder', !hasValue);
+    }
+
+    function openBqPicker(triggerBtn, selectId) {
+        if (bqPickerPanel) closeBqPicker();
+        bqPickerSelectId = selectId;
+        bqPickerPanel = document.createElement('div');
+        bqPickerPanel.className = 'bq-picker-panel';
+        bqPickerPanel.innerHTML = `
+            <div class="bq-picker-search-wrap">
+                <i class="bi bi-search bq-picker-search-icon"></i>
+                <input type="text" class="bq-picker-search" placeholder="Search...">
+            </div>
+            <div class="bq-picker-list"></div>
+        `;
+        document.body.appendChild(bqPickerPanel);
+        triggerBtn.classList.add('open');
+        const r = triggerBtn.getBoundingClientRect();
+        bqPickerPanel.style.left = r.left + 'px';
+        bqPickerPanel.style.width = Math.max(r.width, 180) + 'px';
+        bqPickerPanel.style.top = (r.bottom + 4) + 'px';
+        renderBqPickerList('');
+        // Flip above the trigger if the panel would otherwise run off the
+        // bottom of the viewport — same rule as every other picker panel.
+        const panelRect = bqPickerPanel.getBoundingClientRect();
+        if (panelRect.bottom > window.innerHeight - 12) {
+            bqPickerPanel.style.top = Math.max(12, r.top - panelRect.height - 4) + 'px';
+        }
+        bqPickerPanel.querySelector('.bq-picker-search').addEventListener('input', e => renderBqPickerList(e.target.value));
+        if (typeof lockBodyScroll === 'function') lockBodyScroll();
+        // Deferred so the click that opened the panel doesn't immediately
+        // bubble into this same-tick listener and close it right away.
+        setTimeout(() => {
+            document.addEventListener('click', onBqPickerDocClick, true);
+            document.addEventListener('scroll', onBqPickerScroll, true);
+        }, 0);
+        setTimeout(() => bqPickerPanel.querySelector('.bq-picker-search').focus(), 100);
+    }
+
+    function renderBqPickerList(q) {
+        const select = document.getElementById(bqPickerSelectId);
+        const ql = q.trim().toLowerCase();
+        const opts = [...select.options].filter(o => o.value !== '' && o.textContent.toLowerCase().includes(ql));
+        const list = bqPickerPanel.querySelector('.bq-picker-list');
+        if (!opts.length) { list.innerHTML = '<div class="bq-picker-empty">No matches</div>'; return; }
+        list.innerHTML = opts.map(o => {
+            const isSel = o.value === select.value;
+            return `
+            <div class="bq-picker-item ${isSel ? 'selected' : ''}" onclick="BQuestApp.selectBqOption('${o.value.replace(/'/g, "\\'")}')">
+                <i class="bi bi-check bq-picker-check" style="visibility:${isSel ? 'visible' : 'hidden'}"></i>
+                <span>${esc(o.textContent)}</span>
+            </div>`;
+        }).join('');
+    }
+
+    function selectBqOption(value) {
+        const select = document.getElementById(bqPickerSelectId);
+        select.value = value;
+        syncBqPickerTrigger(bqPickerSelectId);
+        select.dispatchEvent(new Event('change'));
+        closeBqPicker();
+    }
+
+    function onBqPickerDocClick(e) {
+        if (bqPickerPanel && !bqPickerPanel.contains(e.target) && !e.target.classList.contains('bq-picker-trigger')) closeBqPicker();
+    }
+    function onBqPickerScroll(e) {
+        if (bqPickerPanel && !bqPickerPanel.contains(e.target)) closeBqPicker();
+    }
+
+    function closeBqPicker() {
+        if (!bqPickerPanel) return;
+        document.querySelectorAll('.bq-picker-trigger.open').forEach(b => b.classList.remove('open'));
+        bqPickerPanel.remove();
+        bqPickerPanel = null;
+        bqPickerSelectId = null;
+        document.removeEventListener('click', onBqPickerDocClick, true);
+        document.removeEventListener('scroll', onBqPickerScroll, true);
+        if (typeof unlockBodyScroll === 'function') unlockBodyScroll();
     }
 
     function updateStatusUI(selectEl) {
@@ -571,7 +704,7 @@ const BQuestApp = (() => {
             show(`b-quest-modal-${roleId}-status`, true);
         } else {
             card.classList.remove('active'); card.classList.add('disabled');
-            inputs.forEach(input => { input.required = false; input.value = ''; });
+            inputs.forEach(input => { input.required = false; input.value = ''; syncBqPickerTrigger(input.id); });
             deadlinePicker?.setRequired(false);
             deadlinePicker?.setValue(null);
             el(`b-quest-modal-${roleId}-weight`).value = '0';
@@ -1126,7 +1259,7 @@ const BQuestApp = (() => {
             });
         },
 
-        updateRoleUI, updateStatusUI, openSearchOverlay, openAssignPicker,
+        updateRoleUI, updateStatusUI, openSearchOverlay, openAssignPicker, openBqPicker, selectBqOption,
         async openDuplicateModal(taskId, workData = []) {
             const form = el('b-quest-modal-form');
             form.reset(); form.classList.remove('was-validated');

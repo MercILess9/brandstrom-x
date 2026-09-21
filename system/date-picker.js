@@ -434,6 +434,13 @@
         display.inputMode = 'numeric';
         display.autocomplete = 'off';
         if (wasRequired) display.required = true;
+        // inputEl.value already holds the field's existing saved date (the
+        // caller rendered it via the value="..." HTML attribute before this
+        // ran) — without this, a field that already has a date would show
+        // the underlying hidden input correctly holding it while the
+        // visible masked field the user actually sees starts blank, making
+        // real saved data look like it never persisted.
+        if (ISO_RE.test(inputEl.value)) display.value = formatMask(isoToDigits(inputEl.value));
         wrap.appendChild(display);
 
         const iconBtn = document.createElement('button');

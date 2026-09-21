@@ -76,6 +76,21 @@ const B_OPP_MODAL_HTML = `
     .bopp-qt-num.is-invalid { border-color: #dc3545 !important; background: #fff8f8; }
     .bopp-qt-co.is-invalid { border-color: #dc3545 !important; background: #fff8f8; }
     .bopp-item-sel.is-invalid { outline: 1px solid #dc3545; background: #fff8f8 !important; border-radius: 4px; }
+    /* Re-triggering validation on a field that's already red (e.g. hit
+       Save twice without fixing it) changes nothing visually — nothing
+       draws the eye back to it, easy to miss on a small field. Same
+       shake idea as b-finance-list.html's shakeSaveBar(), generalized
+       to any invalid field via shakeInvalid() below. */
+    @keyframes bopp-shake {
+        0%,100% { transform: translateX(0); }
+        15%     { transform: translateX(-6px); }
+        30%     { transform: translateX(6px); }
+        45%     { transform: translateX(-4px); }
+        60%     { transform: translateX(4px); }
+        75%     { transform: translateX(-2px); }
+        90%     { transform: translateX(2px); }
+    }
+    .bopp-shake { animation: bopp-shake 0.4s ease; }
     .bopp-search-btn { width: 42px; height: 35px; flex-shrink: 0; border: 1px solid #bdc432; border-left: none; border-radius: 0 10px 10px 0; background: #f4f7a1; color: #7a8500; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; transition: 0.2s; }
     .bopp-search-btn:hover { background: #bdc432; color: #1e293b; }
 
@@ -1099,6 +1114,20 @@ const BOppApp = (() => {
         }
     }
 
+    // Re-draws attention to a field already marked .is-invalid from a
+    // previous submit attempt — picker-wrapped fields (Company, QT
+    // Company, BU) style their visible trigger via a :has(.is-invalid)
+    // CSS rule on the wrap, not on the hidden <select> itself, so the
+    // wrap is what needs to visibly shake, not el.
+    function shakeInvalid(el) {
+        if (!el) return;
+        const target = el.closest('.bopp-company-wrap, .bopp-qt-co-wrap, .bopp-item-sel-wrap') || el;
+        target.classList.remove('bopp-shake');
+        void target.offsetHeight;
+        target.classList.add('bopp-shake');
+        target.addEventListener('animationend', () => target.classList.remove('bopp-shake'), { once: true });
+    }
+
     // ── Submit ────────────────────────────────────────────────────────────────
     async function handleSubmit(e) {
         e.preventDefault();
@@ -1108,6 +1137,7 @@ const BOppApp = (() => {
         if (!el('bopp-account-id').value) {
             accInp.classList.add('is-invalid');
             accInp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            shakeInvalid(accInp);
             return;
         }
         accInp.classList.remove('is-invalid');
@@ -1115,12 +1145,13 @@ const BOppApp = (() => {
             compSel.classList.add('is-invalid');
             compSel.scrollIntoView({ behavior: 'smooth', block: 'center' });
             compSel.focus();
+            shakeInvalid(compSel);
             return;
         }
         compSel.classList.remove('is-invalid');
         if (!el('bopp-form').checkValidity()) {
             const first = el('bopp-form').querySelector(':invalid');
-            if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); first.focus(); }
+            if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); first.focus(); shakeInvalid(first); }
             return;
         }
         const activeQTs = isChurnMode() ? _churnQTs : _qts;
@@ -1133,7 +1164,7 @@ const BOppApp = (() => {
             const numInp = card?.querySelector('.bopp-qt-num');
             if (numInp && !numInp.value.trim()) { numInp.classList.add('is-invalid'); if (!firstEmptyName) firstEmptyName = numInp; }
         });
-        if (firstEmptyName) { firstEmptyName.scrollIntoView({ behavior: 'smooth', block: 'center' }); firstEmptyName.focus(); return; }
+        if (firstEmptyName) { firstEmptyName.scrollIntoView({ behavior: 'smooth', block: 'center' }); firstEmptyName.focus(); shakeInvalid(firstEmptyName); return; }
         // รอบ 1.5: Company QT
         let firstEmptyCoQT = null;
         activeQTs.forEach(qt => {
@@ -1141,7 +1172,7 @@ const BOppApp = (() => {
             const coSel = card?.querySelector('.bopp-qt-co');
             if (coSel && !coSel.value) { coSel.classList.add('is-invalid'); if (!firstEmptyCoQT) firstEmptyCoQT = coSel; }
         });
-        if (firstEmptyCoQT) { firstEmptyCoQT.scrollIntoView({ behavior: 'smooth', block: 'center' }); firstEmptyCoQT.focus(); return; }
+        if (firstEmptyCoQT) { firstEmptyCoQT.scrollIntoView({ behavior: 'smooth', block: 'center' }); firstEmptyCoQT.focus(); shakeInvalid(firstEmptyCoQT); return; }
         // รอบ 1.6: BU ในทุก item
         let firstEmptyBU = null;
         activeQTs.forEach(qt => {
@@ -1154,7 +1185,7 @@ const BOppApp = (() => {
                 }
             });
         });
-        if (firstEmptyBU) { firstEmptyBU.scrollIntoView({ behavior: 'smooth', block: 'center' }); notify('', 'กรุณาเลือก BU ให้ครบทุก item', 'warning'); return; }
+        if (firstEmptyBU) { firstEmptyBU.scrollIntoView({ behavior: 'smooth', block: 'center' }); firstEmptyBU.focus(); shakeInvalid(firstEmptyBU); return; }
         // รอบ 2: ยอดเงิน
         const noAmtQT = activeQTs.find(qt => !(qt._totAmt > 0));
         if (noAmtQT) {

@@ -260,7 +260,7 @@ async function initLayout(config = {}) {
     if (isAuthPage || isIndex) {
         // ล้าง permission cache ทุกครั้งที่กลับมาหน้า Index เพื่อให้ตอนเข้า project ใหม่จะ fetch ใหม่เสมอ
         if (isIndex) {
-            Object.keys(sessionStorage).filter(k => k.startsWith('bx_perms_') || k === 'bx_sys_access').forEach(k => sessionStorage.removeItem(k));
+            Object.keys(sessionStorage).filter(k => k.startsWith('bx_perms_') || k.startsWith('bx_sys_access')).forEach(k => sessionStorage.removeItem(k));
         }
         document.body.classList.add('auth-ready');
         return;
@@ -313,25 +313,39 @@ async function initAuthGuard() {
     }
 }
 
+// Which table actually holds "is this codename in this project" for each
+// live project — access is granted the moment a project's own admin adds
+// someone there (Add Member), full stop. There's no separate per-person
+// platform-level pre-approval step anymore (that used to be
+// setting_project.<key>, toggled by a different admin on a different page,
+// which could drift out of sync with the project's own member list).
+// setting_project itself still exists for system_setting (no project/
+// member-table equivalent for that one) and for bdashboard/bcommission
+// (not live projects yet, no member table to point at).
+const PROJECT_MEMBER_TABLE = { bquest: 'b_quest_member', baccount: 'b_account_setting', bfinance: 'b_finance_setting' };
+
 async function guardProjectAccess(accessKey) {
     const user = getBxUser();
     if (!user || user.level === 'god') return true;
 
-    let access = null;
-    const cached = sessionStorage.getItem('bx_sys_access');
-    if (cached) {
-        access = JSON.parse(cached);
+    const table = PROJECT_MEMBER_TABLE[accessKey];
+    if (!table) { window.location.replace('/index.html'); return false; }
+
+    // Cached per accessKey (not one combined blob) — each project page only
+    // ever needs its own single key, so there's no reason to fetch or
+    // invalidate the others together.
+    const cacheKey = `bx_sys_access_${accessKey}`;
+    let allowed;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached !== null) {
+        allowed = cached === '1';
     } else {
-        const { data } = await supabaseClient
-            .from('setting_project')
-            .select('*')
-            .eq('codename', user.codename)
-            .single();
-        access = data || {};
-        sessionStorage.setItem('bx_sys_access', JSON.stringify(access));
+        const { data } = await supabaseClient.from(table).select('codename').eq('codename', user.codename).maybeSingle();
+        allowed = !!data;
+        sessionStorage.setItem(cacheKey, allowed ? '1' : '0');
     }
 
-    if (access[accessKey] !== true) {
+    if (!allowed) {
         window.location.replace('/index.html');
         return false;
     }
@@ -413,7 +427,12 @@ async function renderSystemMenu(config) {
         if (perms._god) return true;
         return !!perms[menu.perm];
     }).map(menu => {
-        const isActive = (currentPath === menu.link.replace(/\.html$/, '')) ? 'active' : '';
+        // A menu's page can have a same-project "sub-page" that isn't its own
+        // top-nav entry (e.g. Settings' in-page Members tab lives at a
+        // different URL) — activeAlso lists those URLs so the underline
+        // still shows the right top-level item instead of going dark.
+        const isActive = (currentPath === menu.link.replace(/\.html$/, '')
+            || (menu.activeAlso || []).some(p => currentPath === p.replace(/\.html$/, ''))) ? 'active' : '';
         return `<a href="${menu.link}" class="sys-menu-link ${isActive}">${menu.name}</a>`;
     }).join('');
 }

@@ -126,6 +126,7 @@ initPage().then(() => observer.observe(triggerEl));
 - สีความหมายอื่น (แดง danger, สี role แต่ละแบบ) ยังอยู่ใน `<project>.css` ของตัวเองเหมือนเดิม ไม่ย้ายเข้ามาที่นี่
 - Text วางทับพื้น `--c-accent` เต็มค่าโดยตรง (ไม่ใช่ `--c-accent-light`) ต้องใช้ `--c-on-accent` เสมอ ห้ามใช้ `--c-dark`/hardcode hex ตรงๆ — ตอนสร้างหน้าเลือกสีธีมในอนาคต จุดที่ต้องคำนวณสี (เทียบ contrast ดำ/ขาว) คือ token นี้ตัวเดียว
 - ออกแบบไว้ให้ future Setting เปลี่ยน theme สีหลักได้ — เปลี่ยน 3 ค่านี้พร้อมกันเป็นชุดเดียวเท่านั้น (ห้ามเปลี่ยนแค่ตัวเดียว จะพังคอนทราสต์)
+- Hover ของ item ใน dropdown/filter/checkbox list ทั่วระบบ (`select-picker.js`, `multi-select.js`, column-filter popover ของ `setting.html`/`b-quest-members.html`) ใช้ `--c-accent-light` ตรงๆ เหมือนกันหมด (เคยแยกเป็น token ชื่อ `--c-hover-bg` ต่างหาก แต่รวมกลับมาใช้ตัวเดียวกับสีเขียวแล้วตามที่ user ตัดสินใจ 2026-09-13)
 
 ## Performance Rules
 
@@ -161,10 +162,10 @@ Two sections:
 
 ## Departments Table
 
-- Table: `departments` — columns: `name` (text, PK only — no id, no sort_order)
+- Table: `departments` — columns: `name` (text, PK), `active` (boolean, default true), `sort_order` (integer) — `active`/`sort_order` added 2026-09-22 (`20260922000004_departments_active_sort_order.sql`) to back the drag-reorder + Active toggle on `system/setting.html`'s Department list
 - RLS: `SELECT` open to authenticated (`USING (true)`)
 - Write policy: authenticated users (or manage via SQL Editor)
-- Sorted a-z by `name` on query
+- Ordered by `sort_order` on query (was a-z by `name` before the migration above)
 - Used in: `system/setting.html` (manage), `auth/signup.html` (dropdown), Users & Access dept dropdown
 
 ## Adding a New Project

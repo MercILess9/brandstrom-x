@@ -52,7 +52,7 @@
             .bx-ms-group:first-child { padding-top: 2px; }
             .bx-ms-item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px;
                 cursor: pointer; font-size: 0.8rem; color: #334155; transition: background 0.12s; }
-            .bx-ms-item:hover { background: #f8fafc; }
+            .bx-ms-item:hover { background: var(--c-accent-light); }
             .bx-ms-empty { padding: 20px; text-align: center; color: #94a3b8; font-size: 0.78rem; }
             .bx-ms-footer { padding: 8px 10px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; flex-shrink: 0; }
             .bx-ms-clear, .bx-ms-selectall { background: none; border: none; color: #94a3b8; font-size: 0.72rem; font-weight: 700;

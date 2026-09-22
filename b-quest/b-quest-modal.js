@@ -40,36 +40,39 @@ const B_QUEST_MODAL_HTML = `
     .bq-glass-card { background: #fff; border-radius: 18px; padding: 20px; border: 1px solid #eef2f7; height: 100%; display: flex; flex-direction: column; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.04); }
     .bq-label-modern { font-size: 0.6rem; font-weight: 800; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.8px; display: block; }
     .bq-input-modern { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 12px; font-size: 0.85rem; color: #334155; margin-bottom: 10px; text-align-last: center; height: 35px; transition: 0.2s; font-family: inherit; }
+    .bq-input-modern:hover { border-color: var(--c-accent); }
     .bq-input-modern:focus { outline: none; border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
     .was-validated .bq-input-modern:invalid { border-color: #dc3545 !important; background-color: #fff8f8; }
     .bq-input-detail { flex-grow: 1; min-height: 100px; text-align: left !important; text-align-last: left !important; resize: none; padding-top: 10px; }
 
-    /* Type/Work custom picker — same idea as System Settings' Department
-       picker: a native <select> can't be restyled (its open popup always
-       renders in the OS/browser's own look), so the select stays as the
-       real form control (kept "rendered" via opacity:0 rather than
-       display:none/visibility:hidden, which the constraint-validation spec
-       excludes from validation entirely — required would silently stop
-       working) and a styled button drives it via .value + a dispatched
-       change event, so every existing onchange side effect (Work's
-       weight/day/maxPerDay fill, capacity check) keeps firing unchanged. */
+    /* Type/Work custom picker — a native <select> can't be restyled (its
+       open popup always renders in the OS/browser's own look), so the
+       select stays as the real form control (kept "rendered" via
+       opacity:0 rather than display:none/visibility:hidden, which the
+       constraint-validation spec excludes from validation entirely —
+       required would silently stop working) and a styled button drives it
+       via .value + a dispatched change event, so every existing onchange
+       side effect (Work's weight/day/maxPerDay fill, capacity check) keeps
+       firing unchanged. The popup itself (search+list+positioning) is
+       /system/select-picker.js's shared component — same one System
+       Settings' Department picker uses — so only the trigger button's own
+       look needs styling here; .bx-sp-trigger-open (added by that shared
+       script while its panel is open) already supplies the accent
+       border/glow, same recipe as .bq-input-modern:focus. */
     .bq-picker-wrap { position: relative; margin-bottom: 10px; }
     .bq-picker-wrap .bq-input-modern { position: absolute; inset: 0; opacity: 0; pointer-events: none; margin: 0; }
-    .bq-picker-trigger { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 12px; font-size: 0.85rem; color: #334155; text-align: center; height: 35px; transition: 0.2s; font-family: inherit; cursor: pointer; }
-    .bq-picker-trigger.placeholder { color: #94a3b8; }
-    .bq-picker-trigger.open, .bq-picker-trigger:focus { outline: none; border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
+    /* Same text color whether placeholder or filled — dimming the empty
+       state read as "disabled" instead of "click to choose" (a normal
+       native <select>'s placeholder isn't grayed out either). The chevron
+       is what signals "this is a dropdown", not a faded look. */
+    .bq-picker-trigger { position: relative; width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 24px 5px 12px; font-size: 0.85rem; color: #334155; text-align: center; height: 35px; transition: 0.2s; font-family: inherit; cursor: pointer; }
+    .bq-picker-trigger::after {
+        content: ''; position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+        width: 10px; height: 10px; opacity: 0.5; pointer-events: none;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat center / contain;
+    }
+    .bq-picker-trigger:hover { border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
     .was-validated .bq-picker-wrap:has(.bq-input-modern:invalid) .bq-picker-trigger { border-color: #dc3545 !important; background-color: #fff8f8; }
-    .bq-picker-panel { position: fixed; z-index: 1200; background: #fff; border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.16); border: 1px solid #e2e8f0; width: 220px; max-height: min(320px, calc(100vh - 24px)); display: flex; flex-direction: column; overflow: hidden; }
-    .bq-picker-search-wrap { padding: 10px; border-bottom: 1px solid #f1f5f9; position: relative; flex-shrink: 0; }
-    .bq-picker-search { width: 100%; box-sizing: border-box; border: 1px solid #e2e8f0; border-radius: 10px; padding: 7px 10px 7px 30px; font-size: 0.78rem; outline: none; font-family: inherit; background: #f8fafc; transition: 0.2s; }
-    .bq-picker-search:focus { border-color: var(--c-accent); background: #fff; }
-    .bq-picker-search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.75rem; pointer-events: none; }
-    .bq-picker-list { overflow-y: auto; padding: 6px; flex: 1; min-height: 0; }
-    .bq-picker-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; color: #334155; transition: background 0.12s; }
-    .bq-picker-item:hover { background: #e2e8f0; }
-    .bq-picker-item.selected { font-weight: 700; color: var(--c-accent-dark); background: var(--c-accent-light); }
-    .bq-picker-check { width: 14px; flex-shrink: 0; color: var(--c-accent-dark); }
-    .bq-picker-empty { padding: 20px; text-align: center; color: #94a3b8; font-size: 0.78rem; }
 
     /* Search button — a soft accent tint so it still reads as "clickable"
        at a glance (unlike a fully gray/quiet icon button), but restrained
@@ -112,8 +115,26 @@ const B_QUEST_MODAL_HTML = `
 
     /* Status select — colored per the status's own configured color (set
        inline via updateStatusUI), not a fixed progress/done pair. */
-    .bq-status-select { border: 1px solid; border-radius: 20px; font-size: 0.68rem; font-weight: 700; padding: 3px 12px; min-width: 90px; text-align-last: center; height: 26px; display: none; margin-left: auto; cursor: pointer; font-family: inherit; appearance: none; -webkit-appearance: none; letter-spacing: 0.3px; transition: transform 0.15s, filter 0.15s; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-    .bq-status-select:hover { transform: scale(1.05); filter: brightness(0.97); }
+    /* Status colors come entirely from State.statusList (admin-managed —
+       any hex an admin picks, not a fixed palette), set as inline styles
+       by updateStatusUI. Solid fill + a fixed white ring (not a color-
+       matched border) is what makes this survive an arbitrary color
+       reliably: the ring keeps the chip crisp against whatever sits
+       behind it (the card header's own tint changes when active) without
+       needing to compute a second color, and pairing solid fill with a
+       proper luminance-based text pick (pickBadgeTextColor) — rather than
+       a same-hue pale-tint background + darkened-same-hue text — is what
+       actually guarantees readable contrast for light hues like yellow/
+       lime, where "same hue, just darker" still reads as washed out. */
+    .bq-status-wrap { display: none; margin-left: auto; }
+    .bq-status-select { display: none; }
+    .bq-status-trigger { border: 2px solid #fff; border-radius: 20px; font-size: 0.68rem; font-weight: 700; padding: 3px 20px 3px 12px; min-width: 90px; text-align: center; height: 26px; cursor: pointer; font-family: inherit; letter-spacing: 0.3px; transition: transform 0.15s, filter 0.15s; box-shadow: 0 1px 4px rgba(0,0,0,0.18); position: relative; }
+    .bq-status-trigger:hover { transform: scale(1.05); filter: brightness(0.97); }
+    .bq-status-trigger::after {
+        content: ''; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+        width: 8px; height: 8px; opacity: 0.6; pointer-events: none;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='currentColor' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat center / contain;
+    }
 
     /* ── Timeline Zone ── */
     .timeline-zone { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 14px; padding: 12px 12px 10px; height: 100%; display: flex; flex-direction: column; gap: 6px; }
@@ -175,7 +196,7 @@ const B_QUEST_MODAL_HTML = `
        avatar/subtitle, since these rows are plain strings (account/
        opportunity names) with no person-like metadata to show. */
     .uni-item-modern { display: flex; align-items: center; border: none; background: none; border-radius: 12px; margin-bottom: 2px; padding: 10px 12px; font-size: 0.85rem; font-weight: 600; text-align: left; cursor: pointer; transition: background 0.15s; color: #334155; width: 100%; font-family: inherit; }
-    .uni-item-modern:hover { background: var(--c-bg); color: var(--c-dark); }
+    .uni-item-modern:hover { background: var(--c-accent-light); color: var(--c-accent-dark); }
     #uni-list-container { min-height: 280px; }
 
     /* Assign picker — same visual language as Settings' Add Member list
@@ -183,7 +204,7 @@ const B_QUEST_MODAL_HTML = `
        plain text-only rows this used to be. Icon-only avatar for now,
        already shaped to drop in a real profile photo later. */
     .bq-am-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: background 0.15s; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
-    .bq-am-item:hover { background: var(--c-bg); }
+    .bq-am-item:hover { background: var(--c-accent-light); }
     .bq-am-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--c-accent-light); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: var(--c-accent-dark); flex-shrink: 0; }
     .bq-am-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
     .bq-am-nick { font-size: 0.85rem; font-weight: 700; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -403,48 +424,48 @@ const BQuestApp = (() => {
     // hexToRgba() is now the shared helper in b-quest.js (loaded before this
     // file wherever it's used) — was an identical local copy here.
 
-    // Status color used directly as text on a light tint of itself reads
-    // fine for dark/saturated hues but goes nearly invisible for light ones
-    // (lime, yellow, pale cyan) — same hue, just capped to a lightness that
-    // stays readable, so the pill still color-codes by status.
-    function readableTextColor(hex, cap = 0.3) {
-        const h = (hex || '#64748b').replace('#', '');
+    function hexToRgbParts(hex) {
+        const h = (hex || '#94a3b8').replace('#', '');
         const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
         const n = parseInt(full, 16);
-        let r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
-        const max = Math.max(r, g, b), min = Math.min(r, g, b);
-        let hDeg = 0, s = 0; const l = (max + min) / 2;
-        const d = max - min;
-        if (d !== 0) {
-            s = d / (1 - Math.abs(2 * l - 1));
-            switch (max) {
-                case r: hDeg = ((g - b) / d) % 6; break;
-                case g: hDeg = (b - r) / d + 2; break;
-                default: hDeg = (r - g) / d + 4;
-            }
-            hDeg *= 60; if (hDeg < 0) hDeg += 360;
-        }
-        const l2 = Math.min(l, cap); // cap lightness so text never washes out
-        const c2 = (1 - Math.abs(2 * l2 - 1)) * s;
-        const x2 = c2 * (1 - Math.abs((hDeg / 60) % 2 - 1));
-        const m2 = l2 - c2 / 2;
-        let [r2, g2, b2] = hDeg < 60 ? [c2, x2, 0] : hDeg < 120 ? [x2, c2, 0] : hDeg < 180 ? [0, c2, x2]
-            : hDeg < 240 ? [0, x2, c2] : hDeg < 300 ? [x2, 0, c2] : [c2, 0, x2];
-        [r2, g2, b2] = [r2, g2, b2].map(v => Math.round((v + m2) * 255));
-        return `rgb(${r2},${g2},${b2})`;
+        return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+
+    function yiqLuma(r, g, b) {
+        return (r * 299 + g * 587 + b * 114) / 1000;
+    }
+
+    // Admin-picked color used directly as text — or a same-hue-darkened
+    // variant of it — reads fine for dark/saturated hues but goes muddy or
+    // nearly invisible for light-reading ones (lime, yellow, pale cyan),
+    // because same-hue color pairs have a low perceived-contrast ceiling no
+    // matter how the lightness is tuned. Both pickers below sidestep that by
+    // ignoring hue entirely and picking pure near-black or pure white via a
+    // plain YIQ luminance check — the only thing that reliably tracks
+    // perceived contrast regardless of what hue an admin picks.
+
+    // For a SOLID fill (the color used at full strength, e.g. the Status
+    // pill's background) — check the color itself.
+    function pickBadgeTextColor(hex) {
+        const [r, g, b] = hexToRgbParts(hex);
+        return yiqLuma(r, g, b) >= 150 ? '#1e293b' : '#ffffff';
+    }
+
+    // For a TRANSLUCENT TINT of the color over a white-ish surface (e.g. the
+    // Assign badge, which sits on a 10%/18%-alpha wash of the role color,
+    // not the color itself) — check the composite over white at the
+    // darkest alpha actually used (0.18, the hover state), since that's the
+    // hardest case for dark text to still clear. At these low alphas the
+    // composite stays close to white for nearly any hue, so this is mostly
+    // a safety net for an unusually dark admin-picked role color.
+    function pickTintTextColor(hex, alpha = 0.18) {
+        const [r, g, b] = hexToRgbParts(hex).map(v => v * alpha + 255 * (1 - alpha));
+        return yiqLuma(r, g, b) >= 150 ? '#1e293b' : '#ffffff';
     }
 
     function roleCardHtml(role) {
         const c = role.color || '#64748b';
-        // Same fix as the Status pill's text color — a light/pastel role
-        // color used directly as text on its own light tint background
-        // goes nearly unreadable, so this readable (darkened) variant is
-        // what actually gets used for text, while the raw color still
-        // drives borders/backgrounds/the toggle.
-        // Lighter cap than Status's pill (0.3) — this badge is a smaller,
-        // secondary element, not a primary text-sized label, so it can
-        // afford to stay closer to the role's actual color.
-        const vars = `--role-color:${c}; --role-color-text:${readableTextColor(c, 0.38)}; --role-color-08:${hexToRgba(c,0.08)}; --role-color-10:${hexToRgba(c,0.1)}; --role-color-15:${hexToRgba(c,0.15)}; --role-color-18:${hexToRgba(c,0.18)}; --role-color-25:${hexToRgba(c,0.25)}; --role-color-30:${hexToRgba(c,0.3)};`;
+        const vars = `--role-color:${c}; --role-color-text:${pickTintTextColor(c)}; --role-color-08:${hexToRgba(c,0.08)}; --role-color-10:${hexToRgba(c,0.1)}; --role-color-15:${hexToRgba(c,0.15)}; --role-color-18:${hexToRgba(c,0.18)}; --role-color-25:${hexToRgba(c,0.25)}; --role-color-30:${hexToRgba(c,0.3)};`;
         const defaultId = getDefaultStatusId();
         const statusOptions = State.statusList.map(s => `<option value="${s.id}" ${s.id === defaultId ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
         return `
@@ -455,9 +476,12 @@ const BQuestApp = (() => {
                 </div>
                 <div class="role-card-title"><i class="bi ${role.icon || 'bi-person-workspace'} ms-1 me-1 role-icon"></i> ${esc(role.name)}</div>
                 <span class="bq-assign-badge" id="badge-assign-${role.id}"></span>
-                <select class="bq-status-select" id="b-quest-modal-${role.id}-status" onchange="BQuestApp.updateStatusUI(this)">
-                    ${statusOptions}
-                </select>
+                <div class="bq-status-wrap" id="b-quest-modal-${role.id}-status-wrap">
+                    <select class="bq-status-select" id="b-quest-modal-${role.id}-status" onchange="BQuestApp.updateStatusUI(this)">
+                        ${statusOptions}
+                    </select>
+                    <button type="button" class="bq-status-trigger" onclick="BQuestApp.openBqPicker(this, 'b-quest-modal-${role.id}-status')"></button>
+                </div>
             </div>
             <div class="role-card-body">
                 <div class="row g-3">
@@ -584,10 +608,9 @@ const BQuestApp = (() => {
 
     // ── Type/Work custom picker — a real <select> stays the source of
     // truth (value, required, native validation); this just drives it from
-    // a styled popup instead of the select's own unstyleable native one.
-    let bqPickerSelectId = null;
-    let bqPickerPanel = null;
-
+    // /system/select-picker.js's shared popup instead of the select's own
+    // unstyleable native one. Thin wrapper only — the actual
+    // search+list+positioning code lives in exactly one shared place.
     function syncBqPickerTrigger(selectId) {
         const select = document.getElementById(selectId);
         const trigger = document.getElementById(`${selectId}-trigger`);
@@ -599,89 +622,25 @@ const BQuestApp = (() => {
     }
 
     function openBqPicker(triggerBtn, selectId) {
-        if (bqPickerPanel) closeBqPicker();
-        bqPickerSelectId = selectId;
-        bqPickerPanel = document.createElement('div');
-        bqPickerPanel.className = 'bq-picker-panel';
-        bqPickerPanel.innerHTML = `
-            <div class="bq-picker-search-wrap">
-                <i class="bi bi-search bq-picker-search-icon"></i>
-                <input type="text" class="bq-picker-search" placeholder="Search...">
-            </div>
-            <div class="bq-picker-list"></div>
-        `;
-        document.body.appendChild(bqPickerPanel);
-        triggerBtn.classList.add('open');
-        const r = triggerBtn.getBoundingClientRect();
-        bqPickerPanel.style.left = r.left + 'px';
-        bqPickerPanel.style.width = Math.max(r.width, 180) + 'px';
-        bqPickerPanel.style.top = (r.bottom + 4) + 'px';
-        renderBqPickerList('');
-        // Flip above the trigger if the panel would otherwise run off the
-        // bottom of the viewport — same rule as every other picker panel.
-        const panelRect = bqPickerPanel.getBoundingClientRect();
-        if (panelRect.bottom > window.innerHeight - 12) {
-            bqPickerPanel.style.top = Math.max(12, r.top - panelRect.height - 4) + 'px';
-        }
-        bqPickerPanel.querySelector('.bq-picker-search').addEventListener('input', e => renderBqPickerList(e.target.value));
-        if (typeof lockBodyScroll === 'function') lockBodyScroll();
-        // Deferred so the click that opened the panel doesn't immediately
-        // bubble into this same-tick listener and close it right away.
-        setTimeout(() => {
-            document.addEventListener('click', onBqPickerDocClick, true);
-            document.addEventListener('scroll', onBqPickerScroll, true);
-        }, 0);
-        setTimeout(() => bqPickerPanel.querySelector('.bq-picker-search').focus(), 100);
-    }
-
-    function renderBqPickerList(q) {
-        const select = document.getElementById(bqPickerSelectId);
-        const ql = q.trim().toLowerCase();
-        const opts = [...select.options].filter(o => o.value !== '' && o.textContent.toLowerCase().includes(ql));
-        const list = bqPickerPanel.querySelector('.bq-picker-list');
-        if (!opts.length) { list.innerHTML = '<div class="bq-picker-empty">No matches</div>'; return; }
-        list.innerHTML = opts.map(o => {
-            const isSel = o.value === select.value;
-            return `
-            <div class="bq-picker-item ${isSel ? 'selected' : ''}" onclick="BQuestApp.selectBqOption('${o.value.replace(/'/g, "\\'")}')">
-                <i class="bi bi-check bq-picker-check" style="visibility:${isSel ? 'visible' : 'hidden'}"></i>
-                <span>${esc(o.textContent)}</span>
-            </div>`;
-        }).join('');
-    }
-
-    function selectBqOption(value) {
-        const select = document.getElementById(bqPickerSelectId);
-        select.value = value;
-        syncBqPickerTrigger(bqPickerSelectId);
-        select.dispatchEvent(new Event('change'));
-        closeBqPicker();
-    }
-
-    function onBqPickerDocClick(e) {
-        if (bqPickerPanel && !bqPickerPanel.contains(e.target) && !e.target.classList.contains('bq-picker-trigger')) closeBqPicker();
-    }
-    function onBqPickerScroll(e) {
-        if (bqPickerPanel && !bqPickerPanel.contains(e.target)) closeBqPicker();
-    }
-
-    function closeBqPicker() {
-        if (!bqPickerPanel) return;
-        document.querySelectorAll('.bq-picker-trigger.open').forEach(b => b.classList.remove('open'));
-        bqPickerPanel.remove();
-        bqPickerPanel = null;
-        bqPickerSelectId = null;
-        document.removeEventListener('click', onBqPickerDocClick, true);
-        document.removeEventListener('scroll', onBqPickerScroll, true);
-        if (typeof unlockBodyScroll === 'function') unlockBodyScroll();
+        const select = document.getElementById(selectId);
+        openSelectPicker(triggerBtn, {
+            getOptions: () => [...select.options].filter(o => o.value !== '').map(o => ({ value: o.value, label: o.textContent })),
+            getValue: () => select.value,
+            onSelect: (value) => {
+                select.value = value;
+                syncBqPickerTrigger(selectId);
+                select.dispatchEvent(new Event('change'));
+            },
+        });
     }
 
     function updateStatusUI(selectEl) {
         const status = State.statusList.find(s => s.id === selectEl.value);
         const color = status?.color || '#94a3b8';
-        selectEl.style.background = hexToRgba(color, 0.18);
-        selectEl.style.borderColor = hexToRgba(color, 0.4);
-        selectEl.style.color = readableTextColor(color);
+        const trigger = selectEl.nextElementSibling;
+        trigger.textContent = status?.name || selectEl.options[selectEl.selectedIndex]?.textContent || '';
+        trigger.style.background = color;
+        trigger.style.color = pickBadgeTextColor(color);
     }
 
     function updateRoleUI(roleId) {
@@ -701,7 +660,7 @@ const BQuestApp = (() => {
             deadlinePicker?.setRequired(true);
             const currentAssign = el(`b-quest-modal-${roleId}-assign`).value || '';
             refreshAssignBadge(roleId, currentAssign, canAssign);
-            show(`b-quest-modal-${roleId}-status`, true);
+            show(`b-quest-modal-${roleId}-status-wrap`, true, 'flex');
         } else {
             card.classList.remove('active'); card.classList.add('disabled');
             inputs.forEach(input => { input.required = false; input.value = ''; syncBqPickerTrigger(input.id); });
@@ -713,7 +672,7 @@ const BQuestApp = (() => {
             const capEl = el(`${roleId}-capacity-info`);
             if (capEl) { capEl.className = 'bq-cap-info'; capEl.innerHTML = ''; }
             refreshAssignBadge(roleId, '', false);
-            show(`b-quest-modal-${roleId}-status`, false);
+            show(`b-quest-modal-${roleId}-status-wrap`, false);
         }
         // Card body expand/collapse is an animated max-height transition
         // (0.35s), so the column's scrollHeight isn't final yet on this
@@ -1041,6 +1000,14 @@ const BQuestApp = (() => {
     // regardless of which library's cleanup runs last.
     el('b-quest-modal')?.addEventListener('shown.bs.modal', lockBodyScroll);
     el('b-quest-modal')?.addEventListener('hidden.bs.modal', unlockBodyScroll);
+    // A select-picker popover is appended to <body>, not this modal, and
+    // only closes itself on an outside click/scroll — Escape (Bootstrap's
+    // default data-bs-keyboard, not disabled here) closes the modal
+    // directly with no click event at all, so a picker left open when that
+    // happens would otherwise leak: an orphaned panel still floating after
+    // the modal is gone, plus its document click/scroll listeners never
+    // torn down.
+    el('b-quest-modal')?.addEventListener('hidden.bs.modal', () => { if (typeof closeSelectPicker === 'function') closeSelectPicker(); });
 
     return {
         async openModal(taskId = null, workData = []) {
@@ -1090,7 +1057,7 @@ const BQuestApp = (() => {
 
                         const statusEl = el(`b-quest-modal-${role.id}-status`);
                         if (hasRoleData) fillRoleCardData(role.id, row);
-                        show(statusEl.id, hasRoleData);
+                        show(`b-quest-modal-${role.id}-status-wrap`, hasRoleData, 'flex');
                         updateStatusUI(statusEl);
 
                         if (hasRoleData) refreshAssignBadge(role.id, row.assign || '', canAssign);
@@ -1259,7 +1226,7 @@ const BQuestApp = (() => {
             });
         },
 
-        updateRoleUI, updateStatusUI, openSearchOverlay, openAssignPicker, openBqPicker, selectBqOption,
+        updateRoleUI, updateStatusUI, openSearchOverlay, openAssignPicker, openBqPicker,
         async openDuplicateModal(taskId, workData = []) {
             const form = el('b-quest-modal-form');
             form.reset(); form.classList.remove('was-validated');
@@ -1295,7 +1262,7 @@ const BQuestApp = (() => {
                 if (hasRoleData) {
                     fillRoleCardData(role.id, { ...srcRow, deadline: '', assign: '' });
                 }
-                show(statusEl.id, hasRoleData);
+                show(`b-quest-modal-${role.id}-status-wrap`, hasRoleData, 'flex');
                 updateStatusUI(statusEl);
 
                 refreshAssignBadge(role.id, '', false);

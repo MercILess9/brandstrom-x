@@ -8,25 +8,40 @@ const B_OPP_MODAL_HTML = `
     /* ── Header ── */
     .bopp-header { background: #1e293b; padding: 15px 28px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .bopp-header-left { display: flex; align-items: center; gap: 10px; }
-    .bopp-header-bar { width: 4px; height: 22px; background: #bdc432; border-radius: 2px; flex-shrink: 0; }
-    .bopp-header-icon { color: #bdc432; font-size: 1rem; }
+    .bopp-header-bar { width: 4px; height: 22px; background: var(--c-accent); border-radius: 2px; flex-shrink: 0; }
+    .bopp-header-icon { color: var(--c-accent); font-size: 1rem; }
     .bopp-header-title { color: #fff; font-size: 0.95rem; font-weight: 800; letter-spacing: 0.2px; }
     .bopp-header-right { display: flex; align-items: center; gap: 12px; }
     .bopp-hdr-totals { display: flex; align-items: center; gap: 14px; margin-right: 4px; }
     .bopp-hdr-tbox { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
     .bopp-hdr-tval { font-size: 1.05rem; font-weight: 800; color: #fff; }
-    .bopp-hdr-tval.gp { color: #bdc432; }
+    .bopp-hdr-tval.gp { color: var(--c-accent); }
     .bopp-hdr-tlbl { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: rgba(255,255,255,0.4); }
-    .bopp-hdr-pct-badge { background: #bdc432; color: #1e293b; border-radius: 100px; padding: 5px 10px; font-size: 0.85rem; font-weight: 800; line-height: 1; white-space: nowrap; }
+    .bopp-hdr-pct-badge { background: var(--c-accent); color: var(--c-on-accent); border-radius: 100px; padding: 5px 10px; font-size: 0.85rem; font-weight: 800; line-height: 1; white-space: nowrap; }
     .bopp-hdr-pct-badge:empty { display: none; }
     .bopp-hdr-lost-zone { display: none; align-items: center; gap: 12px; border: 1px solid rgba(249,115,22,0.45); border-radius: 10px; padding: 5px 14px; background: rgba(249,115,22,0.08); margin-right: 6px; }
     .bopp-hdr-lost-zone .bopp-hdr-tval { color: #f97316; }
     .bopp-hdr-lost-zone .bopp-hdr-tlbl { color: rgba(255,255,255,0.4); }
     .bopp-hdr-lost-zone .bopp-hdr-tdiv { background: rgba(249,115,22,0.3); }
     .bopp-hdr-tdiv { width: 1px; height: 26px; background: rgba(255,255,255,0.15); }
-    .bopp-status-sel { border: 1.5px solid rgba(255,255,255,0.2); border-radius: 10px; background: rgba(255,255,255,0.08); color: #e2e8f0; font-size: 0.78rem; font-weight: 700; padding: 0 28px 0 12px; height: 34px; cursor: pointer; font-family: inherit; outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffffff' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; transition: background-color 0.2s, border-color 0.2s, color 0.2s; text-align: center; text-align-last: center; }
-    .bopp-status-sel:focus { border-color: rgba(255,255,255,0.4); }
-    .bopp-status-sel option { background: #1e293b; color: #e2e8f0; }
+    /* Status is driven entirely by JS-set inline colors (updateStatusColor,
+       one per status value) rather than a fixed palette, so the picker
+       swap keeps that mechanism as-is — it now targets the trigger button
+       instead of the (permanently display:none, no validation concern
+       here so no opacity trick needed) <select>. */
+    .bopp-status-wrap { position: relative; display: inline-flex; }
+    .bopp-status-wrap select { display: none; }
+    .bopp-status-trigger { appearance: none; -webkit-appearance: none; border: 1.5px solid rgba(255,255,255,0.2); border-radius: 10px; background: rgba(255,255,255,0.08); color: #e2e8f0; font-size: 0.78rem; font-weight: 700; padding: 0 28px 0 12px; height: 34px; cursor: pointer; font-family: inherit; outline: none; transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.15s, filter 0.15s; text-align: center; position: relative; }
+    /* Background/color here are set inline per-status by JS (updateStatusColor)
+       — hover can't safely override them without fighting that, so it's a
+       scale+brightness nudge instead, same trick used for B-Quest's own
+       status pill. */
+    .bopp-status-trigger:hover { transform: scale(1.04); filter: brightness(0.97); }
+    .bopp-status-trigger::after {
+        content: ''; position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+        width: 10px; height: 10px; pointer-events: none;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffffff' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat center / contain;
+    }
 
 
 
@@ -42,19 +57,101 @@ const B_OPP_MODAL_HTML = `
     .bopp-left-card { display: flex; flex-direction: column; }
     .bopp-remark-wrap { flex: 1; display: flex; flex-direction: column; }
     .bopp-remark-wrap .bq-ta { flex: 1; min-height: 80px; }
-    .bopp-right-col .bopp-card { border-left: 3px solid #1e293b; }
+    .bopp-right-col .bopp-card { border-left: 3px solid var(--c-accent); }
     .bopp-irow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .bopp-irow:last-child { margin-bottom: 0; }
     .bopp-ilbl { font-size: 0.68rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; width: 112px; flex-shrink: 0; white-space: nowrap; }
     .bopp-iinp { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0 10px; font-size: 0.82rem; color: #334155; height: 32px; font-family: inherit; box-sizing: border-box; transition: 0.2s; }
-    .bopp-iinp:focus { outline: none; border-color: #bdc432; background: #fff; box-shadow: 0 0 0 3px rgba(189,196,50,0.12); }
+    .bopp-iinp:focus { outline: none; border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
+    /* Border-only, no glow — a lighter touch than :focus so there's still
+       a felt difference between "hovering near it" and "actively editing
+       it". Inert on the hidden pickers (opacity:0/pointer-events:none
+       never fire :hover); applies to the visible Signed/Launch Date masked
+       input, which keeps this same class after attachDatePicker() runs. */
+    .bopp-iinp:hover { border-color: var(--c-accent); }
     select.bopp-iinp { text-align: center; text-align-last: center; }
     input[type=date].bopp-iinp { text-align: center; }
+
+    /* Owner/AM/Sub-AM/Lead Source pickers — a native <select> popup can't
+       be restyled, so the select stays as the real (required-validated on
+       Owner/Lead) form control, kept "rendered" via opacity:0 rather than
+       display:none (which the constraint-validation spec excludes from
+       validation entirely), and a styled button drives it via
+       /system/select-picker.js, the same shared component used elsewhere
+       in the app. */
+    .bopp-picker-wrap { position: relative; flex: 1; }
+    .bopp-picker-wrap .bopp-iinp { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+    /* Same text color whether placeholder or filled — dimming the empty
+       state read as "disabled" instead of "click to choose". The chevron
+       is what signals "this is a dropdown" instead. */
+    .bopp-picker-trigger { appearance: none; -webkit-appearance: none; position: relative; width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0 22px 0 10px; font-size: 0.82rem; color: #334155; height: 32px; font-family: inherit; box-sizing: border-box; transition: 0.2s; text-align: center; cursor: pointer; }
+    /* Same border+glow recipe as every text input's :focus in this file
+       (not a solid fill) — the earlier QT-row solid-fill hover/focus read
+       as jarring, so triggers stay consistent with the rest of the form. */
+    .bopp-picker-trigger:hover { border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
+    .bopp-picker-trigger::after {
+        content: ''; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+        width: 9px; height: 9px; opacity: 0.5; pointer-events: none;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat center / contain;
+    }
+    .was-validated .bopp-picker-wrap:has(.bopp-iinp:invalid) .bopp-picker-trigger { border-color: #dc3545 !important; background: #fff8f8; }
+
+    /* BU/Company QT per-row pickers — same idea, sized to fit inline in
+       the QT item table instead of a labeled .bopp-irow. */
+    .bopp-item-sel-wrap { position: relative; width: 100%; }
+    .bopp-item-sel-wrap select.bopp-item-sel { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+    .bopp-item-sel-trigger { appearance: none; -webkit-appearance: none; position: relative; width: 100%; background: transparent; border: 1px solid transparent; font-family: inherit; font-size: 0.78rem; color: #334155; cursor: pointer; text-align: center; padding: 2px 14px 2px 4px; border-radius: 4px; box-sizing: border-box; }
+    .bopp-item-sel-trigger::after {
+        content: ''; position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+        width: 8px; height: 8px; opacity: 0.45; pointer-events: none;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat center / contain;
+    }
+    .bopp-item-sel-trigger:hover { border-color: var(--c-accent); background: rgba(var(--c-accent-rgb), 0.08); }
+    /* :has() instead of an .is-invalid class of its own — the existing
+       validation code adds/removes .is-invalid on the (now hidden)
+       <select> itself, unchanged; this just mirrors that state onto the
+       visible trigger without needing to touch every call site. */
+    .bopp-item-sel-wrap:has(.bopp-item-sel.is-invalid) .bopp-item-sel-trigger { outline: 1px solid #dc3545; background: #fff8f8; border-radius: 4px; }
+
+    .bopp-qt-co-wrap { position: relative; min-width: 140px; }
+    .bopp-qt-co-wrap select.bopp-qt-co { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+    .bopp-qt-co-trigger { appearance: none; -webkit-appearance: none; position: relative; width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; padding: 0 22px 0 10px; height: 30px; font-size: 0.8rem; font-weight: 700; color: #1e293b; font-family: inherit; cursor: pointer; text-align: center; }
+    .bopp-qt-co-trigger:hover { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
+    .bopp-qt-co-trigger::after {
+        content: ''; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+        width: 9px; height: 9px; opacity: 0.5; pointer-events: none;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat center / contain;
+    }
+    .bopp-qt-co-wrap:has(.bopp-qt-co.is-invalid) .bopp-qt-co-trigger { border-color: #dc3545 !important; background: #fff8f8; }
+
     .bopp-acc-wrap { position: relative; }
-    .bopp-acc-wrap::after { content: '❯'; position: absolute; right: 13px; top: 50%; transform: translateY(-50%) rotate(90deg); color: #bdc432; font-size: 0.75rem; font-weight: 900; pointer-events: none; }
-    #bopp-acc-name { text-align: center; border-color: #bdc432; background: #fffef5; padding-right: 30px; }
-    #bopp-acc-name:hover { background: #f4f7a1; }
-    #bopp-company-sel { text-align: center; text-align-last: center; }
+    .bopp-acc-wrap::after { content: '❯'; position: absolute; right: 13px; top: 50%; transform: translateY(-50%) rotate(90deg); color: var(--c-accent); font-size: 0.75rem; font-weight: 900; pointer-events: none; }
+    #bopp-acc-name { text-align: center; padding-right: 30px; }
+
+    /* Company picker — same hidden-select-drives-a-styled-button idea as
+       Owner/AM/Sub-AM/Lead above, but sized like .bq-inp (it sits beside
+       Account Name, not in a compact .bopp-irow). Its is-invalid state is
+       toggled manually in JS rather than via native :invalid — a disabled
+       required field is excluded from constraint validation entirely,
+       which is exactly why the existing code already checks it by hand in
+       handleSubmit — so it's mirrored via :has() the same way BU/Company QT
+       do it, not the :invalid rule the other pickers use. */
+    .bopp-company-wrap { position: relative; }
+    .bopp-company-wrap #bopp-company-sel { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+    .bopp-company-trigger { appearance: none; -webkit-appearance: none; position: relative; width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 28px 5px 12px; font-size: 0.85rem; color: #334155; height: 35px; font-family: inherit; box-sizing: border-box; transition: 0.2s; text-align: center; cursor: pointer; }
+    /* :not(.bopp-locked) — otherwise hovering it while an Account isn't
+       picked yet would still light up as if it were clickable. Not a real
+       disabled attribute — see openBoppPicker's own bopp-locked check for
+       why (a genuinely disabled button never fires click at all, which is
+       exactly what stops it from being able to shake the Account field). */
+    .bopp-company-trigger:not(.bopp-locked):hover { border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
+    .bopp-company-trigger::after {
+        content: ''; position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+        width: 9px; height: 9px; opacity: 0.5; pointer-events: none;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat center / contain;
+    }
+    .bopp-company-trigger.bopp-locked { cursor: not-allowed; opacity: 0.65; }
+    .bopp-company-wrap:has(#bopp-company-sel.is-invalid) .bopp-company-trigger { border-color: #dc3545 !important; background: #fff8f8; }
 
     /* ── Grid ── */
     .bopp-row { display: flex; gap: 12px; margin-bottom: 10px; }
@@ -66,9 +163,9 @@ const B_OPP_MODAL_HTML = `
     /* ── Inputs ── */
     .bq-lbl { font-size: 0.6rem; font-weight: 800; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.8px; display: block; }
     .bq-inp { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 12px; font-size: 0.85rem; color: #334155; height: 35px; transition: 0.2s; font-family: inherit; box-sizing: border-box; }
-    .bq-inp:focus { outline: none; border-color: #bdc432; background: #fff; box-shadow: 0 0 0 3px rgba(189,196,50,0.12); }
+    .bq-inp:focus { outline: none; border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
+    .bq-inp:hover { border-color: var(--c-accent); }
     .bq-inp[readonly] { cursor: pointer; }
-    .bq-inp[readonly]:hover { border-color: #bdc432; }
     .bq-ta { height: auto; min-height: 76px; padding: 9px 12px; resize: none; line-height: 1.6; }
     .was-validated .bq-inp:invalid,
     .was-validated .bopp-iinp:invalid,
@@ -76,6 +173,7 @@ const B_OPP_MODAL_HTML = `
     .bopp-qt-num.is-invalid { border-color: #dc3545 !important; background: #fff8f8; }
     .bopp-qt-co.is-invalid { border-color: #dc3545 !important; background: #fff8f8; }
     .bopp-item-sel.is-invalid { outline: 1px solid #dc3545; background: #fff8f8 !important; border-radius: 4px; }
+    .bopp-item-inp.is-invalid { border-color: #dc3545 !important; background: #fff8f8 !important; }
     /* Re-triggering validation on a field that's already red (e.g. hit
        Save twice without fixing it) changes nothing visually — nothing
        draws the eye back to it, easy to miss on a small field. Same
@@ -91,18 +189,19 @@ const B_OPP_MODAL_HTML = `
         90%     { transform: translateX(2px); }
     }
     .bopp-shake { animation: bopp-shake 0.4s ease; }
-    .bopp-search-btn { width: 42px; height: 35px; flex-shrink: 0; border: 1px solid #bdc432; border-left: none; border-radius: 0 10px 10px 0; background: #f4f7a1; color: #7a8500; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; transition: 0.2s; }
-    .bopp-search-btn:hover { background: #bdc432; color: #1e293b; }
+    .bopp-search-btn { width: 42px; height: 35px; flex-shrink: 0; border: 1px solid var(--c-accent); border-left: none; border-radius: 0 10px 10px 0; background: var(--c-accent-light); color: var(--c-accent-dark); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; transition: 0.2s; }
+    .bopp-search-btn:hover { background: var(--c-accent); color: var(--c-on-accent); }
 
     /* ── QT section ── */
     .bopp-qt-lbl { font-size: 0.62rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-    .bopp-qt-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; margin-bottom: 10px; overflow: hidden; border-left: 3px solid #bdc432; }
+    .bopp-qt-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; margin-bottom: 10px; overflow: hidden; border-left: 3px solid var(--c-accent); }
     .bopp-qt-head { background: #f1f5f9; border-bottom: 1px solid #e2e8f0; padding: 9px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
     .bopp-qt-num { border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; padding: 0 10px; height: 30px; font-size: 0.8rem; font-weight: 700; color: #1e293b; width: 148px; font-family: inherit; outline: none; transition: 0.2s; flex-shrink: 0; }
-    .bopp-qt-num:focus { border-color: #bdc432; box-shadow: 0 0 0 2px rgba(189,196,50,0.15); }
+    .bopp-qt-num:hover { border-color: var(--c-accent); }
+    .bopp-qt-num:focus { border-color: var(--c-accent); box-shadow: 0 0 0 2px rgba(var(--c-accent-rgb), 0.15); }
     .bopp-qt-co { border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; padding: 0 10px; height: 30px; font-size: 0.8rem; font-weight: 700; color: #1e293b; outline: none; font-family: inherit; cursor: pointer; min-width: 140px; text-align: center; text-align-last: center; }
-    .bopp-qt-co:focus { border-color: #bdc432; }
+    .bopp-qt-co:focus { border-color: var(--c-accent); }
     .bopp-qt-totals { margin-left: auto; display: flex; align-items: center; gap: 14px; }
     .bopp-qt-tbox { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
     .bopp-qt-tval { font-size: 0.88rem; font-weight: 800; color: #1e293b; }
@@ -123,15 +222,24 @@ const B_OPP_MODAL_HTML = `
     .bopp-item-tbl td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
     .bopp-item-tbl tr:last-child td { border-bottom: none; }
     .bopp-item-tbl tbody tr:hover td { background: #f8fafc; }
-    .bopp-item-inp { width: 100%; border: none; background: transparent; font-family: inherit; font-size: 0.78rem; color: #334155; outline: none; padding: 3px 5px; border-radius: 5px; box-sizing: border-box; }
-    .bopp-item-inp:focus { background: #f4f7a1; }
+    .bopp-item-inp { width: 100%; border: 1px solid transparent; background: transparent; font-family: inherit; font-size: 0.78rem; color: #334155; outline: none; padding: 3px 5px; border-radius: 5px; box-sizing: border-box; }
+    /* Same recipe as .bq-inp/.bq-ta's own focus (Remark, Materials, etc.)
+       instead of a hard inset ring — a real border-color change plus a
+       soft, low-opacity OUTER glow reads as gentler than a solid inset
+       line. A full lime-green background on focus (the old style) was
+       jarring on a wide field like the Detail textarea and fought with
+       readability of whatever's already typed, hence border-only. The
+       base rule needs a transparent 1px border (not none) so this doesn't
+       shift the box size when the real color appears on focus. */
+    .bopp-item-inp:hover { border-color: var(--c-accent); }
+    .bopp-item-inp:focus { background: #fff; border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
     .bopp-item-disc-inp { color: #ef4444; }
     .bopp-item-disc-inp::placeholder { color: #fca5a5; }
     .bopp-item-inp.r { text-align: right; }
     .bopp-item-inp[type=number] { -moz-appearance: textfield; }
     .bopp-item-inp[type=number]::-webkit-inner-spin-button { display: none; }
-    .bopp-item-sel { width: 100%; border: none; background: transparent; font-family: inherit; font-size: 0.78rem; color: #334155; outline: none; cursor: pointer; text-align: center; text-align-last: center; }
-    .bopp-item-sel:focus { background: #f4f7a1; }
+    .bopp-item-sel { width: 100%; border: 1px solid transparent; background: transparent; font-family: inherit; font-size: 0.78rem; color: #334155; outline: none; cursor: pointer; text-align: center; text-align-last: center; }
+    .bopp-item-sel:focus { background: #fff; border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
     .bopp-item-ta { height: auto; min-height: calc(3 * 1.5em + 10px); max-height: calc(3 * 1.5em + 10px); overflow-y: auto; resize: none; vertical-align: top; padding-top: 5px; }
     .bopp-item-amt { font-size: 0.78rem; font-weight: 700; color: #1e293b; text-align: right; white-space: nowrap; }
     .bopp-item-disc { font-size: 0.78rem; color: #ef4444; text-align: right; white-space: nowrap; }
@@ -144,36 +252,42 @@ const B_OPP_MODAL_HTML = `
     /* ── QT footer ── */
     .bopp-qt-foot { padding: 9px 14px; display: flex; justify-content: space-between; align-items: center; background: #fafbfc; border-top: 1px solid #f1f5f9; }
     .bopp-btn-add-item { border: 1px dashed #d1d5db; background: #fff; color: #64748b; border-radius: 8px; padding: 4px 13px; font-size: 0.73rem; font-weight: 700; cursor: pointer; transition: 0.15s; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; }
-    .bopp-btn-add-item:hover { border-color: #bdc432; background: #f4f7a1; color: #6b7200; }
+    .bopp-btn-add-item:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
     .bopp-btn-del-qt { border: 1px solid #fecaca; background: #fff; color: #ef4444; border-radius: 8px; padding: 4px 13px; font-size: 0.73rem; font-weight: 700; cursor: pointer; transition: 0.15s; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; }
     .bopp-btn-del-qt:hover { background: #fee2e2; border-color: #ef4444; }
     .bopp-btn-dup { border: 1px solid #e2e8f0; background: #fff; color: #64748b; border-radius: 8px; padding: 4px 13px; font-size: 0.73rem; font-weight: 700; cursor: pointer; transition: 0.15s; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; }
     .bopp-btn-dup:hover { border-color: #94a3b8; background: #f8fafc; }
     .bopp-btn-add-qt { width: 70%; border: 1.5px dashed #d1d5db; background: #fff; color: #94a3b8; border-radius: 10px; padding: 7px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: 0.2s; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 7px; }
-    .bopp-btn-add-qt:hover { border-color: #bdc432; color: #6b7200; background: #fffef0; }
+    .bopp-btn-add-qt:hover { border-color: var(--c-accent); color: var(--c-accent-dark); background: rgba(var(--c-accent-rgb), 0.06); }
 
     /* ── Account overlay ── */
     .bopp-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 10001; display: none; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
     .bopp-overlay.open { display: flex; }
     .bopp-ov-card { background: #fff; width: 480px; max-height: 80vh; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.15); }
     .bopp-ov-list { overflow-y: auto; flex: 1; margin-top: 2px; padding-right: 4px; }
+    /* Plain Bootstrap .form-control with no override falls back to
+       Bootstrap's own default blue focus ring — same gap as B-Account's
+       account-search overlay, missed for the same reason (never had a
+       custom :focus of its own). */
+    #bopp-ov-input:focus { border-color: var(--c-accent) !important; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12) !important; }
     .bopp-ov-item { border: 1px solid #f1f5f9; background: #fff; border-radius: 12px; margin-bottom: 5px; padding: 11px 16px; font-size: 0.85rem; font-weight: 600; text-align: left; cursor: pointer; transition: 0.15s; color: #334155; width: 100%; display: block; }
-    .bopp-ov-item:hover { background: #f4f7a1; border-color: #bdc432; color: #7a8500; }
+    .bopp-ov-item:hover { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
 
     /* ── Footer ── */
     .bopp-footer { padding: 13px 28px; display: flex; align-items: center; gap: 10px; background: #fff; border-top: 1px solid #f1f5f9; }
     .bopp-btn-del { background: #fee2e2; color: #ef4444; border: none; padding: 0 18px; border-radius: 10px; font-weight: 700; height: 40px; font-size: 0.85rem; cursor: pointer; transition: 0.2s; font-family: inherit; display: none; align-items: center; gap: 6px; }
     .bopp-btn-del:hover { background: #fecaca; }
-    .bopp-btn-undo { border: none; background: #bdc432; color: #1e293b; border-radius: 10px; font-weight: 800; height: 40px; padding: 0 16px; font-size: 0.85rem; cursor: pointer; font-family: inherit; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
-    .bopp-btn-undo:hover { background: #a3b020; }
+    .bopp-btn-undo { border: none; background: var(--c-accent); color: var(--c-on-accent); border-radius: 10px; font-weight: 800; height: 40px; padding: 0 16px; font-size: 0.85rem; cursor: pointer; font-family: inherit; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
+    /* filter instead of a second hardcoded darker green — darkens whatever
+       --c-accent currently resolves to, so a future theme change doesn't
+       need a matching hand-picked "hover shade" of the new color too. */
+    .bopp-btn-undo:hover { filter: brightness(0.88); }
     .bopp-btn-undo-qt { border: 1px solid #e2e8f0; background: #fff; color: #64748b; border-radius: 8px; font-weight: 700; height: 30px; padding: 0 13px; font-size: 0.73rem; cursor: pointer; font-family: inherit; transition: 0.15s; display: inline-flex; align-items: center; gap: 5px; }
-    .bopp-btn-undo-qt:hover { border-color: #bdc432; background: #fffef0; color: #6b7200; }
+    .bopp-btn-undo-qt:hover { border-color: var(--c-accent); background: rgba(var(--c-accent-rgb), 0.06); color: var(--c-accent-dark); }
     .bopp-add-qt-row { position: relative; margin-top: 6px; display: flex; justify-content: center; }
-    .bopp-btn-undo { border: none; background: #bdc432; color: #1e293b; border-radius: 10px; font-weight: 800; height: 40px; padding: 0 16px; font-size: 0.85rem; cursor: pointer; font-family: inherit; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
-    .bopp-btn-undo:hover { background: #a3b020; }
     .bopp-btn-cancel { border: 1px solid #e2e8f0; background: #fff; color: #64748b; border-radius: 10px; font-weight: 700; height: 40px; padding: 0 18px; font-size: 0.85rem; cursor: pointer; font-family: inherit; transition: 0.2s; }
     .bopp-btn-cancel:hover { background: #f8fafc; border-color: #cbd5e1; }
-    .bopp-btn-save { background: #1e293b; color: #bdc432; border: none; padding: 0 24px; border-radius: 10px; font-weight: 800; height: 40px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); font-family: inherit; }
+    .bopp-btn-save { background: #1e293b; color: var(--c-accent); border: none; padding: 0 24px; border-radius: 10px; font-weight: 800; height: 40px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); font-family: inherit; }
     .bopp-btn-save:hover { background: #0f172a; transform: translateY(-2px) scale(1.04); box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
     .bopp-btn-save:active { transform: translateY(0) scale(0.97); box-shadow: none; transition-duration: 0.1s; }
     .bopp-btn-save:disabled { opacity: 0.6; pointer-events: none; }
@@ -212,7 +326,10 @@ const B_OPP_MODAL_HTML = `
                     <div class="bopp-header-bar"></div>
                     <i class="bi bi-briefcase-fill bopp-header-icon"></i>
                     <span class="bopp-header-title" id="bopp-modal-title">New Opportunity</span>
-                    <select id="bopp-status-sel" class="bopp-status-sel" style="display:none;"></select>
+                    <div class="bopp-status-wrap" id="bopp-status-wrap" style="display:none;">
+                        <select id="bopp-status-sel"></select>
+                        <button type="button" class="bopp-status-trigger" id="bopp-status-trigger" onclick="BOppApp.openBoppPicker(this, 'bopp-status-sel')"></button>
+                    </div>
                 </div>
                 <div class="bopp-header-right">
                     <div class="bopp-hdr-totals" id="bopp-hdr-totals">
@@ -262,9 +379,12 @@ const B_OPP_MODAL_HTML = `
                                 </div>
                                 <div style="flex:1; min-width:0;">
                                     <label class="bq-lbl"><i class="bi bi-building"></i> Company <span style="color:#ef4444">*</span></label>
-                                    <select id="bopp-company-sel" class="bq-inp" required disabled>
-                                        <option value="">Select company...</option>
-                                    </select>
+                                    <div class="bopp-company-wrap">
+                                        <select id="bopp-company-sel" required disabled>
+                                            <option value="">Select company...</option>
+                                        </select>
+                                        <button type="button" class="bopp-company-trigger placeholder bopp-locked" id="bopp-company-sel-trigger" data-placeholder="Select company..." onclick="BOppApp.openBoppPicker(this, 'bopp-company-sel')">Select company...</button>
+                                    </div>
                                 </div>
                             </div>
                             <div style="margin-bottom:10px;">
@@ -300,28 +420,43 @@ const B_OPP_MODAL_HTML = `
                             <div class="bopp-card">
                                 <div class="bopp-irow">
                                     <span class="bopp-ilbl">Business Type <span style="color:#ef4444">*</span></span>
-                                    <select id="bopp-type" class="bopp-iinp" required>
-                                        <option value="" disabled selected hidden></option>
-                                        <option value="New Business">New Business</option>
-                                        <option value="Retention">Retention</option>
-                                        <option value="Up Sale">Up Sale</option>
-                                    </select>
+                                    <div class="bopp-picker-wrap">
+                                        <select id="bopp-type" class="bopp-iinp" required>
+                                            <option value="" disabled selected hidden></option>
+                                            <option value="New Business">New Business</option>
+                                            <option value="Retention">Retention</option>
+                                            <option value="Up Sale">Up Sale</option>
+                                        </select>
+                                        <button type="button" class="bopp-picker-trigger placeholder" id="bopp-type-trigger" onclick="BOppApp.openBoppPicker(this, 'bopp-type')">Select...</button>
+                                    </div>
                                 </div>
                                 <div class="bopp-irow">
                                     <span class="bopp-ilbl">Owner OPP <span style="color:#ef4444">*</span></span>
-                                    <select id="bopp-owner" class="bopp-iinp" required></select>
+                                    <div class="bopp-picker-wrap">
+                                        <select id="bopp-owner" class="bopp-iinp" required></select>
+                                        <button type="button" class="bopp-picker-trigger placeholder" id="bopp-owner-trigger" onclick="BOppApp.openBoppPicker(this, 'bopp-owner')">Select...</button>
+                                    </div>
                                 </div>
                                 <div class="bopp-irow">
                                     <span class="bopp-ilbl">Lead Source <span style="color:#ef4444">*</span></span>
-                                    <select id="bopp-lead" class="bopp-iinp" required></select>
+                                    <div class="bopp-picker-wrap">
+                                        <select id="bopp-lead" class="bopp-iinp" required></select>
+                                        <button type="button" class="bopp-picker-trigger placeholder" id="bopp-lead-trigger" onclick="BOppApp.openBoppPicker(this, 'bopp-lead')">Select...</button>
+                                    </div>
                                 </div>
                                 <div class="bopp-irow">
                                     <span class="bopp-ilbl">AM</span>
-                                    <select id="bopp-am" class="bopp-iinp"></select>
+                                    <div class="bopp-picker-wrap">
+                                        <select id="bopp-am" class="bopp-iinp"></select>
+                                        <button type="button" class="bopp-picker-trigger placeholder" id="bopp-am-trigger" onclick="BOppApp.openBoppPicker(this, 'bopp-am')">Select...</button>
+                                    </div>
                                 </div>
                                 <div class="bopp-irow">
                                     <span class="bopp-ilbl">Sub AM</span>
-                                    <select id="bopp-subam" class="bopp-iinp"></select>
+                                    <div class="bopp-picker-wrap">
+                                        <select id="bopp-subam" class="bopp-iinp"></select>
+                                        <button type="button" class="bopp-picker-trigger placeholder" id="bopp-subam-trigger" onclick="BOppApp.openBoppPicker(this, 'bopp-subam')">Select...</button>
+                                    </div>
                                 </div>
                             </div>
                             <div class="bopp-card">
@@ -420,9 +555,70 @@ const BOppApp = (() => {
         const blank = '<option value="" disabled selected hidden></option>';
         const pplOpts = buildOpts(_profiles);
         el('bopp-owner').innerHTML = blank + pplOpts;
-        ['bopp-am','bopp-subam'].forEach(id => { const s = el(id); if (s) s.innerHTML = blank + pplOpts; });
+        syncBoppPickerTrigger('bopp-owner');
+        ['bopp-am','bopp-subam'].forEach(id => { const s = el(id); if (s) { s.innerHTML = blank + pplOpts; syncBoppPickerTrigger(id); } });
         el('bopp-lead').innerHTML = blank + buildOpts(_leadList);
+        syncBoppPickerTrigger('bopp-lead');
         el('bopp-status-sel').innerHTML = _statusList.length ? buildOpts(_statusList) : '<option value="Active">Active</option>';
+    }
+
+    // ── Owner/AM/Sub-AM/Lead Source custom picker — a real <select> stays
+    // the source of truth (value, required, native validation); this just
+    // drives it from /system/select-picker.js's shared popup instead of
+    // the select's own unstyleable native one. ──
+    function syncBoppPickerTrigger(selectId) {
+        const select = el(selectId);
+        const trigger = el(`${selectId}-trigger`);
+        if (!select || !trigger) return;
+        const opt = select.options[select.selectedIndex];
+        const hasValue = opt && opt.value !== '';
+        trigger.textContent = hasValue ? opt.textContent : (trigger.dataset.placeholder || 'Select...');
+        trigger.classList.toggle('placeholder', !hasValue);
+        // Company's select toggles .disabled until an account is chosen —
+        // mirrored onto the trigger as a CSS class (not the trigger's own
+        // disabled attribute) so it still fires a click; a genuinely
+        // disabled button never dispatches one at all, which would stop
+        // openBoppPicker from being able to shake the Account field
+        // instead when the user clicks it too early. A no-op for every
+        // other picker here, none of which ever disables.
+        trigger.classList.toggle('bopp-locked', select.disabled);
+    }
+
+    function openBoppPicker(triggerBtn, selectId) {
+        if (selectId === 'bopp-company-sel' && triggerBtn.classList.contains('bopp-locked')) {
+            shakeInvalid(el('bopp-acc-name'));
+            return;
+        }
+        const select = el(selectId);
+        openSelectPicker(triggerBtn, {
+            getOptions: () => [...select.options].filter(o => o.value !== '').map(o => ({ value: o.value, label: o.textContent })),
+            getValue: () => select.value,
+            onSelect: (value) => {
+                select.value = value;
+                syncBoppPickerTrigger(selectId);
+                select.dispatchEvent(new Event('change'));
+            },
+        });
+    }
+
+    // ── BU (per item row) / Company QT (per QT card) pickers — same idea,
+    // but these selects are re-rendered per row/card with no unique id, so
+    // the trigger's own sibling <select> (rendered right before it in the
+    // markup) is the target instead of an id lookup. The existing
+    // container-level delegated 'change' listener (see below) needs a
+    // *bubbling* change event to actually receive this. ──
+    function openBoppItemPicker(triggerBtn) {
+        const select = triggerBtn.previousElementSibling;
+        openSelectPicker(triggerBtn, {
+            getOptions: () => [...select.options].filter(o => o.value !== '').map(o => ({ value: o.value, label: o.textContent })),
+            getValue: () => select.value,
+            onSelect: (value) => {
+                select.value = value;
+                triggerBtn.textContent = value;
+                triggerBtn.classList.remove('placeholder');
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            },
+        });
     }
 
     // ── Account overlay ───────────────────────────────────────────────────────
@@ -461,6 +657,7 @@ const BOppApp = (() => {
             sel.innerHTML = '<option value="">—</option>';
             sel.disabled = false;
             el('bopp-account-id').value = '';
+            syncBoppPickerTrigger('bopp-company-sel');
             return;
         }
         const opts = companies.map(c => `<option value="${escA(c.account_id)}"${c.account_id === selectedId ? ' selected' : ''}>${escH(c.company_name || c.account_id)}</option>`).join('');
@@ -473,6 +670,7 @@ const BOppApp = (() => {
         }
         sel.disabled = false;
         el('bopp-account-id').value = sel.value;
+        syncBoppPickerTrigger('bopp-company-sel');
     }
 
     el('bopp-company-sel').addEventListener('change', function() { el('bopp-account-id').value = this.value; this.classList.remove('is-invalid'); });
@@ -492,7 +690,12 @@ const BOppApp = (() => {
         const da = disabled ? ' disabled' : '';
         return `<tr data-qt="${escA(qtTmpId)}" data-item="${idx}">
             <td class="bopp-item-no c">${idx+1}</td>
-            <td class="c"><select class="bopp-item-sel" data-field="bu"${da}>${buOpts}</select></td>
+            <td class="c">
+                <div class="bopp-item-sel-wrap">
+                    <select class="bopp-item-sel" data-field="bu"${da}>${buOpts}</select>
+                    <button type="button" class="bopp-item-sel-trigger${item.bu ? '' : ' placeholder'}"${disabled ? ' disabled' : ' onclick="BOppApp.openBoppItemPicker(this)"'}>${item.bu ? escH(item.bu) : '—'}</button>
+                </div>
+            </td>
             <td><textarea class="bopp-item-inp bopp-item-ta" data-field="detail" placeholder="Description..." rows="3"${da}>${escH(item.detail||'')}</textarea></td>
             <td><input type="text" class="bopp-item-inp r" data-field="qty" value="${item.qty ? fmtQty(item.qty) : ''}" inputmode="numeric" placeholder="0"${da}></td>
             <td><input type="text" class="bopp-item-inp r" data-field="price" value="${item.price ? fmtN(item.price) : ''}" inputmode="decimal" placeholder="0"${da}></td>
@@ -512,7 +715,10 @@ const BOppApp = (() => {
             <div class="bopp-qt-head">
                 <i class="bi bi-file-earmark-text" style="color:#94a3b8;font-size:0.9rem;flex-shrink:0;"></i>
                 <input type="text" class="bopp-qt-num" value="${escA(qt.qt_number)}" data-field="qt_number" placeholder="QT...."${da}>
-                <select class="bopp-qt-co" data-field="company_qt"${da}>${buOpts}</select>
+                <div class="bopp-qt-co-wrap">
+                    <select class="bopp-qt-co" data-field="company_qt"${da}>${buOpts}</select>
+                    <button type="button" class="bopp-qt-co-trigger${qt.company_qt ? '' : ' placeholder'}"${disabled ? ' disabled' : ' onclick="BOppApp.openBoppItemPicker(this)"'}>${qt.company_qt ? escH(qt.company_qt) : 'Company QT'}</button>
+                </div>
                 <div class="bopp-qt-totals">
                     <div class="bopp-qt-tbox">
                         <span class="bopp-qt-tval" data-qt-amt>${fmtN(tAmt)}</span>
@@ -656,6 +862,7 @@ const BOppApp = (() => {
                 const amtCell = row.querySelector('[data-amt]');
                 if (amtCell) amtCell.textContent = item.amount > 0 ? fmtN(item.amount) : '0';
             }
+            if (field === 'price' && +item.price > 0) inp.classList.remove('is-invalid');
             if (field === 'gp') inp.style.color = item.gp > 0 ? '#16a34a' : '#cbd5e1';
             recalcTotals();
             return;
@@ -811,7 +1018,7 @@ const BOppApp = (() => {
     // ── Status color ──────────────────────────────────────────────────────────
     const STATUS_COLORS = {
         'Active':        { bg: '#16a34a', text: '#fff' },
-        'Won':           { bg: '#bdc432', text: '#1e293b' },
+        'Won':           { bg: 'var(--c-accent)', text: 'var(--c-on-accent)' },
         'Lost':          { bg: '#ef4444', text: '#fff' },
         'Churn':         { bg: '#f97316', text: '#fff' },
         'End Contact':   { bg: '#64748b', text: '#fff' },
@@ -821,15 +1028,17 @@ const BOppApp = (() => {
 
     function updateStatusColor() {
         const sel = el('bopp-status-sel');
+        const trigger = el('bopp-status-trigger');
+        trigger.textContent = sel.options[sel.selectedIndex]?.textContent || sel.value;
         const c = STATUS_COLORS[sel.value];
         if (c) {
-            sel.style.backgroundColor = c.bg;
-            sel.style.color           = c.text;
-            sel.style.borderColor     = c.bg;
+            trigger.style.backgroundColor = c.bg;
+            trigger.style.color           = c.text;
+            trigger.style.borderColor     = c.bg;
         } else {
-            sel.style.backgroundColor = 'rgba(255,255,255,0.08)';
-            sel.style.color           = '#e2e8f0';
-            sel.style.borderColor     = 'rgba(255,255,255,0.2)';
+            trigger.style.backgroundColor = 'rgba(255,255,255,0.08)';
+            trigger.style.color           = '#e2e8f0';
+            trigger.style.borderColor     = 'rgba(255,255,255,0.2)';
         }
     }
 
@@ -858,7 +1067,7 @@ const BOppApp = (() => {
         el('bopp-save-icon').className      = isEdit ? 'bi bi-check-circle-fill' : 'bi bi-plus-circle-fill';
         el('bopp-save-label').textContent   = isEdit ? 'Save Changes' : 'Create Opportunity';
         el('bopp-btn-del').style.display     = isEdit ? 'flex' : 'none';
-        el('bopp-status-sel').style.display  = isEdit ? '' : 'none';
+        el('bopp-status-wrap').style.display  = isEdit ? '' : 'none';
         if (isEdit) updateStatusColor();
     }
 
@@ -876,9 +1085,11 @@ const BOppApp = (() => {
         const companySel = el('bopp-company-sel');
         companySel.innerHTML = '<option value="">Select company...</option>';
         companySel.disabled = true;
+        syncBoppPickerTrigger('bopp-company-sel');
         ['bopp-type','bopp-lead','bopp-owner','bopp-am','bopp-subam'].forEach(id => { const s = el(id); if (s) s.value = ''; });
+        ['bopp-type','bopp-lead','bopp-owner','bopp-am','bopp-subam'].forEach(syncBoppPickerTrigger);
         el('bopp-status-sel').selectedIndex = 0;
-        el('bopp-status-sel').style.display  = 'none';
+        el('bopp-status-wrap').style.display  = 'none';
         el('bopp-qt-container').innerHTML = '';
         const outerBtn = el('bopp-add-qt-row-outer');
         if (outerBtn) outerBtn.style.display = '';
@@ -894,7 +1105,10 @@ const BOppApp = (() => {
         const user = getBxUser();
         if (user?.codename) {
             const ownerSel = el('bopp-owner');
-            if ([...ownerSel.options].some(o => o.value === user.codename)) ownerSel.value = user.codename;
+            if ([...ownerSel.options].some(o => o.value === user.codename)) {
+                ownerSel.value = user.codename;
+                syncBoppPickerTrigger('bopp-owner');
+            }
         }
         addQT();
         _setModalMode(false);
@@ -919,6 +1133,7 @@ const BOppApp = (() => {
          ['bopp-owner','owner'],['bopp-am','am'],['bopp-subam','sub_am'],
          ['bopp-materials','materials'],['bopp-proposal','proposal'],['bopp-campaign','campaign'],['bopp-remark','remark']]
             .forEach(([id, field]) => { el(id).value = opp[field] || ''; });
+        ['bopp-type','bopp-lead','bopp-owner','bopp-am','bopp-subam'].forEach(syncBoppPickerTrigger);
 
         signedDatePicker.setValue(opp.signed_date ? String(opp.signed_date).slice(0,10) : null);
         launchDatePicker.setValue(opp.launch_date ? String(opp.launch_date).slice(0,10) : null);
@@ -938,7 +1153,13 @@ const BOppApp = (() => {
                 _qtCounter++;
                 const items = (qt.b_opportunity_qt_item || [])
                     .sort((a,b) => (a.no||0)-(b.no||0))
-                    .map(i => ({ item_id: i.item_id, bu: i.bu||'', detail: i.detail||'', qty: +i.qty||1, price: +i.price||0, discount: +i.discount||0, amount: +i.amount||0, gp: +i.gp||0 }));
+                    // amount is re-derived from qty/price/discount rather than
+                    // trusted from the stored column — any item whose amount
+                    // went stale for any reason (the missing-amount bug this
+                    // was hit by, or otherwise) self-heals here instead of
+                    // carrying the stale value forward into this edit.
+                    .map(i => { const qty = +i.qty||1, price = +i.price||0, discount = +i.discount||0;
+                        return { item_id: i.item_id, bu: i.bu||'', detail: i.detail||'', qty, price, discount, amount: Math.max(0, qty*price-discount), gp: +i.gp||0 }; });
                 arr.push({ tmpId: `qt-${_qtCounter}`, qt_id: qt.qt_id, qt_number: qt.qt_number||'', company_qt: qt.company_qt||'',
                     items: items.length ? items : [newItem()],
                     _totAmt: items.reduce((s,i) => s+(+i.amount||0), 0),
@@ -984,6 +1205,7 @@ const BOppApp = (() => {
          ['bopp-owner','owner'],['bopp-am','am'],['bopp-subam','sub_am'],
          ['bopp-materials','materials'],['bopp-proposal','proposal'],['bopp-campaign','campaign'],['bopp-remark','remark']]
             .forEach(([id, field]) => { el(id).value = opp[field] || ''; });
+        ['bopp-type','bopp-lead','bopp-owner','bopp-am','bopp-subam'].forEach(syncBoppPickerTrigger);
 
         signedDatePicker.setValue(opp.signed_date ? String(opp.signed_date).slice(0,10) : null);
         launchDatePicker.setValue(opp.launch_date ? String(opp.launch_date).slice(0,10) : null);
@@ -999,9 +1221,13 @@ const BOppApp = (() => {
         if (origQTs.length) {
             origQTs.forEach(qt => {
                 _qtCounter++;
+                // amount re-derived from qty/price/discount, not trusted
+                // from the stored column — see the same note in openEdit's
+                // item mapping above.
                 const items = (qt.b_opportunity_qt_item || [])
                     .sort((a,b) => (a.no||0)-(b.no||0))
-                    .map(i => ({ item_id: null, bu: i.bu || '', detail: i.detail || '', qty: +i.qty || 1, price: +i.price || 0, discount: +i.discount || 0, amount: +i.amount || 0, gp: +i.gp || 0 }));
+                    .map(i => { const qty = +i.qty||1, price = +i.price||0, discount = +i.discount||0;
+                        return { item_id: null, bu: i.bu||'', detail: i.detail||'', qty, price, discount, amount: Math.max(0, qty*price-discount), gp: +i.gp||0 }; });
                 _qts.push({ tmpId: `qt-${_qtCounter}`, qt_id: null, qt_number: '', company_qt: qt.company_qt || '',
                     items: items.length ? items : [newItem()],
                     _totAmt: items.reduce((s,i) => s+(+i.amount||0), 0),
@@ -1037,11 +1263,11 @@ const BOppApp = (() => {
     }
 
     // b_opportunity_qt_item.amount is a generated column (STORED, computed
-    // by Postgres as GREATEST(0, qty*price - discount)) — never include it
-    // in an insert/update payload to this table anywhere in this file.
-    // item.amount still gets computed client-side (see the input handler
-    // and openEdit/openDuplicate's item mapping) purely for the modal's own
-    // running totals while editing; it's just never sent to the DB.
+    // by Postgres as qty*price - discount) — never include it in an
+    // insert/update payload to this table anywhere in this file. item.amount
+    // still gets computed client-side (see the input handler and
+    // openEdit/openDuplicate's item mapping below) purely for the modal's
+    // own running totals while editing; it's just never sent to the DB.
     async function insertQTToDB(oppId, qt, qtType = 'original') {
         const validItems = qt.items.filter(i => i.detail.trim() || +i.price > 0 || +i.qty > 1);
         if (!qt.qt_number.trim() && !validItems.length) return;
@@ -1049,6 +1275,10 @@ const BOppApp = (() => {
             .insert({ opportunity_id: oppId, qt_number: qt.qt_number.trim() || null, company_qt: qt.company_qt || null, qt_type: qtType })
             .select('qt_id').single();
         if (qtErr) throw qtErr;
+        // amount is intentionally omitted here — it's a generated column
+        // (STORED AS qty*price - discount) on the target schema, computed
+        // by the DB itself and rejected if a value is explicitly sent. See
+        // the note above insertQTToDB for the reasoning.
         const itemRows = qt.items
             .filter(i => i.detail.trim() || +i.price > 0)
             .map((i, idx) => ({ qt_id: qtRow.qt_id, no: idx+1, bu: i.bu||null, detail: i.detail.trim()||null, qty: +i.qty||null, price: +i.price||null, discount: +i.discount||null, gp: +i.gp||null }));
@@ -1161,7 +1391,7 @@ const BOppApp = (() => {
             return;
         }
         const activeQTs = isChurnMode() ? _churnQTs : _qts;
-        if (!activeQTs.length) { notify('','กรุณาเพิ่ม QT อย่างน้อย 1 รายการ', 'warning'); return; }
+        if (!activeQTs.length) { notify('','Please add at least 1 QT', 'warning'); return; }
         const qtContainer = el('bopp-qt-container');
         // รอบ 1: ชื่อ QT
         let firstEmptyName = null;
@@ -1179,12 +1409,15 @@ const BOppApp = (() => {
             if (coSel && !coSel.value) { coSel.classList.add('is-invalid'); if (!firstEmptyCoQT) firstEmptyCoQT = coSel; }
         });
         if (firstEmptyCoQT) { firstEmptyCoQT.scrollIntoView({ behavior: 'smooth', block: 'center' }); firstEmptyCoQT.focus(); shakeInvalid(firstEmptyCoQT); return; }
-        // รอบ 1.6: BU ในทุก item
+        // รอบ 1.6: BU ในทุก item — every item row that exists is required
+        // to have a BU, no exceptions for "it's still blank so it doesn't
+        // count yet". A row nobody wants gets deleted (the trash button),
+        // not left half-filled and silently dropped at save time.
         let firstEmptyBU = null;
         activeQTs.forEach(qt => {
             const card = qtContainer.querySelector(`[data-qt-card="${qt.tmpId}"]`);
             qt.items.forEach((item, idx) => {
-                if (!item.bu && (item.detail?.trim() || +item.price > 0)) {
+                if (!item.bu) {
                     const row = card?.querySelector(`tr[data-qt="${qt.tmpId}"][data-item="${idx}"]`);
                     const buSel = row?.querySelector('.bopp-item-sel[data-field="bu"]');
                     if (buSel) { buSel.classList.add('is-invalid'); if (!firstEmptyBU) firstEmptyBU = buSel; }
@@ -1192,11 +1425,24 @@ const BOppApp = (() => {
             });
         });
         if (firstEmptyBU) { firstEmptyBU.scrollIntoView({ behavior: 'smooth', block: 'center' }); firstEmptyBU.focus(); shakeInvalid(firstEmptyBU); return; }
-        // รอบ 2: ยอดเงิน
-        const noAmtQT = activeQTs.find(qt => !(qt._totAmt > 0));
-        if (noAmtQT) {
-            notify('','Quotation amount required', 'warning');
-            qtContainer.querySelector(`[data-qt-card="${noAmtQT.tmpId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // รอบ 2: ยอดเงิน — same rule as BU: every item row needs its own
+        // price, not just "the QT's total adds up to something" (that let
+        // an extra blank row ride along silently as long as some other
+        // item covered the total). Checks every item in every QT, not
+        // just the first QT that has a problem.
+        for (const qt of activeQTs) {
+            const idx = qt.items.findIndex(i => !(+i.price > 0));
+            if (idx < 0) continue;
+            const card = qtContainer.querySelector(`[data-qt-card="${qt.tmpId}"]`);
+            const priceInp = card?.querySelector(`tr[data-qt="${qt.tmpId}"][data-item="${idx}"] .bopp-item-inp[data-field="price"]`);
+            if (priceInp) {
+                priceInp.classList.add('is-invalid');
+                priceInp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                priceInp.focus();
+                shakeInvalid(priceInp);
+            } else {
+                card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
             return;
         }
 
@@ -1268,7 +1514,7 @@ const BOppApp = (() => {
                         create_by:        user?.codename || null,
                         create_date:      payload.create_date,
                         account_name:     el('bopp-acc-name').value,
-                        company_name:     (() => { const acc = _accMap?.get(el('bopp-account-id').value); return acc?.company_name || null; })(),
+                        company_name:     _accounts.find(a => a.account_id === el('bopp-account-id').value)?.company_name || null,
                         launch_date:      payload.launch_date,
                         signed_date:      payload.signed_date,
                         remark:           payload.remark,
@@ -1313,8 +1559,10 @@ const BOppApp = (() => {
     // ── Delete ────────────────────────────────────────────────────────────────
     async function handleDelete() {
         if (!_editingId) return;
+        const oppName = el('bopp-opp-name').value.trim();
         const { isConfirmed } = await Swal.fire({
-            title: 'Delete Opportunity?', text: `${_editingId} and all its quotations will be permanently deleted.`,
+            title: 'Delete Opportunity',
+            html: `<div style="font-weight:700;">${_editingId}</div>${oppName ? `<div style="margin-top:4px;">${escH(oppName)}</div>` : ''}`,
             icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete',
             confirmButtonColor: '#ef4444', cancelButtonText: 'Cancel'
         });
@@ -1347,7 +1595,15 @@ const BOppApp = (() => {
     // library's cleanup runs last.
     el('b-opp-modal').addEventListener('shown.bs.modal', lockBodyScroll);
     el('b-opp-modal').addEventListener('hidden.bs.modal', unlockBodyScroll);
+    // A select-picker popover is appended to <body>, not this modal, and
+    // only closes itself on an outside click/scroll — Escape (Bootstrap's
+    // default data-bs-keyboard, not disabled here) closes the modal
+    // directly with no click event at all, so a picker left open when that
+    // happens would otherwise leak: an orphaned panel still floating after
+    // the modal is gone, plus its document click/scroll listeners never
+    // torn down.
+    el('b-opp-modal').addEventListener('hidden.bs.modal', () => { if (typeof closeSelectPicker === 'function') closeSelectPicker(); });
 
     function setChurnDate(v) { _churnDate = v; }
-    return { openNew, openEdit, openDuplicate, openOverlay, closeOverlay, addQT, addItem, removeItem, removeQT, dupQT, undo, setChurnDate };
+    return { openNew, openEdit, openDuplicate, openOverlay, closeOverlay, addQT, addItem, removeItem, removeQT, dupQT, undo, setChurnDate, openBoppPicker, openBoppItemPicker };
 })();

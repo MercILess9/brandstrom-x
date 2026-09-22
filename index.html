@@ -404,17 +404,26 @@
                 return;
             }
 
-            const { data } = await supabaseClient
-                .from('setting_project')
-                .select('*')
-                .eq('codename', user.codename)
-                .single();
+            // bquest/baccount/bfinance tiles are driven by real membership
+            // now (does a row for this codename exist in that project's own
+            // member table), not a separate per-person platform toggle —
+            // see system/system.js's guardProjectAccess for the same
+            // convention. setting_project is still the source for
+            // system_setting and the two not-yet-live projects
+            // (bdashboard/bcommission have no member table to check yet).
+            const [{ data: sp }, { data: qm }, { data: am }, { data: fm }] = await Promise.all([
+                supabaseClient.from('setting_project').select('*').eq('codename', user.codename).maybeSingle(),
+                supabaseClient.from('b_quest_member').select('codename').eq('codename', user.codename).maybeSingle(),
+                supabaseClient.from('b_account_setting').select('codename').eq('codename', user.codename).maybeSingle(),
+                supabaseClient.from('b_finance_setting').select('codename').eq('codename', user.codename).maybeSingle(),
+            ]);
+            const access = { ...(sp || {}), bquest: !!qm, baccount: !!am, bfinance: !!fm };
 
-            if (data?.system_setting) {
+            if (access.system_setting) {
                 document.getElementById('btn-setting').style.display = 'flex';
             }
 
-            renderGrid(data || {});
+            renderGrid(access);
         }
 
         async function handleLogout() {

@@ -13,6 +13,7 @@ const B_ACCOUNT_MODAL_HTML = `
     .bac-status-wrap { display: none; align-items: center; }
     .bac-status-wrap.visible { display: flex; }
     #bac-header-status { border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 0.8rem; font-weight: 700; padding: 0 14px; background: #fff; color: #334155; cursor: pointer; font-family: inherit; height: 36px; outline: none; transition: 0.2s; }
+    #bac-header-status:hover { border-color: var(--c-accent); }
     #bac-header-status:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
     #bac-header-status.status-active   { background: var(--c-accent-light); color: var(--c-accent-dark); border-color: var(--c-accent); }
     #bac-header-status.status-inactive { background: #f8fafc; color: #94a3b8; border-color: #e2e8f0; }
@@ -31,6 +32,7 @@ const B_ACCOUNT_MODAL_HTML = `
     /* Inputs */
     .bq-label-modern { font-size: 0.6rem; font-weight: 800; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.8px; display: block; }
     .bq-input-modern { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 12px; font-size: 0.85rem; color: #334155; height: 35px; transition: 0.2s; font-family: inherit; box-sizing: border-box; }
+    .bq-input-modern:hover { border-color: var(--c-accent); }
     .bq-input-modern:focus { outline: none; border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
     .was-validated .bq-input-modern:invalid { border-color: #dc3545 !important; background-color: #fff8f8; }
 
@@ -48,19 +50,33 @@ const B_ACCOUNT_MODAL_HTML = `
     .bac-boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .bac-box { background: #fff; border: 1px solid #eef2f7; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.03); }
     .bac-box-label { display: flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #94a3b8; border-bottom: 1px solid #f1f5f9; background: #fafbfc; }
-    .bac-box-ta { width: 100%; border: none; background: transparent; padding: 11px 14px; font-size: 0.85rem; color: #334155; font-family: inherit; resize: none; min-height: 80px; outline: none; line-height: 1.6; box-sizing: border-box; transition: background 0.15s; }
-    .bac-box-ta:focus { background: #fffef0; }
+    .bac-box-ta { width: 100%; border: none; background: transparent; padding: 11px 14px; font-size: 0.85rem; color: #334155; font-family: inherit; resize: none; min-height: 80px; outline: none; line-height: 1.6; box-sizing: border-box; border-radius: 0 0 14px 14px; transition: box-shadow 0.15s; }
+    /* Inset ring, not a border — this textarea already sits inside
+       .bac-box's own bordered card, so a real border here would double up
+       against it. box-shadow needs no property beyond what's already
+       there, unlike the QT table's borderless inputs elsewhere. The
+       textarea needs the SAME bottom border-radius as .bac-box (it fills
+       the card's bottom section, below the label bar) or its own ring
+       draws with square corners that visibly clash with the card's
+       rounded ones once .bac-box's overflow:hidden clips the mismatch. */
+    .bac-box-ta:hover, .bac-box-ta:focus { box-shadow: inset 0 0 0 1.5px var(--c-accent); }
     .bac-box-ta::placeholder { color: #cbd5e1; }
     /* ── Account name search overlay ── */
     .bac-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.4); z-index: 10001; display: none; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
     .bac-overlay.open { display: flex; }
     .bac-overlay-card { background: #fff; width: 480px; max-height: 80vh; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.15); }
     .bac-overlay-list { overflow-y: auto; flex: 1; padding-right: 4px; }
+    /* Plain Bootstrap .form-control with no override falls back to
+       Bootstrap's own default blue focus ring — every other input in this
+       modal already gets the accent instead, this one was just missed. */
+    #bac-overlay-input:focus { border-color: var(--c-accent) !important; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12) !important; }
     .bac-item { border: 1px solid #f1f5f9; background: #fff; border-radius: 12px; margin-bottom: 5px; padding: 11px 16px; font-size: 0.85rem; font-weight: 600; text-align: left; cursor: pointer; transition: 0.15s; color: #334155; width: 100%; }
-    /* Pick-from-list hover — ref B-Quest's assign-picker (.bx-ap-item):
-       gray, not the brand green, or a long search list reads as "ลายตา"
-       (visually busy) with every row lighting up green as you scan it. */
-    .bac-item:hover { background: #f1f5f9; }
+    /* Green, matching B-Opportunity's own account-search overlay
+       (.bopp-ov-item:hover) — user override 2026-09-13, superseding the
+       earlier gray-by-design call (was ref'd off B-Quest's assign-picker
+       to avoid a long list "lighting up" busy on scan); consistency
+       between the two near-identical overlays won out instead. */
+    .bac-item:hover { background: var(--c-accent-light); }
 
     /* ── Footer ── */
     .bac-footer { padding: 14px 28px; display: flex; justify-content: flex-end; gap: 10px; background: #fff; border-top: 1px solid #f1f5f9; }

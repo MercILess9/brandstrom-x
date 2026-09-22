@@ -68,7 +68,7 @@
         .kpi-label { font-size: 0.65rem; font-weight: 800; color: var(--c-slate); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
         .kpi-icon-chip { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; flex-shrink: 0; }
         .kpi-icon-chip.blue   { background: rgba(59,130,246,0.12);  color: #3b82f6; }
-        .kpi-icon-chip.accent { background: rgba(189,196,50,0.2);   color: #7a8500; }
+        .kpi-icon-chip.accent { background: rgba(var(--c-accent-rgb), 0.2);   color: var(--c-accent-dark); }
         .kpi-icon-chip.green  { background: rgba(22,163,74,0.12);   color: #16a34a; }
         .kpi-icon-chip.warn   { background: rgba(245,158,11,0.14);  color: #b45309; }
         /* Every headline number shares one neutral ink color — color lives
@@ -86,7 +86,7 @@
 
         /* ── Section header ── */
         .sec-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
-        .sec-hd-bar { width: 4px; height: 18px; background: #bdc432; border-radius: 2px; flex-shrink: 0; }
+        .sec-hd-bar { width: 4px; height: 18px; background: var(--c-accent); border-radius: 2px; flex-shrink: 0; }
         .sec-hd-bar.c-red { background: #ef4444; }
         .sec-hd-title { font-size: 0.75rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px; }
         /* The page's own name/identity, not just a section label — allowed
@@ -521,7 +521,13 @@ function buColor(bu) {
     const idx = _cfgBU.indexOf(bu);
     return CAT_PALETTE[(idx >= 0 ? idx : 0) % CAT_PALETTE.length];
 }
-function statusColor(s) { return STATUS_CLR[s] || '#bdc432'; }
+function statusColor(s) { return STATUS_CLR[s] || 'var(--c-accent)'; }
+
+// Chart.js draws its tooltip via <canvas>, which can't resolve a CSS
+// variable reference the way a DOM element's inline style can — it needs
+// an already-resolved concrete color string. Reads the live value instead
+// of hardcoding the brand hex, so a future theme change still reaches here.
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
 // ── Format helpers ─────────────────────────────────────────────────────────────
 function fmtK(n) {
@@ -1832,7 +1838,7 @@ function renderTrendByBU(buMonthMap, axis) {
                     titleFont: { size: 13, weight: '700' },
                     bodyColor: '#e2e8f0',
                     bodyFont: { size: 12 },
-                    footerColor: '#bdc432',
+                    footerColor: cssVar('--c-accent'),
                     footerFont: { size: 12, weight: '700' },
                     footerMarginTop: 6,
                     itemSort: (a, b) => b.raw - a.raw, // biggest BU first, regardless of stack order

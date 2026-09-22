@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <title>B-ACCOUNT | Settings</title>
+    <title>B-ACCOUNT | Setting</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/system/config.js"></script>
@@ -13,14 +13,29 @@
     <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-account.css">
     <style>
-        .settings-wrapper { max-width: 1100px; margin: 0 auto; padding: 36px 20px 140px; }
+        /* Cross-document View Transitions — clicking the Setting/Member tab
+           (a real <a href> navigation between two separate pages, not a JS
+           tab switch) crossfades the old/new page instead of a hard flash.
+           Needs the same declaration on both pages of the pair to engage;
+           no-ops silently in browsers that don't support it yet. */
+        @view-transition {
+            navigation: auto;
+        }
+
+        .settings-wrapper { max-width: 1300px; margin: 0 auto; padding: 36px 20px 140px; }
         .page-header { margin-bottom: 28px; }
         .page-header h1 { font-size: 1.4rem; font-weight: 800; color: var(--c-dark); margin: 0; }
+
+        .settings-tabnav { display: flex; gap: 8px; margin-bottom: 20px; }
+        .settings-tab { display: flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; color: var(--c-slate); text-decoration: none; border: 1px solid var(--c-border); background: #fff; transition: 0.15s; }
+        .settings-tab:hover { border-color: var(--c-accent); color: var(--c-dark); }
+        .settings-tab.active { background: var(--c-dark); color: var(--c-accent); border-color: var(--c-dark); }
 
         /* ── Section ── */
         .section { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; margin-bottom: 20px; overflow: hidden; }
         .section-header { display: flex; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--c-border); }
         .section-title { font-size: 0.82rem; font-weight: 800; color: var(--c-dark); text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 8px; }
+        .section-title i { font-size: 1rem; }
         .section-body { padding: 20px 24px; }
 
         /* ── Config boxes (Dropdown) — horizontal-scroll carousel, exact
@@ -64,134 +79,25 @@
         .cfg-list--grid { display: grid; grid-template-columns: 1fr 1fr; }
         .cfg-name-input { flex: 1; border: 1px solid var(--c-accent); border-radius: 8px; padding: 6px 10px; font-size: 0.83rem; font-weight: 700; color: var(--c-dark); background: #fff; outline: none; font-family: inherit; }
 
-        .btn-cfg-add { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 8px; padding: 5px 14px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
+        .btn-cfg-add { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 7px 14px; font-size: 0.76rem; font-weight: 700; cursor: pointer; transition: 0.15s; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
         .btn-cfg-add:hover { background: #0f172a; }
-
-        /* ── Members ── */
-        .btn-add-member { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 12px; padding: 9px 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.2s; display: flex; align-items: center; gap: 7px; }
-        .btn-add-member:hover { background: #0f172a; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
-        .table-search-wrap { position: relative; flex: 1; max-width: 240px; }
-        .table-search-input { width: 100%; border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 12px 7px 32px; font-size: 0.82rem; background: var(--c-bg); outline: none; font-family: inherit; transition: 0.2s; }
-        .table-search-input:focus { border-color: var(--c-accent); background: #fff; }
-        .table-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.8rem; pointer-events: none; }
-        .table-count { font-size: 0.75rem; font-weight: 700; color: var(--c-muted); white-space: nowrap; }
-
-        /* Grid: Name | New | Edit | Delete | Setting | X */
-        .perm-table-head,
-        .perm-row { display: grid; grid-template-columns: 180px repeat(4, 1fr) 44px; align-items: center; padding: 0 4px; }
-        .perm-table-head { height: 36px; background: var(--c-bg); border-radius: 10px; margin-bottom: 4px; }
-        .perm-row { height: 54px; border-bottom: 1px solid #f8fafc; border-radius: 8px; transition: background 0.15s; }
-        .perm-row:last-child { border-bottom: none; }
-        .perm-row:hover { background: #fafbff; }
-        .perm-row.is-new { background: #f0fdf4; }
-        .perm-row.is-deleted { opacity: 0.4; background: #fff5f5; pointer-events: none; }
-        .perm-row.is-deleted .btn-remove { pointer-events: all; }
-        .perm-col-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; text-align: center; }
-        .perm-col-name  { font-size: 0.68rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.8px; padding-left: 8px; }
-        .perm-name-zone { display: flex; align-items: center; padding-left: 4px; }
-        .perm-codename  { font-size: 0.85rem; font-weight: 700; color: var(--c-dark); }
-        .perm-check-cell { display: flex; justify-content: center; align-items: center; }
-
-        .bq-toggle { position: relative; display: inline-block; width: 34px; height: 19px; }
-        .bq-toggle input { opacity: 0; width: 0; height: 0; }
-        .bq-slider { position: absolute; cursor: pointer; inset: 0; background: #e2e8f0; transition: .3s; border-radius: 34px; }
-        .bq-slider:before { position: absolute; content: ""; height: 13px; width: 13px; left: 3px; bottom: 3px; background: #fff; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-        .bq-toggle input:checked + .bq-slider { background: var(--c-accent); }
-        .bq-toggle input:checked + .bq-slider:before { transform: translateX(15px); }
-
-        .btn-remove { background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 5px; border-radius: 7px; transition: 0.2s; display: flex; align-items: center; font-size: 0.95rem; }
-        .btn-remove:hover { background: #fee2e2; color: #ef4444; }
-        .perm-empty { padding: 40px; text-align: center; color: var(--c-muted); }
-        .perm-empty i { font-size: 2rem; margin-bottom: 10px; display: block; opacity: 0.4; }
-        .perm-empty p { font-size: 0.82rem; font-weight: 600; margin: 0; }
-
-        /* ── Add Member Overlay ── */
-        .am-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.4); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
-        .am-overlay.show { opacity: 1; pointer-events: all; }
-        .am-modal { background: #fff; border-radius: 24px; width: 480px; max-height: 75vh; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.15); transform: translateY(16px); transition: transform 0.25s; overflow: hidden; }
-        .am-overlay.show .am-modal { transform: translateY(0); }
-        .am-header { padding: 22px 24px 16px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-        .am-title { font-size: 0.95rem; font-weight: 800; color: var(--c-dark); }
-        .am-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--c-muted); transition: 0.2s; }
-        .am-close:hover { background: #e2e8f0; color: var(--c-dark); }
-        .am-search-wrap { padding: 12px 20px; border-bottom: 1px solid var(--c-border); flex-shrink: 0; position: relative; }
-        .am-search { width: 100%; border: 1px solid var(--c-border); border-radius: 10px; padding: 8px 12px 8px 36px; font-size: 0.85rem; outline: none; font-family: inherit; background: var(--c-bg); transition: 0.2s; }
-        .am-search:focus { border-color: var(--c-accent); background: #fff; }
-        .am-search-icon { position: absolute; left: 32px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.85rem; pointer-events: none; }
-        .am-list { overflow-y: auto; flex: 1; padding: 8px 12px; }
-        .am-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: 0.15s; }
-        .am-item:hover { background: var(--c-bg); }
-        .am-item.selected { background: var(--c-accent-light); }
-        .am-check { width: 18px; height: 18px; border: 2px solid var(--c-border); border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: 0.15s; font-size: 0.7rem; color: transparent; }
-        .am-item.selected .am-check { background: var(--c-accent); border-color: var(--c-accent); color: var(--c-dark); }
-        .am-avatar { width: 34px; height: 34px; background: var(--c-accent-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; color: #7a8500; flex-shrink: 0; }
-        .am-item.selected .am-avatar { background: #d9e84a; }
-        .am-codename { font-size: 0.85rem; font-weight: 700; color: var(--c-dark); }
-        .am-sub { font-size: 0.72rem; color: var(--c-muted); }
-        .am-empty { padding: 36px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
-        .am-footer { padding: 14px 20px; border-top: 1px solid var(--c-border); display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-shrink: 0; background: #fff; }
-        .btn-am-cancel  { border: 1px solid var(--c-border); background: #fff; color: var(--c-slate); border-radius: 10px; padding: 9px 22px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: 0.15s; }
-        .btn-am-cancel:hover { background: var(--c-bg); }
-        .btn-am-confirm { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 9px 22px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: 0.15s; }
-        .btn-am-confirm:hover:not(:disabled) { background: #0f172a; }
-        .btn-am-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
 <div class="settings-wrapper">
     <div class="page-header">
-        <h1><i class="bi bi-gear-fill me-2" style="color:var(--c-accent)"></i>B-ACCOUNT Settings</h1>
+        <h1><i class="bi bi-gear-fill me-2" style="color:var(--c-accent)"></i>B-ACCOUNT Setting</h1>
     </div>
 
-    <!-- Section 1: Dropdown Config — 5 separate boxes, side by side (ref B-Quest's Role/Status/Type carousel) -->
+    <div class="settings-tabnav">
+        <a href="b-account-settings.html" class="settings-tab active"><i class="bi bi-gear-fill"></i> Setting</a>
+        <a href="b-account-members.html" class="settings-tab"><i class="bi bi-people-fill"></i> Member</a>
+    </div>
+
+    <!-- Dropdown Config — 5 separate boxes, side by side (ref B-Quest's Role/Status/Type carousel) -->
     <div class="cfg-carousel-wrap" id="cfgCarouselWrap">
         <div class="cfg-carousel-grid" id="cfgGrid"></div>
-    </div>
-
-    <!-- Section 2: Member Access -->
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title"><i class="bi bi-people-fill"></i> Member Access</div>
-            <div style="display:flex;align-items:center;gap:10px;margin-left:auto;">
-                <div class="table-search-wrap">
-                    <i class="bi bi-search table-search-icon"></i>
-                    <input type="text" class="table-search-input" id="memberSearch" placeholder="Search member..." oninput="filterMembers(this.value)">
-                </div>
-                <span class="table-count" id="memberCount"></span>
-                <button class="btn-add-member" onclick="openAddMember()"><i class="bi bi-person-plus-fill"></i> Add Member</button>
-            </div>
-        </div>
-        <div class="section-body" style="padding-top:12px;">
-            <div class="perm-table-head">
-                <div class="perm-col-name">Member</div>
-                <div class="perm-col-label">New</div>
-                <div class="perm-col-label">Edit</div>
-                <div class="perm-col-label">Delete</div>
-                <div class="perm-col-label">Setting</div>
-                <div></div>
-            </div>
-            <div id="permBody"></div>
-        </div>
-    </div>
-</div>
-
-<!-- Add Member Overlay -->
-<div class="am-overlay" id="amOverlay">
-    <div class="am-modal">
-        <div class="am-header">
-            <div class="am-title"><i class="bi bi-person-plus-fill me-2" style="color:var(--c-accent)"></i>Add Member</div>
-            <button class="am-close" onclick="closeAddMember()"><i class="bi bi-x-lg"></i></button>
-        </div>
-        <div class="am-search-wrap">
-            <i class="bi bi-search am-search-icon"></i>
-            <input type="text" class="am-search" id="amSearch" placeholder="Search..." oninput="filterAmList(this.value)">
-        </div>
-        <div class="am-list" id="amList"></div>
-        <div class="am-footer">
-            <button class="btn-am-cancel" onclick="closeAddMember()">Cancel</button>
-            <button class="btn-am-confirm" id="amConfirmBtn" onclick="confirmAddMembers()" disabled>Add</button>
-        </div>
     </div>
 </div>
 
@@ -341,140 +247,13 @@
         setTimeout(update, 300);
     }
 
-    // ── Members State ─────────────────────────────────────────────
-    let _members = [];   // { codename, ae, new, edit, delete, setting, _state: 'existing'|'new'|'deleted' }
-    let _allProfiles = [];
-    let _amSelected = new Set();
-    let _memberSearch = '';
-
     let saveBar = null;
 
-    // Total pending change count across both Dropdown Config and Member
-    // Access — shared save-bar module (system/save-bar.js) just wants a
-    // number, ref B-Quest Settings' own recomputeSaveBarCount().
     function recomputeSaveBarCount() {
         if (!saveBar) return;
         let total = 0;
         CFG_TYPES.forEach(t => { const s = _cfg[t.key]; total += s.toAdd.length + s.toDelete.size; });
-        total += _members.filter(m => m._state === 'new' || m._state === 'deleted' || (m._state === 'existing' && m._changed)).length;
         saveBar.setCount(total);
-    }
-
-    function toggle(codename, perm) {
-        const m = _members.find(m => m.codename === codename);
-        if (!m) return;
-        m[perm] = !m[perm];
-        if (m._state === 'existing') m._changed = true;
-        recomputeSaveBarCount();
-    }
-
-    function removeMember(codename) {
-        const m = _members.find(m => m.codename === codename);
-        if (!m) return;
-        if (m._state === 'new') { _members = _members.filter(x => x.codename !== codename); }
-        else { m._state = 'deleted'; }
-        renderPermTable();
-        recomputeSaveBarCount();
-    }
-
-    function renderPermRow(m) {
-        const cls = m._state === 'new' ? ' is-new' : m._state === 'deleted' ? ' is-deleted' : '';
-        const perms = ['new', 'edit', 'delete', 'setting'];
-        return `<div class="perm-row${cls}" data-codename="${esc(m.codename)}">
-            <div class="perm-name-zone"><span class="perm-codename">${esc(m.codename)}</span></div>
-            ${perms.map(p => `
-            <div class="perm-check-cell">
-                <label class="bq-toggle">
-                    <input type="checkbox" ${m[p] ? 'checked' : ''} onchange="toggle('${esc(m.codename)}','${p}')">
-                    <span class="bq-slider"></span>
-                </label>
-            </div>`).join('')}
-            <div style="display:flex;justify-content:center;">
-                <button class="btn-remove" onclick="removeMember('${esc(m.codename)}')" title="Remove"><i class="bi bi-trash3"></i></button>
-            </div>
-        </div>`;
-    }
-
-    function renderPermTable() {
-        const search = _memberSearch.toLowerCase();
-        const filtered = _members.filter(m => !search || m.codename.toLowerCase().includes(search));
-        const body = document.getElementById('permBody');
-        if (!filtered.length) {
-            body.innerHTML = `<div class="perm-empty"><i class="bi bi-people"></i><p>No members</p></div>`;
-        } else {
-            body.innerHTML = filtered.map(renderPermRow).join('');
-        }
-        document.getElementById('memberCount').textContent = `${_members.filter(m => m._state !== 'deleted').length} members`;
-    }
-
-    function filterMembers(val) {
-        _memberSearch = val;
-        renderPermTable();
-    }
-
-    async function loadMembers() {
-        const { data } = await supabaseClient.from('b_account_setting').select('*').order('codename');
-        _members = (data || []).map(m => ({ ...m, _state: 'existing', _changed: false }));
-        renderPermTable();
-    }
-
-    // ── Add Member Overlay ────────────────────────────────────────
-    function openAddMember() {
-        _amSelected.clear();
-        document.getElementById('amSearch').value = '';
-        renderAmList('');
-        document.getElementById('amOverlay').classList.add('show');
-        document.getElementById('amSearch').focus();
-    }
-
-    function closeAddMember() {
-        document.getElementById('amOverlay').classList.remove('show');
-    }
-
-    function renderAmList(search) {
-        const existingCodes = new Set(_members.filter(m => m._state !== 'deleted').map(m => m.codename));
-        const list = _allProfiles.filter(p =>
-            !existingCodes.has(p.codename) &&
-            (!search || p.codename.toLowerCase().includes(search.toLowerCase()) || (p.nick_name || '').toLowerCase().includes(search.toLowerCase()))
-        );
-        const el = document.getElementById('amList');
-        if (!list.length) {
-            el.innerHTML = '<div class="am-empty">No members to add</div>';
-            return;
-        }
-        el.innerHTML = list.map(p => {
-            const sel = _amSelected.has(p.codename);
-            const initials = (p.codename || '').substring(0, 2).toUpperCase();
-            return `<div class="am-item${sel ? ' selected' : ''}" onclick="toggleAmItem('${esc(p.codename)}')">
-                <div class="am-check">${sel ? '<i class="bi bi-check-lg"></i>' : ''}</div>
-                <div class="am-avatar">${initials}</div>
-                <div>
-                    <div class="am-codename">${esc(p.codename)}</div>
-                    <div class="am-sub">${esc(p.nick_name || '')}${p.employee_id ? ` · ${esc(p.employee_id)}` : ''}</div>
-                </div>
-            </div>`;
-        }).join('');
-    }
-
-    function toggleAmItem(codename) {
-        if (_amSelected.has(codename)) _amSelected.delete(codename);
-        else _amSelected.add(codename);
-        document.getElementById('amConfirmBtn').disabled = _amSelected.size === 0;
-        const search = document.getElementById('amSearch').value;
-        renderAmList(search);
-    }
-
-    function filterAmList(val) { renderAmList(val); }
-
-    function confirmAddMembers() {
-        _amSelected.forEach(codename => {
-            if (!_members.find(m => m.codename === codename)) {
-                _members.push({ codename, ae: false, new: false, edit: false, delete: false, setting: false, _state: 'new', _changed: false });
-            }
-        });
-        closeAddMember();
-        renderPermTable();
-        recomputeSaveBarCount();
     }
 
     // onSave for the shared save bar — button disable/spinner is handled
@@ -483,28 +262,18 @@
         const dirtyKeys = CFG_TYPES.map(t => t.key).filter(cfgIsDirty);
         const ops = dirtyKeys.flatMap(cfgOps);
 
-        const toUpsert = _members.filter(m => m._state === 'new' || (m._state === 'existing' && m._changed))
-            .map(({ codename, ae, new: n, edit, delete: d, setting }) => ({ codename, ae, new: n, edit, delete: d, setting }));
-        const toDelete = _members.filter(m => m._state === 'deleted').map(m => m.codename);
-        if (toUpsert.length) ops.push(supabaseClient.from('b_account_setting').upsert(toUpsert, { onConflict: 'codename' }));
-        if (toDelete.length) ops.push(supabaseClient.from('b_account_setting').delete().in('codename', toDelete));
-
         const results = await Promise.all(ops);
 
         const hasError = results.some(r => r.error);
         if (hasError) { notify('', 'Save failed', 'error'); return; }
 
         dirtyKeys.forEach(commitCfgState);
-        _members = _members.filter(m => m._state !== 'deleted').map(m => ({ ...m, _state: 'existing', _changed: false }));
-        renderPermTable();
         saveBar.clear();
         notify('success', 'Settings saved');
     }
 
     // Cancel button on the shared save bar — discard every staged edit
-    // without touching the server. Config just clears its local draft
-    // buffers; Members re-fetches from DB since toggled permissions are
-    // mutated in place with no separate "original" copy to roll back to.
+    // without touching the server.
     async function cancelAllChanges() {
         CFG_TYPES.forEach(t => {
             const state = _cfg[t.key];
@@ -513,13 +282,7 @@
             state.drafting = false;
             refreshCfgTags(t.key);
         });
-        await loadMembers();
         recomputeSaveBarCount();
-    }
-
-    async function loadProfiles() {
-        const { data } = await supabaseClient.from('profiles').select('codename, nick_name, employee_id').neq('level', 'god').order('codename');
-        _allProfiles = data || [];
     }
 
     async function initPage() {
@@ -527,7 +290,7 @@
         await initLayout(B_ACCOUNT_CONFIG);
         if (!canBaccount('setting')) window.location.replace('b-opportunity-list.html');
         saveBar = createSaveBar({ label: 'B-Account Settings', onSave: saveAll, onCancel: cancelAllChanges });
-        await Promise.all([loadConfig(), loadMembers(), loadProfiles()]);
+        await loadConfig();
     }
 
     initPage();

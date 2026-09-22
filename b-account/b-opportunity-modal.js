@@ -1036,6 +1036,12 @@ const BOppApp = (() => {
         }
     }
 
+    // b_opportunity_qt_item.amount is a generated column (STORED, computed
+    // by Postgres as GREATEST(0, qty*price - discount)) — never include it
+    // in an insert/update payload to this table anywhere in this file.
+    // item.amount still gets computed client-side (see the input handler
+    // and openEdit/openDuplicate's item mapping) purely for the modal's own
+    // running totals while editing; it's just never sent to the DB.
     async function insertQTToDB(oppId, qt, qtType = 'original') {
         const validItems = qt.items.filter(i => i.detail.trim() || +i.price > 0 || +i.qty > 1);
         if (!qt.qt_number.trim() && !validItems.length) return;
@@ -1045,7 +1051,7 @@ const BOppApp = (() => {
         if (qtErr) throw qtErr;
         const itemRows = qt.items
             .filter(i => i.detail.trim() || +i.price > 0)
-            .map((i, idx) => ({ qt_id: qtRow.qt_id, no: idx+1, bu: i.bu||null, detail: i.detail.trim()||null, qty: +i.qty||null, price: +i.price||null, discount: +i.discount||null, amount: +i.amount||null, gp: +i.gp||null }));
+            .map((i, idx) => ({ qt_id: qtRow.qt_id, no: idx+1, bu: i.bu||null, detail: i.detail.trim()||null, qty: +i.qty||null, price: +i.price||null, discount: +i.discount||null, gp: +i.gp||null }));
         if (itemRows.length) {
             const { error: itemErr } = await supabaseClient.from('b_opportunity_qt_item').insert(itemRows);
             if (itemErr) throw itemErr;
@@ -1089,7 +1095,7 @@ const BOppApp = (() => {
                 await supabaseClient.from('b_opportunity_qt_item').delete().eq('qt_id', qt.qt_id);
                 const itemRows = qt.items
                     .filter(i => i.detail.trim() || +i.price > 0)
-                    .map((i, idx) => ({ qt_id: qt.qt_id, no: idx+1, bu: i.bu||null, detail: i.detail.trim()||null, qty: +i.qty||null, price: +i.price||null, discount: +i.discount||null, amount: +i.amount||null, gp: +i.gp||null }));
+                    .map((i, idx) => ({ qt_id: qt.qt_id, no: idx+1, bu: i.bu||null, detail: i.detail.trim()||null, qty: +i.qty||null, price: +i.price||null, discount: +i.discount||null, gp: +i.gp||null }));
                 if (itemRows.length) await supabaseClient.from('b_opportunity_qt_item').insert(itemRows);
 
                 // Sync finance row only if still empty

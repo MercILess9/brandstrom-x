@@ -1,0 +1,55 @@
+-- b_opportunity_qt_item.amount schema unification
+-- =========================================================
+-- Discovered 2026-09-22: Brandbox-Test and BX/CB had DIVERGED on this
+-- column without anyone knowing. Test has amount as a STORED GENERATED
+-- column (Postgres computes it from qty/price/discount, rejects any
+-- explicit value). BX/CB have it as a plain writable column with no
+-- default at all — the original root cause of the long-running
+-- "Amount shows blank" bug chain (b-opportunity-modal.js never sent a
+-- value for it, so BX/CB rows silently got NULL; sending a value from
+-- the client, tried as an earlier fix, then broke on Test instead
+-- since Test's generated column rejects explicit values).
+--
+-- Decision: standardize everyone on the GENERATED column design — it's
+-- strictly more robust (the DB itself guarantees amount always matches
+-- qty/price/discount; no client code path can ever "forget" to send
+-- it again, which is exactly the bug class this whole chain was).
+-- b-opportunity-modal.js has been updated to never send `amount` in
+-- any insert/update to this table, matching this design everywhere.
+--
+-- This migration only touches the LOCAL/shared schema definition
+-- (whichever project runs it — Brandbox-Test today). It also fixes a
+-- second-order bug found in Test's original generated expression: it
+-- never clamped to 0 (`qty*price - discount`, no GREATEST), so a
+-- discount larger than the price would generate a NEGATIVE amount,
+-- disagreeing with every client-side computation of amount
+-- (Math.max(0, ...), used everywhere in b-opportunity-modal.js and in
+-- the historical data backfill). Recreated with the matching clamp.
+--
+-- ====================================================================
+-- DEPLOYMENT NOTE — DO NOT RUN THE BX/CB VERSION OF THIS UNTIL THE
+-- SAME CODE CHANGE (amount removed from every insert/update payload in
+-- b-opportunity-modal.js) IS DEPLOYED TO THAT FORK IN THE SAME WINDOW.
+-- BX/CB currently still run the OLDER code that explicitly sends
+-- `amount` — converting their column to GENERATED first, before that
+-- code ships, would immediately break New/Edit Opportunity there with
+-- "cannot insert a non-DEFAULT value into column amount" (the exact
+-- error this session just hit and fixed on Test). Schema and code must
+-- change together, same rule as any other rename/type-change step in
+-- the BX/CB migration playbook.
+--
+-- BX/CB SQL (run only alongside the matching code deploy):
+--   ALTER TABLE public.b_opportunity_qt_item DROP COLUMN amount;
+--   ALTER TABLE public.b_opportunity_qt_item
+--     ADD COLUMN amount numeric GENERATED ALWAYS AS
+--     (GREATEST(0, qty * price - COALESCE(discount, 0))) STORED;
+-- (DROP+ADD, not ALTER COLUMN — Postgres has no direct way to turn an
+-- existing plain column into a generated one. Existing values recompute
+-- automatically from qty/price/discount when the column is re-added,
+-- nothing is lost.)
+-- ====================================================================
+
+alter table public.b_opportunity_qt_item drop column amount;
+alter table public.b_opportunity_qt_item
+  add column amount numeric generated always as
+  (greatest(0, qty * price - coalesce(discount, 0))) stored;

@@ -5,6 +5,96 @@ function esc(s) { return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 function safeLink(url) { if (!url) return '#'; const u = url.trim(); return (u.startsWith('http://') || u.startsWith('https://')) ? u : '#'; }
 
+// ── Branding (Phase 2 of system/setting.html's Branding section) ──
+// Reads logo_header_url/logo_icon_url/theme_accent(_light/_dark) from
+// system_setting and applies them platform-wide: CSS custom property
+// overrides on :root for the theme colors, and swapping the header/auth
+// page <img> src for the logos. Runs on every page via initLayout().
+//
+// This is a static site with no server-side render, so applying anything
+// fetched from the DB always happens after the page's own default CSS/
+// markup has already painted once — there's an unavoidable brief flash
+// from default → custom on a visitor's very first load. localStorage
+// caches the last-applied values so every load AFTER the first can apply
+// them synchronously, before the network fetch even starts, shrinking
+// (not eliminating) that flash to just whenever the config actually
+// changes rather than every single page view.
+const BX_BRANDING_CACHE_KEY = 'bx_branding_cache';
+
+function bxHexToRgbString(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+}
+
+// Picks readable text (dark vs white) for content sitting directly on top
+// of a full-strength accent color — same purpose as theme.css's own
+// --c-on-accent token, just computed instead of hand-picked, since the
+// accent itself is now user-configurable. Perceptual luminance weights
+// (ITU-R BT.601), not a straight average — matches how bright a color
+// actually reads to the eye.
+function bxContrastTextColor(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+    if (!m) return '#1e293b';
+    const n = parseInt(m[1], 16);
+    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.6 ? '#1e293b' : '#ffffff';
+}
+
+function applyBrandingValues(cfg) {
+    if (!cfg) return;
+    const root = document.documentElement.style;
+    if (cfg.theme_accent) {
+        root.setProperty('--c-accent', cfg.theme_accent);
+        const rgb = bxHexToRgbString(cfg.theme_accent);
+        if (rgb) root.setProperty('--c-accent-rgb', rgb);
+        root.setProperty('--c-on-accent', bxContrastTextColor(cfg.theme_accent));
+    }
+    if (cfg.theme_accent_light) root.setProperty('--c-accent-light', cfg.theme_accent_light);
+    if (cfg.theme_accent_dark) root.setProperty('--c-accent-dark', cfg.theme_accent_dark);
+
+    if (cfg.logo_header_url) {
+        const headerLogo = document.querySelector('.sys-logo-img');
+        if (headerLogo) headerLogo.src = cfg.logo_header_url;
+    }
+    if (cfg.logo_icon_url) {
+        const authLogo = document.getElementById('brandbox-logo');
+        if (authLogo) authLogo.src = cfg.logo_icon_url;
+    }
+}
+
+// Sync half — call as early as possible (before header injection, before
+// the async DB fetch even starts) so a repeat visitor's theme colors are
+// right on first paint. Logo swapping still waits for the relevant <img>
+// to exist (header injection for .sys-logo-img; auth pages already have
+// #brandbox-logo in their static markup), so applyBrandingValues is
+// deliberately called again after header injection too.
+function applyCachedBranding() {
+    try {
+        const cached = JSON.parse(localStorage.getItem(BX_BRANDING_CACHE_KEY) || 'null');
+        applyBrandingValues(cached);
+    } catch {}
+}
+
+// Async half — fire-and-forget from initLayout(), never awaited: a
+// project page's own init shouldn't wait on a branding fetch that isn't
+// on its critical path. Refreshes the cache + re-applies once resolved,
+// so a change made in system/setting.html shows up (after one extra
+// reload to repopulate the cache) without needing a hard refresh loop.
+async function refreshBranding() {
+    if (!supabaseClient) return;
+    try {
+        const { data, error } = await supabaseClient.from('system_setting').select('key, value');
+        if (error || !data) return;
+        const cfg = {};
+        data.forEach(row => { cfg[row.key] = row.value; });
+        applyBrandingValues(cfg);
+        localStorage.setItem(BX_BRANDING_CACHE_KEY, JSON.stringify(cfg));
+    } catch {}
+}
+
 // Body scroll lock for the many custom fixed-overlay popups across the
 // app (Settings, Members, assign-picker, ...) — Bootstrap's own modals
 // already lock scroll via their .modal-open class, so this is only for
@@ -239,6 +329,8 @@ function formatDate(dateStr) {
 
 async function initLayout(config = {}) {
     injectAssets();
+    applyCachedBranding(); // sync, runs before header injection — shrinks the default→custom flash on repeat visits
+    refreshBranding();     // async, not awaited — refreshes the cache + re-applies once it resolves
 
     if (!supabaseClient) {
         console.error("❌ Supabase Client not initialized");
@@ -317,9 +409,9 @@ async function initAuthGuard() {
 // live project — access is granted the moment a project's own admin adds
 // someone there (Add Member), full stop. There's no separate per-person
 // platform-level pre-approval step anymore (that used to be
-// setting_project.<key>, toggled by a different admin on a different page,
+// system_access.<key>, toggled by a different admin on a different page,
 // which could drift out of sync with the project's own member list).
-// setting_project itself still exists for system_setting (no project/
+// system_access itself still exists for system_setting (no project/
 // member-table equivalent for that one) and for bdashboard/bcommission
 // (not live projects yet, no member table to point at).
 const PROJECT_MEMBER_TABLE = { bquest: 'b_quest_member', baccount: 'b_account_setting', bfinance: 'b_finance_setting' };
@@ -356,6 +448,7 @@ async function renderSystemUI(config) {
     const response = await fetch('/system/header.html');
     const headerHTML = await response.text();
     document.body.insertAdjacentHTML('afterbegin', headerHTML);
+    applyCachedBranding(); // .sys-logo-img only exists from this point on — re-apply so a cached custom logo actually lands on it
 
     if (config.projectName) {
         document.getElementById('project-title').innerText = config.projectName;

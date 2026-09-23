@@ -673,18 +673,18 @@
     // Own staging bucket (not configChanges) so Work Calendar gets its own
     // dirty-dot/section id without double-counting the same pending rule
     // against both section-worklist and section-calendar in the save-bar
-    // total — both buckets still land in the same b-quest-config table.
+    // total — both buckets still land in the same b-quest-setting table.
     let calendarChanges = {};
     const calendarDeletes = new Set(); // same story as configDeletes — never populated
     // Which Status a new task starts with (default_status_id) — same
-    // flat-bucket b-quest-config shape as configChanges, but kept in its
+    // flat-bucket b-quest-setting shape as configChanges, but kept in its
     // own bucket so it lights up the Status section's dirty-dot instead of
     // Work List's (same reasoning as calendarChanges above).
     let statusConfigChanges = {};
     const statusConfigDeletes = new Set(); // never populated, same story as configDeletes
     // List page Data Visibility (Role/Owner Own-vs-All) and Filter Defaults
     // (Status/Type/Role pre-selected + Deadline range) — two more flat
-    // b-quest-config buckets, own dirty-dots per the same reasoning as
+    // b-quest-setting buckets, own dirty-dots per the same reasoning as
     // calendarChanges/statusConfigChanges above.
     let visibilityChanges = {};
     const visibilityDeletes = new Set(); // never populated, same story as configDeletes
@@ -695,7 +695,7 @@
     // sending anything (resolving rules into a deduped recipient list,
     // fetching emails, handling the same person matching multiple rules)
     // is separate future work once this is wired to real trigger events.
-    let originalDepartments = []; // [name, ...], loaded once from departments table
+    let originalDepartments = []; // [name, ...], loaded once from system_department table
     let notifyChannel = 'notify'; // 'notify' | 'email' — which tab is showing
     let notifyChanges = {}; // rule -> staged value, same flat-bucket shape as configChanges
     const notifyDeletes = new Set(); // never populated, same story as configDeletes
@@ -1446,7 +1446,7 @@
     // Config (flat rule -> value bucket, global toggles)
     // ═══════════════════════════════════════════
     async function loadConfig() {
-        const { data } = await supabaseClient.from('b_quest_config').select('rule, value');
+        const { data } = await supabaseClient.from('b_quest_setting').select('rule, value');
         originalConfig = {};
         (data || []).forEach(row => { originalConfig[row.rule] = row.value; });
         renderWorkConfigToggles();
@@ -1461,7 +1461,7 @@
     }
 
     async function loadDepartments() {
-        const { data } = await supabaseClient.from('departments').select('name').order('name');
+        const { data } = await supabaseClient.from('system_department').select('name').order('name');
         originalDepartments = (data || []).map(d => d.name);
     }
 
@@ -1494,7 +1494,7 @@
 
     // ═══════════════════════════════════════════
     // List page — Filter Defaults (Role/Status/Type pre-selected + Deadline
-    // range). Two separate b-quest-config rules (list_filter_defaults,
+    // range). Two separate b-quest-setting rules (list_filter_defaults,
     // list_deadline_default) staged in the same filterDefaultsChanges
     // bucket, so both share one dirty-dot/section.
     // ═══════════════════════════════════════════
@@ -1704,7 +1704,7 @@
 
     // ═══════════════════════════════════════════
     // Work Calendar — how much of a day's capacity actually counts, per
-    // weekday (0-100%). Feeds the same b-quest-config table as the Day/Max
+    // weekday (0-100%). Feeds the same b-quest-setting table as the Day/Max
     // toggles above but through its own staging bucket (calendarChanges),
     // so this box's dirty-dot and the Work List box's don't get confused
     // with each other's pending state.
@@ -2109,7 +2109,7 @@
             }
 
             for (const [rule, value] of Object.entries({ ...configChanges, ...statusConfigChanges, ...calendarChanges, ...visibilityChanges, ...filterDefaultsChanges, ...notifyChanges })) {
-                const { error } = await supabaseClient.from('b_quest_config').upsert({ rule, value });
+                const { error } = await supabaseClient.from('b_quest_setting').upsert({ rule, value });
                 if (error) errors.push('Settings update: ' + error.message);
             }
 

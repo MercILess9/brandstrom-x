@@ -177,7 +177,7 @@
         /* ── Popover shells (Excel-filter/Add overlays share this) ── */
         .modal-overlay-base { position: fixed; inset: 0; background: rgba(15,23,42,0.4); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
         .modal-overlay-base.show { opacity: 1; pointer-events: all; }
-        .modal-shell-base { background: #fff; border-radius: 24px; max-height: 75vh; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.15); transform: translateY(16px); transition: transform 0.25s; overflow: hidden; }
+        .modal-shell-base { background: #fff; border-radius: 24px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.15); transform: translateY(16px); transition: transform 0.25s; overflow: hidden; }
         .modal-overlay-base.show .modal-shell-base { transform: translateY(0); }
 
         /* ── Add Member Overlay ── */
@@ -613,7 +613,13 @@
         recomputeSaveBarCount();
     }
 
+    function showSkeleton() {
+        const row = () => `<div class="skeleton-row"><div class="skeleton-block" style="height:30px;width:130px;"></div><div class="skeleton-block" style="height:24px;width:200px;"></div></div>`;
+        document.getElementById('mem-list').innerHTML = row() + row() + row();
+    }
+
     async function loadMembers() {
+        showSkeleton();
         const { data } = await supabaseClient.from('b_account_setting').select('*').order('codename');
         _members = (data || []).map(m => ({ ...m, _state: 'existing', _changed: false }));
     }

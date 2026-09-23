@@ -26,7 +26,7 @@
         }
 
         body { font-family: 'Inter', 'Outfit', sans-serif; background: var(--c-bg); color: var(--c-dark); margin: 0; }
-        .settings-wrapper { max-width: 1300px; margin: 0 auto; padding: 36px 20px 120px; }
+        .settings-wrapper { max-width: 1300px; margin: 0 auto; padding: 36px 20px 140px; }
 
         .page-header { margin-bottom: 28px; display: flex; align-items: center; gap: 12px; }
         .page-header h1 { font-size: 1.4rem; font-weight: 800; color: var(--c-dark); margin: 0; }
@@ -36,10 +36,6 @@
         .section-title { font-size: 0.82rem; font-weight: 800; color: var(--c-dark); text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 8px; }
         .section-title i { font-size: 1rem; }
 
-        /* Dept filter dropdown */
-        .dept-filter { width: 140px; flex-shrink: 0; border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 28px 7px 12px; font-size: 0.82rem; color: var(--c-dark); background: var(--c-bg); outline: none; font-family: inherit; transition: 0.2s; appearance: none; cursor: pointer; text-align: center; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
-        .dept-filter:focus { border-color: var(--c-accent); background-color: #fff; }
-        .dept-filter.active { border-color: #508faf; color: #508faf; font-weight: 700; }
 
         /* ── Departments Section — row list matching B-Quest's Role table
            pattern (drag handle / name / Active toggle / trash), laid out
@@ -47,7 +43,7 @@
            interleaved left-right). Drag-reorder and Active are staged in
            deptChanges and persisted by saveAll() — see the
            20260922000004 migration that added `active`/`sort_order` to
-           `departments`. */
+           `system_department` (named `departments` at the time). */
         .btn-add-dept { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 7px 14px; font-size: 0.76rem; font-weight: 700; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
         .btn-add-dept:hover { background: #0f172a; }
         .dept-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 20px; }
@@ -84,12 +80,17 @@
         .dept-empty { padding: 32px 20px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
 
         /* ── Branding Section — logo upload previews + theme color
-           pickers. Phase 1 only: saves to system_config/Storage, does not
-           yet change the live header/auth-page logo or theme.css colors
-           (see the migration file's comment for the Phase 2 note). ── */
+           pickers. Saves to system_setting/Storage, and system.js's
+           applyCachedBranding()/refreshBranding() apply these values
+           site-wide at runtime (header logo, login logo, theme colors)
+           on any page that calls initLayout() — signup/forgot-password/
+           reset-password don't call it, so they still show the
+           hardcoded default logo. ── */
         .brand-split-row { display: flex; gap: 32px; align-items: flex-start; }
         .brand-split-col { flex: 1; min-width: 0; }
         .brand-subhead { font-size: 0.7rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; }
+        .btn-reset-colors { background: none; border: none; color: var(--c-muted); cursor: pointer; padding: 2px; display: flex; align-items: center; font-size: 0.8rem; transition: 0.15s; }
+        .btn-reset-colors:hover { color: var(--c-accent-dark); transform: rotate(-45deg); }
         .brand-logo-row { display: flex; flex-direction: column; gap: 14px; }
         /* Lean/flat — a bottom hairline divider between slots instead of a
            boxed card, and a preview frame sized to each logo's own shape
@@ -113,21 +114,21 @@
         .btn-choose-logo:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
         /* Swatch is a plain trigger (not <input type="color">) — clicking
            it opens the same custom popover B-Quest's Role/Status color
-           picker uses (Quick Pick grid + a big color-wheel bar + hex
+           picker uses (Presets grid + a big color-wheel bar + hex
            input inside the popover), instead of relying on the OS/browser's
            own native color-picker chrome. */
         .brand-color-row { display: flex; flex-direction: column; gap: 2px; }
         .brand-color-item { display: flex; align-items: center; gap: 14px; padding: 10px 8px; border-radius: 12px; transition: background 0.15s; }
         .brand-color-item:hover { background: var(--c-bg); }
-        .brand-color-name { font-size: 0.84rem; font-weight: 700; color: var(--c-dark); flex: 1; min-width: 0; }
-        .brand-color-hex-label { font-size: 0.72rem; font-weight: 700; color: var(--c-muted); font-family: 'SF Mono', Consolas, monospace; flex-shrink: 0; }
+        .brand-color-name { font-size: 0.84rem; font-weight: 700; color: var(--c-dark); width: 100px; flex-shrink: 0; }
+        .brand-color-hex-label { font-size: 0.72rem; font-weight: 700; color: var(--c-muted); font-family: 'SF Mono', Consolas, monospace; flex-shrink: 0; margin-left: 2px; }
 
-        /* Swatch trigger only — the popover itself (Quick Pick grid +
+        /* Swatch trigger only — the popover itself (Presets grid +
            Custom wheel/hex) is injected by the shared /system/color-
            picker.js, loaded on both this page and b-quest-settings.html
            so there's exactly one implementation, not two that can drift
            apart from each other. */
-        .cfg-swatch { position: relative; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(0,0,0,0.08); flex-shrink: 0; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+        .cfg-swatch { position: relative; width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid rgba(0,0,0,0.08); flex-shrink: 0; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
         .cfg-swatch:hover { transform: scale(1.15); box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
 
         /* Users Table — same mem-matrix recipe as b-quest-members.html
@@ -155,7 +156,6 @@
         .table-search-input { width: 100%; border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 12px 7px 32px; font-size: 0.82rem; color: var(--c-dark); background: var(--c-bg); outline: none; font-family: inherit; transition: 0.2s; }
         .table-search-input:focus { border-color: var(--c-accent); background: #fff; }
         .table-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.8rem; pointer-events: none; }
-        .usr-header-right-group { display: flex; align-items: center; gap: 12px; }
         .cfg-count-badge { font-size: 0.66rem; font-weight: 700; color: var(--c-slate); text-transform: none; letter-spacing: 0; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 1px 8px; }
 
         .usr-matrix-wrap { overflow-x: auto; overflow-y: visible; border-radius: 12px; }
@@ -252,8 +252,8 @@
             background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat center / contain;
         }
 
-        /* Holiday year picker — same idea as .usr-dept-trigger above, sized
-           like .dept-filter's own box (this replaces a plain <select>). */
+        /* Holiday year picker — same idea as .usr-dept-trigger above
+           (this replaces a plain <select>). */
         .holiday-year-trigger {
             width: 110px; flex-shrink: 0; border: 1px solid var(--c-border); border-radius: 10px;
             padding: 7px 28px 7px 12px; font-size: 0.82rem; font-weight: 700; color: var(--c-dark);
@@ -277,8 +277,7 @@
         .bq-toggle input { opacity: 0; width: 0; height: 0; }
         .bq-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #e2e8f0; transition: .3s; border-radius: 34px; }
         .bq-slider:before { position: absolute; content: ""; height: 13px; width: 13px; left: 3px; bottom: 3px; background: #fff; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-        .bq-toggle.t-access input:checked + .bq-slider { background: #3b82f6; }
-        .bq-toggle.t-sys    input:checked + .bq-slider { background: var(--c-accent); }
+        .bq-toggle.t-sys input:checked + .bq-slider { background: var(--c-accent); }
         .bq-toggle input:checked + .bq-slider:before { transform: translateX(15px); }
 
         /* Read-only project-membership dot — plain filled/unfilled circle,
@@ -555,9 +554,6 @@
                 <i class="bi bi-palette-fill"></i> Branding
                 <span class="dirty-dot"></span>
             </div>
-            <button class="btn-add-dept" onclick="resetBrandingColors()">
-                <i class="bi bi-arrow-counterclockwise"></i> Reset Colors
-            </button>
         </div>
         <div style="padding: 20px 24px;">
             <div class="brand-split-row">
@@ -568,10 +564,10 @@
                             <div class="brand-logo-preview-wrap"><div class="brand-logo-preview is-wide" id="logo-header-preview"><i class="bi bi-image"></i></div></div>
                             <div class="brand-logo-info">
                                 <div class="brand-logo-label">Header Logo</div>
-                                <div class="brand-logo-hint">~300×80px, transparent PNG — shown top-left on every page</div>
+                                <div class="brand-logo-hint">~300×80px · PNG, ICO</div>
                                 <label class="btn-choose-logo">
                                     <i class="bi bi-upload"></i> Choose
-                                    <input type="file" accept="image/png" style="display:none" onchange="onLogoFileChange(event, 'header')">
+                                    <input type="file" accept="image/png,image/x-icon,.ico" style="display:none" onchange="onLogoFileChange(event, 'header')">
                                 </label>
                             </div>
                         </div>
@@ -579,17 +575,20 @@
                             <div class="brand-logo-preview-wrap"><div class="brand-logo-preview is-square" id="logo-icon-preview"><i class="bi bi-image"></i></div></div>
                             <div class="brand-logo-info">
                                 <div class="brand-logo-label">Icon Logo</div>
-                                <div class="brand-logo-hint">≥240×240px, transparent PNG — shown on login/loading screens</div>
+                                <div class="brand-logo-hint">≥240×240px · PNG, ICO</div>
                                 <label class="btn-choose-logo">
                                     <i class="bi bi-upload"></i> Choose
-                                    <input type="file" accept="image/png" style="display:none" onchange="onLogoFileChange(event, 'icon')">
+                                    <input type="file" accept="image/png,image/x-icon,.ico" style="display:none" onchange="onLogoFileChange(event, 'icon')">
                                 </label>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="brand-split-col">
-                    <div class="brand-subhead">Theme Colors</div>
+                    <div class="brand-subhead" style="display:flex; align-items:center; gap:6px;">
+                        Theme Colors
+                        <button class="btn-reset-colors" onclick="resetBrandingColors()" title="Reset to default colors"><i class="bi bi-arrow-counterclockwise"></i></button>
+                    </div>
                     <div class="brand-color-row" id="brand-color-row"></div>
                 </div>
             </div>
@@ -805,7 +804,7 @@
 
     // ── Branding State ──
     const BRAND_DEFAULTS = { theme_accent: '#bdc432', theme_accent_light: '#f4f7a1', theme_accent_dark: '#7a8500' };
-    let brandingData = {};          // key -> value, as loaded from system_config
+    let brandingData = {};          // key -> value, as loaded from system_setting
     let brandingChanges = {};       // key -> new value (color hex strings only)
     let brandingLogoFiles = {};     // 'header'|'icon' -> staged File object, uploaded on Save
     let brandingLogoPreviews = {};  // 'header'|'icon' -> object URL for the staged file's preview
@@ -845,7 +844,7 @@
     // ── Departments ──
     async function loadDepartments() {
         const { data, error } = await supabaseClient
-            .from('departments')
+            .from('system_department')
             .select('name, active, sort_order')
             .order('sort_order', { ascending: true });
         deptData = error ? [] : (data || []);
@@ -1060,7 +1059,7 @@
 
     // ── Branding ──
     async function loadBranding() {
-        const { data, error } = await supabaseClient.from('system_config').select('key, value');
+        const { data, error } = await supabaseClient.from('system_setting').select('key, value');
         brandingData = {};
         (error ? [] : (data || [])).forEach(row => { brandingData[row.key] = row.value; });
         renderBranding();
@@ -1073,9 +1072,9 @@
     }
 
     const BRAND_COLOR_FIELDS = [
-        { key: 'theme_accent',       label: 'Accent' },
-        { key: 'theme_accent_light', label: 'Accent Light' },
-        { key: 'theme_accent_dark',  label: 'Accent Dark' },
+        { key: 'theme_accent',       label: 'Primary' },
+        { key: 'theme_accent_light', label: 'Primary Light' },
+        { key: 'theme_accent_dark',  label: 'Primary Dark' },
     ];
 
     function renderBranding() {
@@ -1115,14 +1114,6 @@
 
     function markDirtyBranding() {
         document.getElementById('section-branding').classList.add('is-dirty');
-        pushUndoSnapshot();
-        recomputeSaveBarCount();
-    }
-
-    function checkDirtyBranding() {
-        if (!Object.keys(brandingChanges).length && !Object.keys(brandingLogoFiles).length) {
-            document.getElementById('section-branding').classList.remove('is-dirty');
-        }
         pushUndoSnapshot();
         recomputeSaveBarCount();
     }
@@ -1938,7 +1929,7 @@
     function guardSystemSetting() {
         const user = getBxUser();
         if (user?.level === 'god') return;
-        // Check setting_project table — if not god, must have system_setting = true
+        // Check system_access table — if not god, must have system_setting = true
         // We check after data loads via guardAfterLoad()
     }
 
@@ -1971,7 +1962,7 @@
 
     // bquest/baccount/bfinance are read-only here now — sourced live from
     // each project's own member table (does a row for this codename exist
-    // there), not the editable setting_project.<key> flags they used to be.
+    // there), not the editable system_access.<key> flags they used to be.
     // Access is granted the moment a project's own admin adds someone on
     // that project's own Settings/Members page; there's no separate
     // per-person platform pre-approval step left to toggle. bdashboard/
@@ -1982,7 +1973,7 @@
 
     async function loadAccessData() {
         const [{ data }, { data: qm }, { data: am }, { data: fm }] = await Promise.all([
-            supabaseClient.from('setting_project').select('*'),
+            supabaseClient.from('system_access').select('*'),
             supabaseClient.from('b_quest_member').select('codename'),
             supabaseClient.from('b_account_setting').select('codename'),
             supabaseClient.from('b_finance_setting').select('codename'),
@@ -1995,7 +1986,7 @@
         accessData = {};
         (data || []).forEach(row => { accessData[row.codename] = row; });
         // A codename can be a project member without ever having a
-        // setting_project row at all (that row now only matters for
+        // system_access row at all (that row now only matters for
         // bdashboard/bcommission/system_setting) — make sure such users
         // still get an accessData entry so their read-only badges render.
         Object.keys(memberSets).forEach(key => {
@@ -2386,7 +2377,7 @@
             if (profErr) throw profErr;
             if (!deleted?.length) throw new Error('Delete failed — please check RLS Policy in Supabase (profiles table)');
 
-            await supabaseClient.from('setting_project').delete().eq('codename', codename);
+            await supabaseClient.from('system_access').delete().eq('codename', codename);
 
             // Remove from local state
             allUsers = allUsers.filter(u => u.codename !== codename);
@@ -2420,12 +2411,12 @@
             for (const [key, ch] of Object.entries(deptChanges)) {
                 if (ch._new) {
                     const { error } = await supabaseClient
-                        .from('departments')
+                        .from('system_department')
                         .insert([{ name: ch.newName, active: ch.active ?? true, sort_order: ch.sort_order ?? 0 }]);
                     if (error) errors.push(`Dept add "${ch.newName}": ${error.message}`);
                 } else if (ch._delete) {
                     const { error } = await supabaseClient
-                        .from('departments')
+                        .from('system_department')
                         .delete()
                         .eq('name', ch.origName);
                     if (error) errors.push(`Dept delete "${ch.origName}": ${error.message}`);
@@ -2435,38 +2426,53 @@
                     // silently resets them.
                     const orig = deptData.find(d => d.name === ch.origName);
                     const { error: delErr } = await supabaseClient
-                        .from('departments').delete().eq('name', ch.origName);
+                        .from('system_department').delete().eq('name', ch.origName);
                     if (delErr) { errors.push(`Dept rename del "${ch.origName}": ${delErr.message}`); continue; }
                     const { error: insErr } = await supabaseClient
-                        .from('departments').insert([{ name: ch.newName, active: ch.active ?? orig?.active ?? true, sort_order: ch.sort_order ?? orig?.sort_order ?? 0 }]);
+                        .from('system_department').insert([{ name: ch.newName, active: ch.active ?? orig?.active ?? true, sort_order: ch.sort_order ?? orig?.sort_order ?? 0 }]);
                     if (insErr) errors.push(`Dept rename ins "${ch.newName}": ${insErr.message}`);
                 } else if (ch.active !== undefined || ch.sort_order !== undefined) {
                     const patch = {};
                     if (ch.active !== undefined) patch.active = ch.active;
                     if (ch.sort_order !== undefined) patch.sort_order = ch.sort_order;
                     const { error } = await supabaseClient
-                        .from('departments').update(patch).eq('name', ch.origName);
+                        .from('system_department').update(patch).eq('name', ch.origName);
                     if (error) errors.push(`Dept update "${ch.origName}": ${error.message}`);
                 }
             }
 
             // 0.5 Save branding changes (logo uploads + theme colors) —
-            // fixed filenames (logo-header.png/logo-icon.png) with
+            // fixed filenames (logo-header.<ext>/logo-icon.<ext>) with
             // upsert:true so a re-upload always replaces the same object,
-            // never leaving an orphaned previous file to clean up.
+            // never leaving an orphaned previous file to clean up. Extension
+            // and contentType follow the actual uploaded file (PNG or ICO)
+            // instead of assuming PNG — an .ico's bytes served with a
+            // mismatched image/png contentType can fail to render.
             const brandingUpserts = [];
             for (const [slot, file] of Object.entries(brandingLogoFiles)) {
-                const path = `branding/logo-${slot}.png`;
-                const { error: upErr } = await supabaseClient.storage.from('Brandbox').upload(path, file, { upsert: true, contentType: 'image/png' });
+                const isIco = file.type === 'image/x-icon' || /\.ico$/i.test(file.name);
+                const ext = isIco ? 'ico' : 'png';
+                const contentType = isIco ? 'image/x-icon' : 'image/png';
+                const path = `branding/logo-${slot}.${ext}`;
+                const { error: upErr } = await supabaseClient.storage.from('Brandbox').upload(path, file, { upsert: true, contentType });
                 if (upErr) { errors.push(`Logo upload (${slot}): ${upErr.message}`); continue; }
                 const { data: pub } = supabaseClient.storage.from('Brandbox').getPublicUrl(path);
-                brandingUpserts.push({ key: `logo_${slot}_url`, value: pub.publicUrl });
+                // Cache-bust — the storage path is a fixed filename reused
+                // on every re-upload (upsert:true), so the URL alone never
+                // changes when the image does; a returning visitor's
+                // browser (or Supabase's own edge cache) would otherwise
+                // keep serving the old cached bytes at that same URL
+                // indefinitely. Baking a fresh ?v= into the stored URL
+                // itself means every page that reads this value from
+                // system_setting always gets the busted URL, with no
+                // extra logic needed anywhere it's displayed.
+                brandingUpserts.push({ key: `logo_${slot}_url`, value: `${pub.publicUrl}?v=${Date.now()}` });
             }
             for (const [key, value] of Object.entries(brandingChanges)) {
                 brandingUpserts.push({ key, value });
             }
             if (brandingUpserts.length) {
-                const { error } = await supabaseClient.from('system_config').upsert(brandingUpserts, { onConflict: 'key' });
+                const { error } = await supabaseClient.from('system_setting').upsert(brandingUpserts, { onConflict: 'key' });
                 if (error) errors.push(`Branding save: ${error.message}`);
             }
 
@@ -2491,7 +2497,7 @@
                 if (ch._delete) continue;
 
                 // Every project column is read-only now (see PROJECT_COLS/
-                // USR_PROJECT_MEMBER_TABLE) — setting_project's per-project
+                // USR_PROJECT_MEMBER_TABLE) — system_access's per-project
                 // columns are no longer read or written by anything.
                 // System Setting is the only field left that's ever really
                 // edited on this page.
@@ -2501,7 +2507,7 @@
                 };
 
                 const { error } = await supabaseClient
-                    .from('setting_project')
+                    .from('system_access')
                     .upsert([payload], { onConflict: 'codename' });
                 if (error) errors.push(`Access ${codename}: ${error.message}`);
                 else accessData[codename] = { ...accessData[codename], ...payload };

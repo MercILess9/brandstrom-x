@@ -429,7 +429,7 @@
 
     // ── Data Visibility & Filter Defaults (set in Settings) ──
     async function loadListConfig() {
-        const { data } = await supabaseClient.from('b_quest_config').select('rule, value')
+        const { data } = await supabaseClient.from('b_quest_setting').select('rule, value')
             .in('rule', ['list_visibility', 'list_filter_defaults', 'list_deadline_default']);
         const map = Object.fromEntries((data || []).map(r => [r.rule, r.value]));
         visibilityConfig = { role: 'all', owner: 'all', ...map.list_visibility };

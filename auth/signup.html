@@ -148,7 +148,7 @@
     // Load departments from DB
     (async () => {
         const { data } = await supabaseClient
-            .from('departments')
+            .from('system_department')
             .select('name')
             .order('name', { ascending: true });
         const sel = document.getElementById('dept_val');

@@ -368,7 +368,7 @@ const BQuestApp = (() => {
             if (State.statusList.length) return;
             const [{ data }, { data: cfg }] = await Promise.all([
                 supabaseClient.from('b_quest_status').select('id, name, color').eq('active', true).order('sort_order'),
-                supabaseClient.from('b_quest_config').select('value').eq('rule', 'default_status_id').maybeSingle()
+                supabaseClient.from('b_quest_setting').select('value').eq('rule', 'default_status_id').maybeSingle()
             ]);
             State.statusList = data || [];
             State.defaultStatusId = cfg?.value || null;
@@ -385,8 +385,8 @@ const BQuestApp = (() => {
         async loadWorkdayWeight() {
             if (State.workdayWeight) return;
             const [{ data }, { data: mergeCfg }] = await Promise.all([
-                supabaseClient.from('b_quest_config').select('value').eq('rule', 'workday_weight').maybeSingle(),
-                supabaseClient.from('b_quest_config').select('value').eq('rule', 'merge_company_holidays').maybeSingle(),
+                supabaseClient.from('b_quest_setting').select('value').eq('rule', 'workday_weight').maybeSingle(),
+                supabaseClient.from('b_quest_setting').select('value').eq('rule', 'merge_company_holidays').maybeSingle(),
             ]);
             State.workdayWeight = { mon: 100, tue: 100, wed: 100, thu: 100, fri: 100, sat: 100, sun: 100, ...(data?.value || {}) };
             State.mergeCompanyHolidays = mergeCfg?.value === true;
@@ -1104,6 +1104,19 @@ const BQuestApp = (() => {
             e.preventDefault();
             const form = e.target;
 
+            // Guards against a double-click or slow-network double-tap firing
+            // two overlapping saves: without this, both would independently
+            // see the same role as "not yet in State.currentRoleRows" and
+            // both insert, producing two b-quest-task-role rows for the same
+            // (quest_id, role_id) — found live on BX (BQ-0544, two Designer
+            // rows), root-caused, DB now has a unique constraint as a second
+            // line of defense (see 20260922000009 migration) but this is the
+            // fix for the actual race, not just a safety net for its symptom.
+            const submitBtn = el('btn-submit-text');
+            if (submitBtn.disabled) return;
+            submitBtn.disabled = true;
+            try {
+
             if (!form.checkValidity()) { form.classList.add('was-validated'); return; }
 
             const currentId = el('b-quest-modal-id').value;
@@ -1224,6 +1237,10 @@ const BQuestApp = (() => {
                 if (typeof window.refreshSingleCard === 'function') window.refreshSingleCard(questId);
                 else location.reload();
             });
+
+            } finally {
+                submitBtn.disabled = false;
+            }
         },
 
         updateRoleUI, updateStatusUI, openSearchOverlay, openAssignPicker, openBqPicker,

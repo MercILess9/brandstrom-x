@@ -9,7 +9,7 @@ const B_QUEST_CONFIG = {
         { name: "Dashboard", link: "b-quest-dashboard.html", perm: "dashboard" },
         { name: "List", link: "b-quest-list.html" },
         { name: "Assignment", link: "b-quest-assignment.html", perm: "assign" },
-        { name: "Settings", link: "b-quest-settings.html", perm: "setting" },
+        { name: "Settings", link: "b-quest-settings.html", perm: "setting", activeAlso: ["b-quest-members.html"] },
     ]
 };
 

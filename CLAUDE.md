@@ -13,7 +13,10 @@ system/
   config.js         — Supabase credentials, SITE_URL, LOGO_URL
   system.js         — Auth guard, layout init, header inject, shared utils
   header.html       — Fixed header template (injected via JS)
-  setting.html      — System Settings (Users & Access + Departments)
+  setting.html      — System Settings (Setting tab: Departments/Holidays/Branding; Member tab: Users & Access)
+  color-picker.js   — Shared color-picker popover (Presets grid + wheel/hex), self-injecting
+                      CSS/markup convention like select-picker.js/people-picker.js. Loaded by
+                      setting.html and b-quest-settings.html.
 auth/
   auth.js           — Login / Signup / Forgot / Reset password functions
   *.html            — Auth pages (signup.html loads departments from DB)
@@ -41,17 +44,18 @@ All table names are `snake_case` (no hyphens) — standardized 2026-08-27, see [
 | Table | Key Columns |
 |---|---|
 | `profiles` | id (uuid), codename, employee_id, nick_name, full_name, email, department, level, created_at |
-| `departments` | name (text, PK) — list of departments, RLS: SELECT open to authenticated |
+| `system_department` | name (text, PK) — list of departments, RLS: SELECT open to authenticated |
 | `b_quest_list` | id, account_name, opportunity_name, task_name, detail, link, publish_date, owner, create_date, last_update — per-role fields (deadline/assign/weight/status/etc.) live on `b_quest_task_role` instead, not flat columns here |
 | `b_quest_task_role` | id, quest_id (FK → `b_quest_list.id`), role_id (FK → `b_quest_role.id`), role (denormalized name), status_id (FK → `b_quest_status.id`), status (denormalized name), work, type, deadline, weight, day, max_per_day, assign — one row per role a task has open |
 | `b_quest_role` | id, name, color, icon, active, sort_order, max_capacity — dynamic role list (Designer/Creative/IT/...), `max_capacity` is the per-role daily cap Dashboard/Modal both read |
 | `b_quest_status` | id, name, color, active, sort_order — dynamic status list |
 | `b_quest_type` | id, name, active, sort_order |
 | `b_quest_work` | role, work, day, weight |
-| `b_quest_config` | rule, value — misc B-Quest-wide settings (e.g. Data Visibility mode) |
+| `b_quest_setting` | rule, value — misc B-Quest-wide settings (e.g. Data Visibility mode) |
 | `b_quest_member` | codename (PK), creative, designer, setting, permissions |
 | `b_quest_member_role` | id, codename, role_id, new, edit, delete, assign, accept, edit_scope, delete_scope — per-role permission grants (replaces the old flat `b-quest-setting` table) |
-| `setting_project` | codename (PK), bquest, bdashboard, baccount, bcommission, bfinance, system_setting |
+| `system_access` | codename (PK), bquest, bdashboard, baccount, bcommission, bfinance, system_setting |
+| `system_setting` | key (PK), value, updated_at — platform-wide key-value settings (same shape as `b_quest_setting`), first used by System Settings' Branding section (`logo_header_url`, `logo_icon_url`, `theme_accent`, `theme_accent_light`, `theme_accent_dark`) |
 
 `b_quest_capacity` (role, max_capacity) and 14 legacy flat designer_*/creative_* columns on `b_quest_list` were dropped 2026-08-27 — dead since the task-role cutover, nothing in the codebase read them anymore.
 
@@ -59,7 +63,7 @@ All table names are `snake_case` (no hyphens) — standardized 2026-08-27, see [
 
 `profiles.codename` is used as a soft join key (plain string match, no FK) across several tables. An `AFTER UPDATE` trigger on `profiles` (`trg_profiles_cascade_codename` → `fn_cascade_codename_rename()`, current version in `supabase/migrations/20260910000001_cascade_codename_opportunity.sql`) auto-propagates a codename rename into every table below — this is automatic, no manual step needed when a codename actually changes.
 
-Tables currently covered: `setting_project.codename`, `b_account_setting.codename`, `b_finance_setting.codename`, `b_quest_member_role.codename`, `b_quest_member.codename`, `b_quest_task_role.assign`, `b_quest_list.owner`, `b_account_list.create_by`/`update_by`, `b_opportunity_list.owner`/`am`/`sub_am`/`create_by`/`update_by`.
+Tables currently covered: `system_access.codename`, `b_account_setting.codename`, `b_finance_setting.codename`, `b_quest_member_role.codename`, `b_quest_member.codename`, `b_quest_task_role.assign`, `b_quest_list.owner`, `b_account_list.create_by`/`update_by`, `b_opportunity_list.owner`/`am`/`sub_am`/`create_by`/`update_by`.
 
 **Standing rule:** any new table/column that stores a person's codename as free text (not a `profiles.id` FK) MUST be added to `fn_cascade_codename_rename()` in the same migration that creates it — otherwise a future codename rename will silently leave that column stale (this already happened once, after the 2026-08-27 snake_case table rename). When adding schema, check new column names like `codename`/`owner`/`assign`/`create_by` against this list, not just when a bug is reported.
 
@@ -78,7 +82,7 @@ Tables currently covered: `setting_project.codename`, `b_account_setting.codenam
 - TASK: `new`, `edit`, `delete`
 - ADMIN: `assign`, `setting`
 
-**System-level access (`setting_project`):**
+**System-level access (`system_access`):**
 - Per-project toggles: `bquest`, `bdashboard`, `baccount`, `bcommission`, `bfinance`
 - `system_setting` — access to `/system/setting.html`
 
@@ -126,6 +130,7 @@ initPage().then(() => observer.observe(triggerEl));
 - สีความหมายอื่น (แดง danger, สี role แต่ละแบบ) ยังอยู่ใน `<project>.css` ของตัวเองเหมือนเดิม ไม่ย้ายเข้ามาที่นี่
 - Text วางทับพื้น `--c-accent` เต็มค่าโดยตรง (ไม่ใช่ `--c-accent-light`) ต้องใช้ `--c-on-accent` เสมอ ห้ามใช้ `--c-dark`/hardcode hex ตรงๆ — ตอนสร้างหน้าเลือกสีธีมในอนาคต จุดที่ต้องคำนวณสี (เทียบ contrast ดำ/ขาว) คือ token นี้ตัวเดียว
 - ออกแบบไว้ให้ future Setting เปลี่ยน theme สีหลักได้ — เปลี่ยน 3 ค่านี้พร้อมกันเป็นชุดเดียวเท่านั้น (ห้ามเปลี่ยนแค่ตัวเดียว จะพังคอนทราสต์)
+- Hover ของ item ใน dropdown/filter/checkbox list ทั่วระบบ (`select-picker.js`, `multi-select.js`, column-filter popover ของ `setting.html`/`b-quest-members.html`) ใช้ `--c-accent-light` ตรงๆ เหมือนกันหมด (เคยแยกเป็น token ชื่อ `--c-hover-bg` ต่างหาก แต่รวมกลับมาใช้ตัวเดียวกับสีเขียวแล้วตามที่ user ตัดสินใจ 2026-09-13)
 
 ## Performance Rules
 
@@ -150,21 +155,26 @@ Users are always shown as **codename** (nickname). Format reference: `codename :
 ## index.html — Portal Home
 
 - Top-right: gear icon (⚙️ → `/system/setting.html`) shown only to god/system_setting users; logout icon shown to all
-- Project cards rendered from `setting_project` access data
+- Project cards rendered from `system_access` access data
 - God user sees all projects + gear icon automatically
 
 ## System Settings (`/system/setting.html`)
 
-Two sections:
-1. **Departments** — CRUD list, 2-column grid, add inline in grid, sort a-z after save. Data from `departments` table (name PK). Staging pattern same as b-quest-settings.
-2. **Users & Access** — manage profiles + per-project toggles + system_setting flag. Department cell is dropdown from `departments` DB.
+Two tabs (`top-tabs`/`switchTopTab()`, a JS-driven single-page tab switch, not separate files — unlike the other projects' Setting/Member split):
+
+**Setting tab** — three sections, stacked:
+1. **Departments** — row list (drag-handle reorder, Active toggle, trash), 2-column layout filled top-to-bottom (not left-right interleaved). Data from `system_department` table (`name` PK + `active`/`sort_order`), ordered by `sort_order`; A-Z sort button available as an explicit action, not automatic-on-save anymore. Staging pattern same as b-quest-settings.
+2. **Holidays** — per-year list, staging pattern same as Departments.
+3. **Branding** — logo upload (2 slots: header wordmark + icon mark, staged as `File` objects, uploaded to the `Brandbox` Storage bucket on Save) + theme color pickers (Accent/Accent Light/Accent Dark, via the shared `/system/color-picker.js` popover) backed by the `system_setting` key-value table. Applied site-wide at runtime by `system.js`'s `applyCachedBranding()`/`refreshBranding()` (header logo, theme colors, and `auth/login.html`'s logo since it calls `initLayout()`) — `auth/signup.html`/`forgot-password.html`/`reset-password.html` don't call `initLayout()`, so they still show the hardcoded default logo.
+
+**Member tab** — Users & Access: manage profiles + per-project toggles + system_setting flag. Department cell is dropdown from `system_department` DB.
 
 ## Departments Table
 
-- Table: `departments` — columns: `name` (text, PK only — no id, no sort_order)
+- Table: `system_department` (named `departments` until 2026-09-22, see `20260922000008_rename_departments_table.sql`) — columns: `name` (text, PK), `active` (boolean, default true), `sort_order` (integer) — `active`/`sort_order` added 2026-09-22 (`20260922000004_departments_active_sort_order.sql`) to back the drag-reorder + Active toggle on `system/setting.html`'s Department list
 - RLS: `SELECT` open to authenticated (`USING (true)`)
 - Write policy: authenticated users (or manage via SQL Editor)
-- Sorted a-z by `name` on query
+- Ordered by `sort_order` on query (was a-z by `name` before the migration above)
 - Used in: `system/setting.html` (manage), `auth/signup.html` (dropdown), Users & Access dept dropdown
 
 ## Adding a New Project
@@ -175,7 +185,7 @@ Two sections:
 4. Create `<project-name>.css` — `:root` variables + shared styles (follow `b-quest.css`)
 5. Create HTML pages, each loading: supabase → sweetalert2 → config.js → system.js → `<project-name>.js` → `<project-name>.css`
 6. Create a settings table in Supabase: `<project>-setting` with columns: codename (PK), role columns, task columns (new/edit/delete), admin columns (assign/setting)
-7. Add column to `setting_project` table for the new project key
+7. Add column to `system_access` table for the new project key
 8. sessionStorage key: `bx_perms_<project>` — system.js clears all `bx_perms_*` keys on index automatically
 
 ## Security Patterns

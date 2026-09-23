@@ -858,7 +858,7 @@ function renderFinRow(r, canEdit, showSub, totalRows) {
         const val = extra || 'this.value';
         return isNew
             ? `oninput="trackNewChange('${esc(id)}','${field}',${val})"`
-            : `onchange="trackChange('${esc(id)}','${field}',${val})"`;
+            : `oninput="trackChange('${esc(id)}','${field}',${val})"`;
     };
 
     const delBtn = !canEdit ? '' : isNew

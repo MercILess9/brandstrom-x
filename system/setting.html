@@ -88,9 +88,13 @@
            hardcoded default logo. ── */
         .brand-split-row { display: flex; gap: 32px; align-items: flex-start; }
         .brand-split-col { flex: 1; min-width: 0; }
-        .brand-subhead { font-size: 0.7rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; }
-        .btn-reset-colors { background: none; border: none; color: var(--c-muted); cursor: pointer; padding: 2px; display: flex; align-items: center; font-size: 0.8rem; transition: 0.15s; }
-        .btn-reset-colors:hover { color: var(--c-accent-dark); transform: rotate(-45deg); }
+        .brand-subhead { font-size: 0.7rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        /* Icon-only, sitting right next to the label it acts on — reads
+           as "reset [Theme Colors]" by proximity, not a floating icon
+           whose target is ambiguous. Bigger hit target than the old 2px-
+           padding version, still compact since it's not carrying a label. */
+        .btn-reset-colors { background: none; color: var(--c-muted); border: 1px solid var(--c-border); border-radius: 8px; width: 22px; height: 22px; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: 0.15s; flex-shrink: 0; }
+        .btn-reset-colors:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
         .brand-logo-row { display: flex; flex-direction: column; gap: 14px; }
         /* Lean/flat — a bottom hairline divider between slots instead of a
            boxed card, and a preview frame sized to each logo's own shape
@@ -117,19 +121,28 @@
            picker uses (Presets grid + a big color-wheel bar + hex
            input inside the popover), instead of relying on the OS/browser's
            own native color-picker chrome. */
-        .brand-color-row { display: flex; flex-direction: column; gap: 2px; }
-        .brand-color-item { display: flex; align-items: center; gap: 14px; padding: 10px 8px; border-radius: 12px; transition: background 0.15s; }
-        .brand-color-item:hover { background: var(--c-bg); }
+        /* Mirrors .brand-logo-row/.brand-logo-slot's own rhythm (16px
+           padding + hairline divider between rows) on purpose — before,
+           this column's rows were a tight 10px with no divider while the
+           Logos column's were a spacious 16px with dividers, so the two
+           columns read as mismatched weight even though they're peers in
+           the same section. Same row height now, same visual language. */
+        .brand-color-row { display: flex; flex-direction: column; }
+        .brand-color-item { display: flex; align-items: center; gap: 16px; padding: 16px 2px; border-bottom: 1px solid #f1f5f9; }
+        .brand-color-item:last-child { border-bottom: none; }
         .brand-color-name { font-size: 0.84rem; font-weight: 700; color: var(--c-dark); width: 100px; flex-shrink: 0; }
-        .brand-color-hex-label { font-size: 0.72rem; font-weight: 700; color: var(--c-muted); font-family: 'SF Mono', Consolas, monospace; flex-shrink: 0; margin-left: 2px; }
+        .brand-color-hex-label { font-size: 0.72rem; font-weight: 700; color: var(--c-slate); font-family: 'SF Mono', Consolas, monospace; flex-shrink: 0; background: var(--c-bg); border-radius: 20px; padding: 5px 12px; }
 
         /* Swatch trigger only — the popover itself (Presets grid +
            Custom wheel/hex) is injected by the shared /system/color-
            picker.js, loaded on both this page and b-quest-settings.html
            so there's exactly one implementation, not two that can drift
            apart from each other. */
-        .cfg-swatch { position: relative; width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid rgba(0,0,0,0.08); flex-shrink: 0; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
-        .cfg-swatch:hover { transform: scale(1.15); box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
+        /* Rounded-square, not a circle — echoes .brand-logo-preview's own
+           10px-radius chip shape so the two columns' "sample" elements
+           (logo thumbnail, color swatch) read as the same visual family. */
+        .cfg-swatch { position: relative; width: 36px; height: 36px; border-radius: 10px; border: 1.5px solid rgba(0,0,0,0.08); flex-shrink: 0; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+        .cfg-swatch:hover { transform: scale(1.08); box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
 
         /* Users Table — same mem-matrix recipe as b-quest-members.html
            (real <table>, sticky-left Trash+Member, grouped 2-row header),
@@ -585,7 +598,7 @@
                     </div>
                 </div>
                 <div class="brand-split-col">
-                    <div class="brand-subhead" style="display:flex; align-items:center; gap:6px;">
+                    <div class="brand-subhead">
                         Theme Colors
                         <button class="btn-reset-colors" onclick="resetBrandingColors()" title="Reset to default colors"><i class="bi bi-arrow-counterclockwise"></i></button>
                     </div>
@@ -2550,6 +2563,12 @@
             await loadDepartments();
             await loadHolidays();
             await loadBranding();
+            // loadBranding() only refreshes this page's own Branding form
+            // (previews, hex inputs) — refreshBranding() is the separate
+            // call that re-applies the saved values to this page's own
+            // live header logo/theme colors, so a save shows its effect
+            // immediately without needing a manual reload.
+            if (typeof refreshBranding === 'function') refreshBranding();
 
         } catch (e) {
             Swal.fire('Error', e.message, 'error');

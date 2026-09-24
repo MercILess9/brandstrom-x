@@ -9,10 +9,10 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
-    
+    <link rel="stylesheet" href="/system/theme.css">
+
     <style>
         :root {
-            --brand-lime: #bdc432;
             --brand-dark: #111111;
             --border-color: #eeeeee;
             --font-main: 'Outfit', sans-serif;
@@ -65,7 +65,7 @@
         .top-label {
             font-size: 0.9rem;
             letter-spacing: 4px;
-            color: var(--brand-lime);
+            color: var(--c-accent);
             font-weight: 700;
             text-transform: uppercase;
             margin-bottom: 12px;
@@ -97,7 +97,7 @@
         .app-card {
             position: relative;
             height: 160px;
-            border: 2.5px solid var(--brand-lime); 
+            border: 2.5px solid var(--c-accent); 
             border-radius: 20px;
             display: flex;
             flex-direction: column;
@@ -115,7 +115,7 @@
             content: '';
             position: absolute;
             bottom: 0; left: 0; width: 100%; height: 0;
-            background: var(--brand-lime);
+            background: var(--c-accent);
             transition: height 0.4s ease;
             z-index: -1;
         }
@@ -123,7 +123,7 @@
         .app-card:hover {
             transform: translateY(-10px);
             color: #000;
-            box-shadow: 0 20px 40px rgba(189, 196, 50, 0.25);
+            box-shadow: 0 20px 40px rgba(var(--c-accent-rgb), 0.25);
         }
 
         .app-card:hover::before {
@@ -205,7 +205,7 @@
         .portal-avatar-btn {
             width: 38px; height: 38px;
             border-radius: 50%;
-            background: var(--brand-lime);
+            background: var(--c-accent);
             color: #fff;
             border: none;
             font-size: 1.1rem;
@@ -239,7 +239,7 @@
         .portal-avatar-lg {
             width: 56px; height: 56px;
             border-radius: 50%;
-            background: var(--brand-lime);
+            background: var(--c-accent);
             color: #fff;
             font-size: 1.6rem;
             display: flex; align-items: center; justify-content: center;
@@ -249,7 +249,7 @@
         .portal-profile-fullname { font-size: 0.76rem; font-weight: 600; color: #888; margin-top: 2px; word-break: break-word; }
         .portal-profile-email {
             font-size: 0.74rem; font-weight: 600;
-            color: var(--brand-lime) !important;
+            color: var(--c-accent) !important;
             text-decoration: none !important;
             margin-top: 4px; word-break: break-word;
         }
@@ -335,7 +335,7 @@
     <div class="container-portal">
         <header class="portal-header">
             <div class="logo-box">
-                <img src="https://www.brandboxplatform.com/images/brandbox-logo.png" alt="Brandstrom X Logo">
+                <img src="https://www.brandboxplatform.com/images/brandbox-logo.png" class="sys-logo-img" alt="Brandstrom X Logo">
             </div>
             <div class="hero-content">
                 <div class="top-label">Brandstrom X Operations</div>

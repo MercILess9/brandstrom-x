@@ -144,6 +144,11 @@
 
 <script>
     document.getElementById('brandbox-logo').src = LOGO_URL;
+    // signup.html never calls initLayout() (no session yet, nothing to
+    // guard), so it misses the branding sync that piggybacks on it
+    // elsewhere — call the same two halves directly instead.
+    applyCachedBranding();
+    refreshBranding();
 
     // Load departments from DB
     (async () => {

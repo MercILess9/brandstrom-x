@@ -167,6 +167,33 @@ const B_QUEST_MODAL_HTML = `
     .bq-cap-worklimit { display: flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: 700; color: #64748b; margin-top: 5px; }
     .bq-cap-worklimit.over { color: #dc2626; font-weight: 800; }
 
+    /* Deadline-label info button + popover — shows the raw Weight/Day/Max
+       settings behind the selected Work + this role's Max Capacity, so a
+       user filling the modal can see the conditions without leaving to
+       check Settings. Deliberately just the configured numbers, not the
+       computed running-total the capacity bar (.bq-cap-info) above
+       already shows — a plain reference card, not a duplicate of that. */
+    .bq-info-btn { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; margin-left: 3px; border-radius: 50%; color: #94a3b8; cursor: pointer; font-size: 0.8rem; vertical-align: -2px; transition: color 0.15s, transform 0.15s; }
+    .bq-info-btn:hover { color: var(--c-accent-dark); transform: scale(1.15); }
+    .bq-info-popover { position: fixed; z-index: 10050; background: #fff; border-radius: 16px; box-shadow: 0 20px 48px rgba(0,0,0,0.16); border: 1px solid #eef2f7; padding: 14px 14px 8px; width: 400px; max-height: 420px; overflow-y: auto; box-sizing: border-box; }
+    .bq-info-popover-title { font-size: 0.62rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .bq-info-maxcap { font-size: 0.68rem; font-weight: 800; color: var(--c-accent-dark); background: var(--c-accent-light); border-radius: 20px; padding: 3px 10px; text-transform: none; letter-spacing: normal; white-space: nowrap; }
+    .bq-info-table { width: 100%; border-collapse: collapse; }
+    .bq-info-table th { font-size: 0.6rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; text-align: left; padding: 0 8px 8px 10px; border-bottom: 1.5px solid #f1f5f9; }
+    .bq-info-table th.num, .bq-info-table td.num { text-align: right; }
+    .bq-info-table td { font-size: 0.78rem; font-weight: 700; color: #334155; padding: 8px 8px 8px 10px; border-bottom: 1px solid #f8fafc; font-variant-numeric: tabular-nums; }
+    /* Work name wraps instead of truncating+native-tooltip — the popover
+       is wide enough now that most names fit on one line, and the ones
+       that don't read fine on two rather than needing a hover to reveal
+       the rest (the browser's default title-attribute tooltip box looked
+       out of place next to everything else here). */
+    .bq-info-table td:first-child { white-space: normal; word-break: break-word; border-left: 3px solid transparent; }
+    .bq-info-table tr:last-child td { border-bottom: none; }
+    .bq-info-table tr:not(.is-selected):hover td { background: #f8fafc; }
+    .bq-info-table tr.is-selected td { color: var(--c-accent-dark); background: var(--c-accent-light); }
+    .bq-info-table tr.is-selected td:first-child { border-left-color: var(--c-accent); }
+    .bq-info-empty { font-size: 0.8rem; font-weight: 600; color: #94a3b8; text-align: center; padding: 18px 0; }
+
     /* Toggle */
     .bq-toggle { position: relative; display: inline-block; width: 34px; height: 18px; margin: 0; vertical-align: middle; }
     .bq-toggle input { opacity: 0; width: 0; height: 0; }
@@ -331,6 +358,11 @@ const BQuestApp = (() => {
         deadlinePickers: {} }; // roleId -> attachDatePicker() handle, rebuilt every renderRoleCards()+setupDropdowns() cycle since role cards are fully re-rendered per modal open
     const el = id => document.getElementById(id);
     const show = (id, condition, display = 'block') => { const e = el(id); if(e) e.style.display = condition ? display : 'none'; };
+    // Work names reach the Capacity Settings popover (openCapSettingsInfo)
+    // as raw DB text rendered via innerHTML — everywhere else in this file
+    // that inserts a Work/role name uses new Option()/.textContent, which
+    // the browser escapes on its own, so this wasn't needed until now.
+    const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
     const BQuestService = {
         async getQuestById(id) {
@@ -499,7 +531,7 @@ const BQuestApp = (() => {
                     </div>
                     <div class="col-6">
                         <div class="timeline-zone">
-                            <label class="bq-label-modern"><i class="bi bi-calendar3 me-1" style="opacity:0.5"></i>Deadline</label>
+                            <label class="bq-label-modern"><i class="bi bi-calendar3 me-1" style="opacity:0.5"></i>Deadline<i class="bi bi-info-circle bq-info-btn" onclick="BQuestApp.openCapSettingsInfo(event, '${role.id}')" title="Weight / Day / Max settings"></i></label>
                             <input type="date" class="bq-input-modern m-0" id="b-quest-modal-${role.id}-deadline">
                             <div id="${role.id}-capacity-info" class="bq-cap-info"></div>
                         </div>
@@ -778,6 +810,80 @@ const BQuestApp = (() => {
     function effectiveMaxCap(roleId, targetDateStr) {
         const pct = dayPct(State.workdayWeight || {}, new Date(targetDateStr + 'T00:00:00'));
         return (State.maxCap[roleId] ?? 10) * (pct / 100);
+    }
+
+    // Info popover next to the Deadline label — the raw Weight/Day/Max
+    // settings behind the currently-selected Work, plus this role's flat
+    // Max Capacity, read straight off the hidden inputs setupDropdowns()
+    // already keeps in sync on every Work change (no extra query). Shown
+    // as-configured, not date-scaled — that computed version is what the
+    // capacity bar (checkCapacity()) already shows once a Deadline is set.
+    let capInfoPopoverEl = null;
+    function closeCapSettingsInfo() {
+        if (!capInfoPopoverEl) return;
+        capInfoPopoverEl.remove();
+        capInfoPopoverEl = null;
+        document.removeEventListener('click', onCapInfoDocClick, true);
+        document.removeEventListener('scroll', onCapInfoDocScroll, true);
+    }
+    function onCapInfoDocClick(e) {
+        if (capInfoPopoverEl && !capInfoPopoverEl.contains(e.target) && !e.target.closest('.bq-info-btn')) closeCapSettingsInfo();
+    }
+    function onCapInfoDocScroll(e) {
+        if (capInfoPopoverEl && !capInfoPopoverEl.contains(e.target)) closeCapSettingsInfo();
+    }
+    function openCapSettingsInfo(event, roleId) {
+        event.stopPropagation();
+        closeCapSettingsInfo();
+
+        // Always available, not gated on a Work being selected — reads
+        // every <option> already sitting on the Work <select> (populated
+        // once by setupDropdowns(), dataset.weight/day/maxPerDay attached
+        // per option) rather than just the current selection, so this is
+        // the full reference table for the role, not a single-row echo.
+        const workSelect = el(`b-quest-modal-${roleId}-work`);
+        const currentWork = workSelect.value;
+        const items = Array.from(workSelect.options).filter(opt => opt.value);
+        const maxCap = State.maxCap[roleId] ?? 10;
+        const roleName = State.roleNameById[roleId] || '';
+
+        const popover = document.createElement('div');
+        popover.className = 'bq-info-popover';
+        popover.innerHTML = `
+            <div class="bq-info-popover-title">
+                <span>Capacity${roleName ? ' ' + esc(roleName) : ''}</span>
+                <span class="bq-info-maxcap">Max ${maxCap}</span>
+            </div>
+            ${!items.length ? `<div class="bq-info-empty">No work items configured for this role</div>` : `
+            <table class="bq-info-table">
+                <thead><tr><th>Work</th><th class="num">Weight</th><th class="num">Day</th><th class="num">Max/day</th></tr></thead>
+                <tbody>
+                    ${items.map(opt => `
+                    <tr class="${opt.value === currentWork ? 'is-selected' : ''}">
+                        <td>${esc(opt.value)}</td>
+                        <td class="num">${esc(opt.dataset.weight || '0')}</td>
+                        <td class="num">${esc(opt.dataset.day || '1')}</td>
+                        <td class="num">${opt.dataset.maxPerDay ? esc(opt.dataset.maxPerDay) : '—'}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>`}
+        `;
+        document.body.appendChild(popover);
+        capInfoPopoverEl = popover;
+
+        const r = event.currentTarget.getBoundingClientRect();
+        const width = 400;
+        popover.style.left = Math.min(r.left, window.innerWidth - width - 12) + 'px';
+        popover.style.top = (r.bottom + 8) + 'px';
+        const popRect = popover.getBoundingClientRect();
+        if (popRect.bottom > window.innerHeight - 12) {
+            popover.style.top = Math.max(12, r.top - popRect.height - 8) + 'px';
+        }
+
+        setTimeout(() => {
+            document.addEventListener('click', onCapInfoDocClick, true);
+            document.addEventListener('scroll', onCapInfoDocScroll, true);
+        }, 0);
     }
 
     async function checkCapacity(roleId) {
@@ -1243,7 +1349,7 @@ const BQuestApp = (() => {
             }
         },
 
-        updateRoleUI, updateStatusUI, openSearchOverlay, openAssignPicker, openBqPicker,
+        updateRoleUI, updateStatusUI, openSearchOverlay, openAssignPicker, openBqPicker, openCapSettingsInfo,
         async openDuplicateModal(taskId, workData = []) {
             const form = el('b-quest-modal-form');
             form.reset(); form.classList.remove('was-validated');

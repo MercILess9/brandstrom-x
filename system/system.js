@@ -423,6 +423,24 @@ async function guardProjectAccess(accessKey) {
     const table = PROJECT_MEMBER_TABLE[accessKey];
     if (!table) { window.location.replace('/index.html'); return false; }
 
+    // Admin on/off switch (system_project.status) — checked here too, not
+    // just on index.html's card grid, so a regular user who bookmarked a
+    // project's direct URL while it was Active gets bounced back out once
+    // an admin sets it to Disabled/Hidden, same as if they'd lost
+    // membership. GOD already returned true above and is exempt, same as
+    // the card grid (GOD can always click/type straight in).
+    const statusCacheKey = `bx_sys_access_status_${accessKey}`;
+    let status = sessionStorage.getItem(statusCacheKey);
+    if (status === null) {
+        const { data } = await supabaseClient.from('system_project').select('status').eq('key', accessKey).maybeSingle();
+        status = data?.status || 'active';
+        sessionStorage.setItem(statusCacheKey, status);
+    }
+    if (status !== 'active') {
+        window.location.replace('/index.html');
+        return false;
+    }
+
     // Cached per accessKey (not one combined blob) — each project page only
     // ever needs its own single key, so there's no reason to fetch or
     // invalidate the others together.

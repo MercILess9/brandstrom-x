@@ -173,26 +173,46 @@ const B_QUEST_MODAL_HTML = `
        check Settings. Deliberately just the configured numbers, not the
        computed running-total the capacity bar (.bq-cap-info) above
        already shows — a plain reference card, not a duplicate of that. */
-    .bq-info-btn { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; margin-left: 3px; border-radius: 50%; color: #94a3b8; cursor: pointer; font-size: 0.8rem; vertical-align: -2px; transition: color 0.15s, transform 0.15s; }
+    .bq-info-btn { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; margin-left: 3px; border-radius: 50%; color: #c7c7cc; cursor: pointer; font-size: 0.8rem; vertical-align: -2px; transition: color 0.15s, transform 0.15s; }
     .bq-info-btn:hover { color: var(--c-accent-dark); transform: scale(1.15); }
-    .bq-info-popover { position: fixed; z-index: 10050; background: #fff; border-radius: 16px; box-shadow: 0 20px 48px rgba(0,0,0,0.16); border: 1px solid #eef2f7; padding: 14px 14px 8px; width: 400px; max-height: 420px; overflow-y: auto; box-sizing: border-box; }
-    .bq-info-popover-title { font-size: 0.62rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .bq-info-maxcap { font-size: 0.68rem; font-weight: 800; color: var(--c-accent-dark); background: var(--c-accent-light); border-radius: 20px; padding: 3px 10px; text-transform: none; letter-spacing: normal; white-space: nowrap; }
+    /* Frosted-glass surface + a soft, diffuse (not hard-edged) shadow
+       stack instead of a visible border — the border used to be what
+       separated the panel from the page, now the blur+shadow alone do
+       that, which is what reads as "soft"/Apple-like instead of a flat
+       white card with a hairline around it. Entrance animation is a
+       small scale+fade, same easing feel as a macOS popover/menu. */
+    .bq-info-popover { position: fixed; z-index: 10050; background: rgba(255,255,255,0.88); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border-radius: 20px; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.05), 0 24px 60px rgba(0,0,0,0.14); padding: 16px 16px 10px; width: 400px; max-height: 420px; overflow-y: auto; box-sizing: border-box; animation: bqInfoPopIn 0.16s cubic-bezier(.2,.8,.2,1); }
+    @keyframes bqInfoPopIn { from { opacity: 0; transform: scale(0.97) translateY(-4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .bq-info-popover-title { font-size: 0.62rem; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .bq-info-maxcap { font-size: 0.68rem; font-weight: 700; color: var(--c-accent-dark); background: rgba(var(--c-accent-rgb), 0.16); border-radius: 20px; padding: 3px 10px; text-transform: none; letter-spacing: normal; white-space: nowrap; }
     .bq-info-table { width: 100%; border-collapse: collapse; }
-    .bq-info-table th { font-size: 0.6rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; text-align: left; padding: 0 8px 8px 10px; border-bottom: 1.5px solid #f1f5f9; }
+    .bq-info-table th { font-size: 0.6rem; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.4px; text-align: left; padding: 0 10px 10px 12px; border-bottom: 1px solid rgba(60,60,67,0.1); }
     .bq-info-table th.num, .bq-info-table td.num { text-align: right; }
-    .bq-info-table td { font-size: 0.78rem; font-weight: 700; color: #334155; padding: 8px 8px 8px 10px; border-bottom: 1px solid #f8fafc; font-variant-numeric: tabular-nums; }
+    .bq-info-table td { font-size: 0.8rem; font-weight: 600; color: #3a3a3c; padding: 10px 10px 10px 12px; border-bottom: 1px solid rgba(60,60,67,0.06); font-variant-numeric: tabular-nums; }
     /* Work name wraps instead of truncating+native-tooltip — the popover
        is wide enough now that most names fit on one line, and the ones
        that don't read fine on two rather than needing a hover to reveal
        the rest (the browser's default title-attribute tooltip box looked
        out of place next to everything else here). */
-    .bq-info-table td:first-child { white-space: normal; word-break: break-word; border-left: 3px solid transparent; }
+    .bq-info-table td:first-child { white-space: normal; word-break: break-word; }
     .bq-info-table tr:last-child td { border-bottom: none; }
-    .bq-info-table tr:not(.is-selected):hover td { background: #f8fafc; }
-    .bq-info-table tr.is-selected td { color: var(--c-accent-dark); background: var(--c-accent-light); }
-    .bq-info-table tr.is-selected td:first-child { border-left-color: var(--c-accent); }
-    .bq-info-empty { font-size: 0.8rem; font-weight: 600; color: #94a3b8; text-align: center; padding: 18px 0; }
+    /* Selected row reads as a soft floating pill (rounded on both ends,
+       not flush to the table's own edges) rather than a full-bleed
+       highlight band or a hard accent stripe — closer to how macOS lists
+       mark a selection. */
+    /* --c-accent-light, not a neutral tint — matches the platform-wide
+       hover convention for dropdown/filter/checkbox list items (see
+       select-picker.js's own .bx-sp-item:hover), so this reads as part
+       of the same app instead of an isolated one-off gray. Rounded the
+       same way as the selected-row pill above, so hover previews that
+       same shape rather than a square patch against a rounded pill. */
+    .bq-info-table tr:not(.is-selected):hover td { background: var(--c-accent-light); }
+    .bq-info-table tr:not(.is-selected):hover td:first-child { border-radius: 10px 0 0 10px; }
+    .bq-info-table tr:not(.is-selected):hover td:last-child { border-radius: 0 10px 10px 0; }
+    .bq-info-table tr.is-selected td { color: var(--c-accent-dark); background: rgba(var(--c-accent-rgb), 0.14); }
+    .bq-info-table tr.is-selected td:first-child { border-radius: 10px 0 0 10px; }
+    .bq-info-table tr.is-selected td:last-child { border-radius: 0 10px 10px 0; }
+    .bq-info-empty { font-size: 0.8rem; font-weight: 600; color: #8e8e93; text-align: center; padding: 18px 0; }
 
     /* Toggle */
     .bq-toggle { position: relative; display: inline-block; width: 34px; height: 18px; margin: 0; vertical-align: middle; }

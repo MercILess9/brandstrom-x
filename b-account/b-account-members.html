@@ -90,7 +90,17 @@
            sitting narrower than its container with a dead gap on the
            right (width:auto, tried and rejected — looked unbalanced). */
         .mem-matrix { border-collapse: collapse; width: 100%; font-size: 0.8rem; table-layout: fixed; }
+        /* Not sticky — .mem-matrix-wrap needs overflow-x:auto for
+           horizontal scroll, which per a CSS spec quirk forces overflow-y
+           to stop being visible too on that same element, which blocks
+           position:sticky no matter which ancestor it's set on. A
+           floating clone of the real header (#mem-sticky-hdr, further
+           down) shows once it scrolls out of view instead — same
+           mechanism as system/setting.html's Member tab and B-Quest's own
+           b-quest-members.html. */
         .mem-matrix thead th { background: #fff; z-index: 2; text-align: center; font-size: 0.62rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 8px; height: 34px; border-bottom: 1px solid var(--c-border); white-space: nowrap; box-sizing: border-box; }
+        .mem-sticky-hdr { position: fixed; top: var(--header-height, 64px); z-index: 900; overflow: hidden; pointer-events: none; background: #fff; border-bottom: 1px solid var(--c-border); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+        .mem-sticky-hdr table { border-collapse: collapse; table-layout: fixed; }
         .mem-matrix th.mem-col-trash, .mem-matrix td.mem-col-trash { position: sticky; left: 0; z-index: 1; background: #fff; width: 40px; }
         .mem-matrix th.mem-col-trash { z-index: 3; }
         .mem-matrix th.mem-col-name, .mem-matrix td.mem-col-name { position: sticky; left: 40px; z-index: 1; background: #fff; text-align: left; width: 200px; }
@@ -250,6 +260,7 @@
             </div>
         </div>
         <div class="section-body">
+            <div class="mem-sticky-hdr" id="mem-sticky-hdr" style="display:none;"></div>
             <div class="mem-matrix-wrap" id="mem-list"></div>
         </div>
     </div>
@@ -571,6 +582,60 @@
                 }).join('')}
             </tbody>
         </table>`;
+        rebuildMemStickyHdrClone();
+    }
+
+    // Floating header clone (see .mem-sticky-hdr's CSS comment). This
+    // renders the WHOLE table (colgroup+thead+tbody) as one innerHTML
+    // string on every edit, so the <thead> node is destroyed and
+    // recreated each time — the IntersectionObserver must be re-pointed
+    // at the fresh node every render, not just set up once, or it'd
+    // silently stop firing on a detached element after the first toggle.
+    function rebuildMemStickyHdrClone() {
+        const bar = document.getElementById('mem-sticky-hdr');
+        const table = document.querySelector('#mem-list table.mem-matrix');
+        if (!bar || !table) return;
+        const colgroup = table.querySelector('colgroup');
+        const thead = table.querySelector('thead');
+        if (!colgroup || !thead) return;
+        const stripped = thead.innerHTML.replace(/\sid="[^"]*"/g, '').replace(/\sonclick="[^"]*"/g, '');
+        bar.innerHTML = `<table class="mem-matrix"><colgroup>${colgroup.innerHTML}</colgroup><thead>${stripped}</thead></table>`;
+        setupMemHeaderHintObserver(thead);
+    }
+
+    function syncMemStickyHdrPosition() {
+        const bar = document.getElementById('mem-sticky-hdr');
+        const wrap = document.getElementById('mem-list');
+        if (!bar || !wrap || bar.style.display === 'none') return;
+        const rect = wrap.getBoundingClientRect();
+        bar.style.left = rect.left + 'px';
+        bar.style.width = rect.width + 'px';
+        const table = bar.querySelector('table');
+        if (table) table.style.transform = `translateX(${-wrap.scrollLeft}px)`;
+    }
+
+    let memHeaderHintObserver = null;
+    let memHeaderHintListenersBound = false;
+    function setupMemHeaderHintObserver(realThead) {
+        const bar = document.getElementById('mem-sticky-hdr');
+        const wrap = document.getElementById('mem-list');
+        if (!bar || !wrap || !realThead) return;
+        if (!memHeaderHintObserver) {
+            const navHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 64;
+            memHeaderHintObserver = new IntersectionObserver((entries) => {
+                const show = !entries[0].isIntersecting;
+                bar.style.display = show ? 'block' : 'none';
+                if (show) syncMemStickyHdrPosition();
+            }, { rootMargin: `-${navHeight}px 0px 0px 0px`, threshold: 0 });
+        } else {
+            memHeaderHintObserver.disconnect();
+        }
+        memHeaderHintObserver.observe(realThead);
+        if (!memHeaderHintListenersBound) {
+            wrap.addEventListener('scroll', syncMemStickyHdrPosition);
+            window.addEventListener('resize', syncMemStickyHdrPosition);
+            memHeaderHintListenersBound = true;
+        }
     }
 
     function updateTableCount(shown, total) {

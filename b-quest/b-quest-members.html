@@ -160,10 +160,13 @@
            needs an explicit width below, and text that doesn't fit truncates
            (ellipsis) instead of expanding its column. */
         .mem-matrix { border-collapse: collapse; width: 100%; font-size: 0.8rem; table-layout: fixed; }
-        /* Not sticky — the page scrolls now (no inner box), and this header
-           would need the page itself as its sticky reference, which is a
-           bigger change than this pass is taking on; scrolls away with the
-           rest of the table like a plain header for now. */
+        /* Not sticky — .mem-matrix-wrap needs overflow-x:auto for
+           horizontal scroll, which per a CSS spec quirk forces overflow-y
+           to stop being visible too on that same element, which blocks
+           position:sticky no matter which ancestor it's set on. Same
+           mechanism/fix as system/setting.html's Member tab: a floating
+           clone of the real header (#mem-sticky-hdr, further down) shows
+           once it scrolls out of view instead — see setupMemHeaderHintObserver(). */
         .mem-matrix thead th { background: #fff; z-index: 2; text-align: center; font-size: 0.62rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 8px; border-bottom: 1px solid var(--c-border); white-space: nowrap; box-sizing: border-box; }
         /* Only the role-group headers (colspan, no rowspan) get a fixed
            height — Member/Settings/trailing cells span both header rows via
@@ -171,6 +174,11 @@
         .mem-matrix th.mem-role-group-head { height: 34px; font-size: 0.68rem; text-transform: none; letter-spacing: normal; border-left: 1px solid var(--c-border); }
         .mem-matrix thead tr:last-child th { height: 26px; padding: 0 6px; font-size: 0.6rem; border-top: 1px solid var(--c-bg); overflow: hidden; text-overflow: ellipsis; }
         .mem-matrix th.mem-role-group-head i { margin-right: 4px; }
+        /* Floating header clone — see system/setting.html's #usr-sticky-hdr
+           for the full rationale/verification. Purely visual: id/onclick
+           stripped from the clone, pointer-events off. */
+        .mem-sticky-hdr { position: fixed; top: var(--header-height, 64px); z-index: 900; overflow: hidden; pointer-events: none; background: #fff; border-bottom: 1px solid var(--c-border); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+        .mem-sticky-hdr table { border-collapse: collapse; table-layout: fixed; }
         /* Trash column (40px, fixed so its width is known) and Member both
            stay pinned while scrolling sideways through the role columns —
            trash at the very left edge, Member right after it. */
@@ -360,6 +368,7 @@
             </div>
         </div>
         <div class="section-body">
+            <div class="mem-sticky-hdr" id="mem-sticky-hdr" style="display:none;"></div>
             <div class="cfg-carousel-wrap" id="memCarouselWrap">
                 <div class="mem-matrix-wrap" id="mem-list"></div>
             </div>
@@ -1020,6 +1029,61 @@
                 }).join('')}
             </tbody>
         </table>`;
+        rebuildMemStickyHdrClone();
+    }
+
+    // Floating header clone (see .mem-sticky-hdr's CSS comment for why a
+    // real sticky header isn't feasible). renderMembers() rebuilds the
+    // WHOLE table (colgroup+thead+tbody) as one innerHTML string on every
+    // edit, so the <thead> node itself is destroyed and recreated each
+    // time — the IntersectionObserver below must be re-pointed at the
+    // fresh node every render, not just set up once, or it'd silently
+    // stop firing on a detached element after the first checkbox click.
+    function rebuildMemStickyHdrClone() {
+        const bar = document.getElementById('mem-sticky-hdr');
+        const table = document.querySelector('#mem-list table.mem-matrix');
+        if (!bar || !table) return;
+        const colgroup = table.querySelector('colgroup');
+        const thead = table.querySelector('thead');
+        if (!colgroup || !thead) return;
+        const stripped = thead.innerHTML.replace(/\sid="[^"]*"/g, '').replace(/\sonclick="[^"]*"/g, '');
+        bar.innerHTML = `<table class="mem-matrix"><colgroup>${colgroup.innerHTML}</colgroup><thead>${stripped}</thead></table>`;
+        setupMemHeaderHintObserver(thead);
+    }
+
+    function syncMemStickyHdrPosition() {
+        const bar = document.getElementById('mem-sticky-hdr');
+        const wrap = document.getElementById('mem-list');
+        if (!bar || !wrap || bar.style.display === 'none') return;
+        const rect = wrap.getBoundingClientRect();
+        bar.style.left = rect.left + 'px';
+        bar.style.width = rect.width + 'px';
+        const table = bar.querySelector('table');
+        if (table) table.style.transform = `translateX(${-wrap.scrollLeft}px)`;
+    }
+
+    let memHeaderHintObserver = null;
+    let memHeaderHintListenersBound = false;
+    function setupMemHeaderHintObserver(realThead) {
+        const bar = document.getElementById('mem-sticky-hdr');
+        const wrap = document.getElementById('mem-list');
+        if (!bar || !wrap || !realThead) return;
+        if (!memHeaderHintObserver) {
+            const navHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 64;
+            memHeaderHintObserver = new IntersectionObserver((entries) => {
+                const show = !entries[0].isIntersecting;
+                bar.style.display = show ? 'block' : 'none';
+                if (show) syncMemStickyHdrPosition();
+            }, { rootMargin: `-${navHeight}px 0px 0px 0px`, threshold: 0 });
+        } else {
+            memHeaderHintObserver.disconnect();
+        }
+        memHeaderHintObserver.observe(realThead);
+        if (!memHeaderHintListenersBound) {
+            wrap.addEventListener('scroll', syncMemStickyHdrPosition);
+            window.addEventListener('resize', syncMemStickyHdrPosition);
+            memHeaderHintListenersBound = true;
+        }
     }
 
     // Pure state mutators (no markDirty/render) — shared by the single-cell

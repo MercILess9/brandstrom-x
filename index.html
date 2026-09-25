@@ -9,10 +9,10 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
-    
+    <link rel="stylesheet" href="/system/theme.css">
+
     <style>
         :root {
-            --brand-lime: #bdc432;
             --brand-dark: #111111;
             --border-color: #eeeeee;
             --font-main: 'Outfit', sans-serif;
@@ -65,7 +65,7 @@
         .top-label {
             font-size: 0.9rem;
             letter-spacing: 4px;
-            color: var(--brand-lime);
+            color: var(--c-accent);
             font-weight: 700;
             text-transform: uppercase;
             margin-bottom: 12px;
@@ -97,7 +97,7 @@
         .app-card {
             position: relative;
             height: 160px;
-            border: 2.5px solid var(--brand-lime); 
+            border: 2.5px solid var(--c-accent); 
             border-radius: 20px;
             display: flex;
             flex-direction: column;
@@ -115,7 +115,7 @@
             content: '';
             position: absolute;
             bottom: 0; left: 0; width: 100%; height: 0;
-            background: var(--brand-lime);
+            background: var(--c-accent);
             transition: height 0.4s ease;
             z-index: -1;
         }
@@ -123,7 +123,7 @@
         .app-card:hover {
             transform: translateY(-10px);
             color: #000;
-            box-shadow: 0 20px 40px rgba(189, 196, 50, 0.25);
+            box-shadow: 0 20px 40px rgba(var(--c-accent-rgb), 0.25);
         }
 
         .app-card:hover::before {
@@ -205,7 +205,7 @@
         .portal-avatar-btn {
             width: 38px; height: 38px;
             border-radius: 50%;
-            background: var(--brand-lime);
+            background: var(--c-accent);
             color: #fff;
             border: none;
             font-size: 1.1rem;
@@ -239,7 +239,7 @@
         .portal-avatar-lg {
             width: 56px; height: 56px;
             border-radius: 50%;
-            background: var(--brand-lime);
+            background: var(--c-accent);
             color: #fff;
             font-size: 1.6rem;
             display: flex; align-items: center; justify-content: center;
@@ -249,7 +249,7 @@
         .portal-profile-fullname { font-size: 0.76rem; font-weight: 600; color: #888; margin-top: 2px; word-break: break-word; }
         .portal-profile-email {
             font-size: 0.74rem; font-weight: 600;
-            color: var(--brand-lime) !important;
+            color: var(--c-accent) !important;
             text-decoration: none !important;
             margin-top: 4px; word-break: break-word;
         }
@@ -335,7 +335,7 @@
     <div class="container-portal">
         <header class="portal-header">
             <div class="logo-box">
-                <img src="https://www.brandboxplatform.com/images/brandbox-logo.png" alt="Brandstrom X Logo">
+                <img src="https://www.brandboxplatform.com/images/brandbox-logo.png" class="sys-logo-img" alt="Brandstrom X Logo">
             </div>
             <div class="hero-content">
                 <div class="top-label">Brandstrom X Operations</div>
@@ -349,17 +349,48 @@
     </div>
 
     <script>
+        // system_project.label is now admin-editable DB data (Settings →
+        // Projects), rendered via innerHTML below — needs escaping per
+        // the platform's own security convention, unlike before when
+        // every field on this page was a hardcoded literal.
+        function esc(s) {
+            return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
         const PROJECTS = [
-            { key: 'bquest',      label: 'B-QUEST',    icon: 'bi-rocket-takeoff-fill', href: 'b-quest/b-quest-list.html', live: true },
-            { key: 'bdashboard',  label: 'DASHBOARD',  icon: 'bi-pie-chart-fill',      href: null, live: false },
-            { key: 'baccount',    label: 'B-ACCOUNT',  icon: 'bi-person-vcard-fill',   href: 'b-account/b-opportunity-list.html', live: true },
-            { key: 'bcommission', label: 'COMMISSION', icon: 'bi-graph-up-arrow',      href: null, live: false },
-            { key: 'bfinance',    label: 'FINANCE',    icon: 'bi-wallet2',             href: '/b-finance/b-finance-list.html', live: true },
+            { key: 'bquest',      label: 'B-QUEST',      icon: 'bi-rocket-takeoff-fill', href: 'b-quest/b-quest-list.html', live: true },
+            { key: 'baccount',    label: 'B-ACCOUNT',    icon: 'bi-person-vcard-fill',   href: 'b-account/b-opportunity-list.html', live: true },
+            { key: 'bcommission', label: 'B-COMMISSION', icon: 'bi-graph-up-arrow',      href: null, live: false },
+            { key: 'bfinance',    label: 'B-FINANCE',    icon: 'bi-wallet2',             href: '/b-finance/b-finance-list.html', live: true },
         ];
 
-        function renderGrid(access) {
+        function renderGrid(access, sysProj = [], isGod = false) {
             const grid = document.getElementById('app-grid');
-            const visible = PROJECTS.filter(p => access[p.key]);
+            // sysProj (system_project rows) carries the admin's 3-state
+            // switch (active/disabled/hidden) AND display order.
+            // access[p.key] is the per-user permission half — a project
+            // failing that is left out of the grid entirely regardless of
+            // status (no point showing a card for something this person
+            // was never granted). Hidden works the same way for a regular
+            // user — invisible, as if no system_project row existed — but
+            // GOD never gets that: a hidden project still renders for GOD,
+            // downgraded to the same grayed treatment as Disabled. And
+            // unlike a regular user, GOD can still click through a grayed
+            // card into a built project — the switch only ever changes
+            // how it LOOKS to GOD, never whether GOD can get in.
+            const projectStatus = {};
+            const sortOrder = {};
+            const projectLabel = {};
+            const projectIcon = {};
+            sysProj.forEach(row => {
+                projectStatus[row.key] = row.status || 'active';
+                sortOrder[row.key] = row.sort_order;
+                if (row.label) projectLabel[row.key] = row.label;
+                if (row.icon) projectIcon[row.key] = row.icon;
+            });
+
+            const visible = PROJECTS.filter(p => access[p.key] && (isGod || projectStatus[p.key] !== 'hidden'));
+            visible.sort((a, b) => (sortOrder[a.key] ?? 999) - (sortOrder[b.key] ?? 999));
 
             if (!visible.length) {
                 grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#aaa;padding:60px 0;font-size:0.9rem;font-weight:700;letter-spacing:1px;">No projects assigned yet.</div>`;
@@ -367,10 +398,31 @@
             }
 
             grid.innerHTML = visible.map(p => {
-                if (p.live && p.href) {
-                    return `<a href="${p.href}" class="app-card"><i class="bi ${p.icon}"></i><span>${p.label}</span><div class="status-tag">ENTER SYSTEM</div></a>`;
+                const rawStatus = projectStatus[p.key] || 'active';
+                const status = (rawStatus === 'hidden' && isGod) ? 'disabled' : rawStatus;
+                const built = p.live && p.href;
+                // Custom label/icon (set from Settings → Projects) override
+                // this array's own hardcoded ones when present — key/href/
+                // live stay fixed here regardless, since those tie to
+                // actual routing/code, not just cosmetics.
+                const icon = esc(projectIcon[p.key] || p.icon);
+                const displayLabel = esc(projectLabel[p.key] || p.label);
+                // A regular user only gets in when status is Active. GOD
+                // can always click through to a built project regardless
+                // of status — the admin switch still shows visually
+                // (grayed via the same .disabled class when not Active)
+                // but never actually locks GOD out, since GOD is the one
+                // who'd need to get in to flip the switch back anyway.
+                if (built && (status === 'active' || isGod)) {
+                    const cls = status === 'active' ? 'app-card' : 'app-card disabled';
+                    return `<a href="${p.href}" class="${cls}"><i class="bi ${icon}"></i><span>${displayLabel}</span><div class="status-tag">ENTER SYSTEM</div></a>`;
                 }
-                return `<div class="app-card disabled" title="Currently Locked"><i class="bi ${p.icon}"></i><span>${p.label}</span><div class="status-tag">COMING SOON</div></div>`;
+                // Two different reasons a card ends up disabled: never
+                // built yet (COMING SOON) vs built but switched off by an
+                // admin (UNAVAILABLE) — same visual treatment, different
+                // label so "why can't I click this" has an honest answer.
+                const label = built ? 'UNAVAILABLE' : 'COMING SOON';
+                return `<div class="app-card disabled" title="Currently Locked"><i class="bi ${icon}"></i><span>${displayLabel}</span><div class="status-tag">${label}</div></div>`;
             }).join('');
         }
 
@@ -400,7 +452,14 @@
                 document.getElementById('btn-setting').style.display = 'flex';
                 const allAccess = {};
                 PROJECTS.forEach(p => allAccess[p.key] = true);
-                renderGrid(allAccess);
+                // God sees every project unconditionally (all access true)
+                // but still gets the disabled/grayed treatment for whichever
+                // ones an admin switched off — same rendering rules as
+                // everyone else, just with nothing filtered by permission,
+                // and Hidden downgraded to Disabled instead of invisible
+                // (isGod=true — see renderGrid's own comment).
+                const { data: sysProj } = await supabaseClient.from('system_project').select('key, status, sort_order, label, icon');
+                renderGrid(allAccess, sysProj || [], true);
                 return;
             }
 
@@ -409,21 +468,28 @@
             // member table), not a separate per-person platform toggle —
             // see system/system.js's guardProjectAccess for the same
             // convention. system_access is still the source for
-            // system_setting and the two not-yet-live projects
-            // (bdashboard/bcommission have no member table to check yet).
-            const [{ data: sp }, { data: qm }, { data: am }, { data: fm }] = await Promise.all([
+            // system_setting/system_holiday/system_member (gear icon
+            // below) and bcommission (not yet live, no member table to
+            // check).
+            const [{ data: sp }, { data: qm }, { data: am }, { data: fm }, { data: sysProj }] = await Promise.all([
                 supabaseClient.from('system_access').select('*').eq('codename', user.codename).maybeSingle(),
                 supabaseClient.from('b_quest_member').select('codename').eq('codename', user.codename).maybeSingle(),
                 supabaseClient.from('b_account_setting').select('codename').eq('codename', user.codename).maybeSingle(),
                 supabaseClient.from('b_finance_setting').select('codename').eq('codename', user.codename).maybeSingle(),
+                supabaseClient.from('system_project').select('key, status, sort_order, label, icon'),
             ]);
             const access = { ...(sp || {}), bquest: !!qm, baccount: !!am, bfinance: !!fm };
 
-            if (access.system_setting) {
+            // Any one of the 3 setting.html tabs (Setting/Holiday/Member)
+            // is enough to show the gear icon — the page itself now
+            // admits anyone with at least one, and shows only the tab(s)
+            // they actually have (see system/setting.html's
+            // applyTabAccessVisibility()), not just system_setting alone.
+            if (access.system_setting || access.system_holiday || access.system_member) {
                 document.getElementById('btn-setting').style.display = 'flex';
             }
 
-            renderGrid(access);
+            renderGrid(access, sysProj || [], false);
         }
 
         async function handleLogout() {

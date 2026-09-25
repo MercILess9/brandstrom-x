@@ -12,6 +12,7 @@
     <script src="/system/save-bar.js"></script>
     <script src="/system/select-picker.js"></script>
     <script src="/system/color-picker.js"></script>
+    <script src="/system/icon-picker.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
 
     <style>
@@ -44,6 +45,12 @@
            deptChanges and persisted by saveAll() — see the
            20260922000004 migration that added `active`/`sort_order` to
            `system_department` (named `departments` at the time). */
+        /* Matches B-Quest's own .hover-scale (b-quest.css) — a slight pop
+           on hover shared by its Add/Sort buttons, instead of relying on
+           color change alone for the "lift" feel. This page has no
+           project-level CSS file to put a shared copy in, so it's local. */
+        .hover-scale { transition: transform 0.15s; }
+        .hover-scale:hover { transform: scale(1.06); }
         .btn-add-dept { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 7px 14px; font-size: 0.76rem; font-weight: 700; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
         .btn-add-dept:hover { background: #0f172a; }
         .dept-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 20px; }
@@ -88,9 +95,13 @@
            hardcoded default logo. ── */
         .brand-split-row { display: flex; gap: 32px; align-items: flex-start; }
         .brand-split-col { flex: 1; min-width: 0; }
-        .brand-subhead { font-size: 0.7rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; }
-        .btn-reset-colors { background: none; border: none; color: var(--c-muted); cursor: pointer; padding: 2px; display: flex; align-items: center; font-size: 0.8rem; transition: 0.15s; }
-        .btn-reset-colors:hover { color: var(--c-accent-dark); transform: rotate(-45deg); }
+        .brand-subhead { font-size: 0.7rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        /* Icon-only, sitting right next to the label it acts on — reads
+           as "reset [Theme Colors]" by proximity, not a floating icon
+           whose target is ambiguous. Bigger hit target than the old 2px-
+           padding version, still compact since it's not carrying a label. */
+        .btn-reset-colors { background: none; color: var(--c-muted); border: 1px solid var(--c-border); border-radius: 8px; width: 22px; height: 22px; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: 0.15s; flex-shrink: 0; }
+        .btn-reset-colors:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
         .brand-logo-row { display: flex; flex-direction: column; gap: 14px; }
         /* Lean/flat — a bottom hairline divider between slots instead of a
            boxed card, and a preview frame sized to each logo's own shape
@@ -117,19 +128,77 @@
            picker uses (Presets grid + a big color-wheel bar + hex
            input inside the popover), instead of relying on the OS/browser's
            own native color-picker chrome. */
-        .brand-color-row { display: flex; flex-direction: column; gap: 2px; }
-        .brand-color-item { display: flex; align-items: center; gap: 14px; padding: 10px 8px; border-radius: 12px; transition: background 0.15s; }
-        .brand-color-item:hover { background: var(--c-bg); }
+        /* Mirrors .brand-logo-row/.brand-logo-slot's own rhythm (16px
+           padding + hairline divider between rows) on purpose — before,
+           this column's rows were a tight 10px with no divider while the
+           Logos column's were a spacious 16px with dividers, so the two
+           columns read as mismatched weight even though they're peers in
+           the same section. Same row height now, same visual language. */
+        .brand-color-row { display: flex; flex-direction: column; }
+        .brand-color-item { display: flex; align-items: center; gap: 16px; padding: 16px 2px; border-bottom: 1px solid #f1f5f9; }
+        .brand-color-item:last-child { border-bottom: none; }
         .brand-color-name { font-size: 0.84rem; font-weight: 700; color: var(--c-dark); width: 100px; flex-shrink: 0; }
-        .brand-color-hex-label { font-size: 0.72rem; font-weight: 700; color: var(--c-muted); font-family: 'SF Mono', Consolas, monospace; flex-shrink: 0; margin-left: 2px; }
+        .brand-color-hex-label { font-size: 0.72rem; font-weight: 700; color: var(--c-slate); font-family: 'SF Mono', Consolas, monospace; flex-shrink: 0; background: var(--c-bg); border-radius: 20px; padding: 5px 12px; }
+
+        /* Projects section — same row rhythm as the Branding rows above
+           (16px padding + hairline divider) so every section on this tab
+           reads as one consistent list language, not a different layout
+           per card. Fixed list (no add/remove) since a "project" only
+           exists once real code for it does — see index.html's own
+           PROJECTS array, which this list is kept in sync with by hand. */
+        .proj-toggle-row { display: flex; flex-direction: column; }
+        .proj-toggle-item { display: flex; align-items: center; gap: 14px; padding: 14px 2px; border-bottom: 1px solid #f1f5f9; }
+        .proj-toggle-item:last-child { border-bottom: none; }
+        .proj-toggle-item.dragging { opacity: 0.35; }
+        .proj-toggle-item.drag-over { background: var(--c-accent-light) !important; }
+        .proj-drag-handle { flex-shrink: 0; width: 15px; color: #cbd5e1; cursor: grab; font-size: 0.95rem; display: flex; align-items: center; padding: 2px; touch-action: none; }
+        .proj-drag-handle:hover { color: var(--c-slate); }
+        /* Clickable now (opens /system/icon-picker.js) — border/hover give
+           it the same "this is editable" affordance as .cfg-icon-swatch
+           in b-quest-settings.html. */
+        .proj-toggle-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--c-bg); color: var(--c-slate); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; border: 1.5px solid transparent; cursor: pointer; transition: 0.15s; }
+        .proj-toggle-icon:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); transform: scale(1.08); }
+        .proj-toggle-item.is-off .proj-toggle-icon { color: #cbd5e1; }
+        /* Borderless until hover/focus — same convention as .dept-name-input,
+           so the row reads as plain text until you actually mean to edit it. */
+        .proj-toggle-name-input { font-size: 0.84rem; font-weight: 700; color: var(--c-dark); flex: 1; min-width: 0; border: 1px solid transparent; border-radius: 8px; outline: none; background: transparent; padding: 6px 10px; font-family: inherit; transition: 0.15s; }
+        .proj-toggle-name-input:hover { border-color: var(--c-border); background: var(--c-bg); }
+        .proj-toggle-name-input:focus { border-color: var(--c-accent); background: #fff; }
+        .proj-toggle-item.is-off .proj-toggle-name-input { color: var(--c-muted); }
+        /* 3-state segmented control (Active/Disable/Hide) — sliding-pill
+           pattern, same structure as b-quest.js's createRoleSegControl()/
+           .role-seg-* (wrap + one absolutely-positioned .slider that
+           animates left/width behind whichever button is active, no
+           visible dividers between buttons) — the "modern" segmented look
+           already established elsewhere in this codebase, reused here
+           instead of a bordered/divided button row. b-quest.js itself
+           isn't loaded on this system-level page, so the JS is a small
+           local reimplementation (renderProjects()/repositionProjSeg())
+           rather than a shared import. Each status gets its own slider
+           color (set inline in JS, not CSS, since it's per-state) —
+           unlike Full/Half Day, the 3 states aren't equal siblings: Hide
+           is materially more drastic than Disable, so its color says so. */
+        .proj-status-seg { position: relative; display: inline-flex; align-items: center; flex-shrink: 0; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 18px; height: 32px; padding: 3px; }
+        .proj-status-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; border-radius: 15px; background: var(--c-accent); border: 1px solid transparent; box-sizing: border-box; transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1), background 0.2s, border-color 0.2s; z-index: 0; }
+        .proj-status-btn { position: relative; z-index: 1; appearance: none; -webkit-appearance: none; border: none; background: transparent; padding: 0 13px; height: 100%; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.4px; text-transform: uppercase; color: var(--c-slate); cursor: pointer; font-family: inherit; transition: color 0.2s; white-space: nowrap; }
+        /* Hover previews each option's own eventual color (matching
+           .proj-status-slider's per-state fill in JS) instead of one
+           flat color for all three — Disable/Hide aren't equal siblings
+           of Active, so hovering them shouldn't hint the same green. */
+        .proj-status-btn[data-status="active"]:not(.active):hover { color: var(--c-accent-dark); }
+        .proj-status-btn[data-status="disabled"]:not(.active):hover { color: #475569; }
+        .proj-status-btn[data-status="hidden"]:not(.active):hover { color: #b91c1c; }
 
         /* Swatch trigger only — the popover itself (Presets grid +
            Custom wheel/hex) is injected by the shared /system/color-
            picker.js, loaded on both this page and b-quest-settings.html
            so there's exactly one implementation, not two that can drift
            apart from each other. */
-        .cfg-swatch { position: relative; width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid rgba(0,0,0,0.08); flex-shrink: 0; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
-        .cfg-swatch:hover { transform: scale(1.15); box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
+        /* Rounded-square, not a circle — echoes .brand-logo-preview's own
+           10px-radius chip shape so the two columns' "sample" elements
+           (logo thumbnail, color swatch) read as the same visual family. */
+        .cfg-swatch { position: relative; width: 36px; height: 36px; border-radius: 10px; border: 1.5px solid rgba(0,0,0,0.08); flex-shrink: 0; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+        .cfg-swatch:hover { transform: scale(1.08); box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
 
         /* Users Table — same mem-matrix recipe as b-quest-members.html
            (real <table>, sticky-left Trash+Member, grouped 2-row header),
@@ -160,10 +229,30 @@
 
         .usr-matrix-wrap { overflow-x: auto; overflow-y: visible; border-radius: 12px; }
         .usr-matrix { border-collapse: collapse; width: 100%; font-size: 0.8rem; table-layout: fixed; }
+        /* A true sticky/frozen header isn't feasible here — .usr-matrix-wrap
+           needs overflow-x:auto for horizontal scroll, which per a CSS spec
+           quirk forces overflow-y to stop being visible too on that same
+           element, which blocks position:sticky no matter which ancestor
+           it's set on (verified before landing on the floating clone
+           below instead — see #usr-sticky-hdr). */
         .usr-matrix thead th { background: #fff; z-index: 2; text-align: center; font-size: 0.62rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 8px; border-bottom: 1px solid var(--c-border); white-space: nowrap; box-sizing: border-box; }
         .usr-matrix th.usr-group-head { height: 34px; font-size: 0.68rem; text-transform: none; letter-spacing: normal; border-left: 1px solid var(--c-border); }
         .usr-matrix thead tr:last-child th { height: 26px; padding: 0 6px; font-size: 0.6rem; border-top: 1px solid var(--c-bg); overflow: hidden; text-overflow: ellipsis; }
         .group-access { color: #2563eb; }
+
+        /* Floating header-lookalike — a real <table><colgroup><thead>
+           clone (rebuildUsrStickyHdrClone()) reusing .usr-matrix's own
+           header styles, so it looks identical to the real header
+           instead of a dark, unrelated-looking pill (that was the first
+           attempt — rejected as ugly/unreadable/not actually aligned to
+           the real columns). Position/width/horizontal-scroll are synced
+           to #usr-list-wrap in JS (syncUsrStickyHdrPosition()) so its
+           columns land exactly above the real ones. Purely visual —
+           id/onclick attributes are stripped from the clone (would
+           otherwise collide with the real header's ids) and
+           pointer-events stays off, same "no function" as before. */
+        .usr-sticky-hdr { position: fixed; top: var(--header-height, 64px); z-index: 900; overflow: hidden; pointer-events: none; background: #fff; border-bottom: 1px solid var(--c-border); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+        .usr-sticky-hdr table { border-collapse: collapse; table-layout: fixed; }
 
         /* Trash (40px) and Member both stay pinned while scrolling
            sideways through the project-access columns. */
@@ -202,7 +291,11 @@
         .usr-filter-search-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
         .usr-filter-search-row .usr-filter-search-wrap { flex: 1; margin-bottom: 0; }
         .cfg-btn-sort { background: none; border: 1px solid var(--c-border); color: var(--c-slate); border-radius: 9px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; flex-shrink: 0; transition: 0.15s; }
-        .cfg-btn-sort:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
+        /* Neutral hover (no accent color), matching B-Quest's own
+           .cfg-btn-sort exactly — the lift comes from .hover-scale
+           (applied in the markup), not a color change tied to the
+           system accent. */
+        .cfg-btn-sort:hover { background: #f1f5f9; border-color: #cbd5e1; color: var(--c-dark); }
         .usr-filter-search-wrap { position: relative; }
         .usr-filter-search-input { width: 100%; border: 1px solid var(--c-border); border-radius: 12px; padding: 9px 34px 9px 36px; font-size: 0.85rem; outline: none; font-family: inherit; transition: 0.2s; background: var(--c-bg); box-sizing: border-box; }
         .usr-filter-search-input:focus { border-color: var(--c-accent); background: #fff; }
@@ -341,7 +434,13 @@
            the list is whatever already has data (plus the current year), a
            new year appears on its own the first time a holiday is saved
            into it (see saveHolidayForm), no separate "add year" action. ── */
-        .holiday-total-badge { font-size: 0.78rem; font-weight: 700; color: var(--c-slate); background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 6px 14px; white-space: nowrap; }
+        /* Darker text + border than the generic .cfg-count-badge recipe
+           (--c-slate text on --c-bg/--c-border, both near-white-on-white)
+           — this one carries an actual label ("6 Days Off"), not just a
+           bare number, so it needs to read at a glance without blending
+           into the card. Still neutral gray, not accent-colored — that's
+           reserved for the year selector next to it. */
+        .holiday-total-badge { font-size: 0.78rem; font-weight: 700; color: var(--c-dark); background: var(--c-bg); border: 1px solid #cbd5e1; border-radius: 20px; padding: 6px 14px; white-space: nowrap; }
 
         /* ── Holiday list — CSS Grid rows instead of a plain <table>: a
            real <table> let the browser auto-layout stretch Description
@@ -384,7 +483,10 @@
 
         .holiday-empty { padding: 40px 20px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
 
-        .btn-import-holiday { background: #fff; color: var(--c-dark); border: 1.5px solid var(--c-border); border-radius: 12px; padding: 9px 18px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 7px; font-family: inherit; }
+        /* Same padding/font-size as .btn-add-dept next to it (was 9px 18px
+           / 0.82rem — visibly bigger than Add's 7px 14px / 0.76rem despite
+           sitting right beside it as a matched pair). */
+        .btn-import-holiday { background: #fff; color: var(--c-dark); border: 1.5px solid var(--c-border); border-radius: 10px; padding: 7px 14px; font-size: 0.76rem; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 7px; font-family: inherit; }
         .btn-import-holiday:hover { border-color: var(--c-accent); color: var(--c-accent-dark); }
 
         /* ── Get Holidays Modal — same recipe as b-quest-members.html's Add
@@ -494,58 +596,11 @@
 
     <div class="top-tabs">
         <button class="top-tab-btn active" id="top-tab-settings" onclick="switchTopTab('settings')"><i class="bi bi-gear-fill"></i> Setting</button>
+        <button class="top-tab-btn" id="top-tab-holiday" onclick="switchTopTab('holiday')"><i class="bi bi-calendar-event"></i> Holiday</button>
         <button class="top-tab-btn" id="top-tab-access" onclick="switchTopTab('access')"><i class="bi bi-people-fill"></i> Member</button>
     </div>
 
     <div id="tab-settings">
-
-    <!-- Section: Departments -->
-    <div class="section" id="section-departments">
-        <div class="section-header">
-            <div class="section-title">
-                <i class="bi bi-building"></i> Department
-                <span class="dirty-dot"></span>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
-                <button class="cfg-btn-sort" onclick="sortDeptAlpha()" title="Sort A-Z"><i class="bi bi-sort-alpha-down"></i></button>
-                <button class="btn-add-dept" onclick="showDeptNewRow()">
-                    <i class="bi bi-plus-lg"></i> Add
-                </button>
-            </div>
-        </div>
-        <div style="padding: 16px 24px 20px;">
-            <div id="dept-list" class="dept-list"></div>
-        </div>
-    </div>
-
-    <!-- Section: Holidays -->
-    <div class="section" id="section-holidays">
-        <div class="section-header">
-            <div class="section-title">
-                <i class="bi bi-calendar-event"></i> Holiday
-                <span class="dirty-dot"></span>
-            </div>
-            <button type="button" id="holiday-year-select" class="holiday-year-trigger" onclick="openHolidayYearPicker(this)"></button>
-            <span class="holiday-total-badge" id="holiday-total-badge"></span>
-            <div style="display:flex; align-items:center; gap:10px; margin-left:auto;">
-                <button class="btn-import-holiday" onclick="openImportModal()">
-                    <i class="bi bi-cloud-download"></i> Get Holidays
-                </button>
-                <button class="btn-add-dept" onclick="openHolidayFormModal()" style="margin-left:0;">
-                    <i class="bi bi-plus-lg"></i> Add
-                </button>
-            </div>
-        </div>
-        <div class="holiday-list-wrap">
-            <div class="holiday-table-head holiday-cols">
-                <div class="holiday-col-label c">No</div>
-                <div class="holiday-col-label">Date</div>
-                <div class="holiday-col-label">Holiday Name</div>
-                <div></div>
-            </div>
-            <div id="holiday-list"></div>
-        </div>
-    </div>
 
     <!-- Section: Branding -->
     <div class="section" id="section-branding">
@@ -585,7 +640,7 @@
                     </div>
                 </div>
                 <div class="brand-split-col">
-                    <div class="brand-subhead" style="display:flex; align-items:center; gap:6px;">
+                    <div class="brand-subhead">
                         Theme Colors
                         <button class="btn-reset-colors" onclick="resetBrandingColors()" title="Reset to default colors"><i class="bi bi-arrow-counterclockwise"></i></button>
                     </div>
@@ -595,12 +650,84 @@
         </div>
     </div>
 
+    <!-- Section: Projects -->
+    <div class="section" id="section-projects">
+        <div class="section-header">
+            <div class="section-title">
+                <i class="bi bi-grid-3x3-gap-fill"></i> Project
+                <span class="dirty-dot"></span>
+            </div>
+        </div>
+        <div style="padding: 20px 24px;">
+            <div class="proj-toggle-row" id="proj-toggle-row"></div>
+        </div>
+    </div>
+
+    <!-- Section: Departments -->
+    <div class="section" id="section-departments">
+        <div class="section-header">
+            <div class="section-title">
+                <i class="bi bi-building"></i> Department
+                <span class="dirty-dot"></span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
+                <button class="cfg-btn-sort hover-scale" onclick="sortDeptAlpha()" title="Sort A-Z"><i class="bi bi-sort-alpha-down"></i></button>
+                <button class="btn-add-dept hover-scale" onclick="showDeptNewRow()">
+                    <i class="bi bi-plus-lg"></i> Add
+                </button>
+            </div>
+        </div>
+        <div style="padding: 16px 24px 20px;">
+            <div id="dept-list" class="dept-list"></div>
+        </div>
+    </div>
+
     </div>
     <!-- /#tab-settings -->
+
+    <!-- Tab: Holiday — own top-level tab (used to be a stacked section
+         inside #tab-settings), split out since Setting keeps growing a
+         new section every so often and Holiday is a full add/import/
+         edit workflow of its own, not just a short config list. -->
+    <div id="tab-holiday" style="display:none;">
+    <div class="section" id="section-holidays">
+        <div class="section-header">
+            <div class="section-title">
+                <i class="bi bi-calendar-event"></i> Holiday
+                <span class="dirty-dot"></span>
+            </div>
+            <button type="button" id="holiday-year-select" class="holiday-year-trigger" onclick="openHolidayYearPicker(this)"></button>
+            <span class="holiday-total-badge" id="holiday-total-badge"></span>
+            <div style="display:flex; align-items:center; gap:10px; margin-left:auto;">
+                <button class="btn-import-holiday hover-scale" onclick="openImportModal()">
+                    <i class="bi bi-cloud-download"></i> Get Holidays
+                </button>
+                <button class="btn-add-dept hover-scale" onclick="openHolidayFormModal()" style="margin-left:0;">
+                    <i class="bi bi-plus-lg"></i> Add
+                </button>
+            </div>
+        </div>
+        <div class="holiday-list-wrap">
+            <div class="holiday-table-head holiday-cols">
+                <div class="holiday-col-label c">No</div>
+                <div class="holiday-col-label">Date</div>
+                <div class="holiday-col-label">Holiday Name</div>
+                <div></div>
+            </div>
+            <div id="holiday-list"></div>
+        </div>
+    </div>
+    </div>
+    <!-- /#tab-holiday -->
 
     <!-- Tab: Members -->
     <div id="tab-access" style="display:none;">
         <div class="section" id="section-users">
+            <!-- Purely visual clone of the real header (rebuildUsrStickyHdrClone()),
+                 shown once the real one scrolls out of view. See the
+                 .usr-sticky-hdr CSS comment for why a true sticky header
+                 isn't feasible here. -->
+            <div class="usr-sticky-hdr" id="usr-sticky-hdr" style="display:none;"></div>
             <div class="section-header mem-header-grid">
                 <div class="section-title">
                     <i class="bi bi-people-fill"></i> Member Access
@@ -616,35 +743,19 @@
             <div class="section-body" style="padding: 20px 24px;">
                 <div class="usr-matrix-wrap" id="usr-list-wrap">
                     <table class="usr-matrix">
-                        <colgroup>
-                            <col style="width:40px">
-                            <col style="width:200px">
-                            <col style="width:120px">
-                            <col style="width:190px">
-                            <col style="width:100px">
-                            <col style="width:100px">
-                            <col style="width:100px">
-                            <col style="width:100px">
-                            <col style="width:100px">
-                            <col style="width:100px">
-                        </colgroup>
-                        <thead>
-                            <tr>
-                                <th class="usr-col-trash" rowspan="2"></th>
-                                <th class="usr-col-name usr-header-sortable" rowspan="2" style="text-align:left" onclick="openColumnFilterPopup('nick_name', 'Member')">Member<span id="usr-sort-nick_name"></span><span id="usr-filter-nick_name"></span></th>
-                                <th class="usr-zone-divider usr-header-sortable" rowspan="2" onclick="openColumnFilterPopup('employee_id', 'ID')">ID<span id="usr-sort-employee_id"></span><span id="usr-filter-employee_id"></span></th>
-                                <th class="usr-header-sortable" rowspan="2" onclick="openColumnFilterPopup('department', 'Department')">Department<span id="usr-sort-department"></span><span id="usr-filter-department"></span></th>
-                                <th class="usr-group-head" colspan="5"><span class="group-label group-access">PROJECT ACCESS</span></th>
-                                <th class="usr-zone-divider" rowspan="2">Setting</th>
-                            </tr>
-                            <tr>
-                                <th class="usr-zone-divider" title="Read-only — managed from B-Quest's own Settings/Members page">B-QUEST</th>
-                                <th title="Not a live project yet">Dashboard</th>
-                                <th title="Read-only — managed from B-Account's own Settings page">B-ACCOUNT</th>
-                                <th title="Not a live project yet">Commission</th>
-                                <th title="Read-only — managed from B-Finance's own Settings page">Finance</th>
-                            </tr>
-                        </thead>
+                        <!-- colgroup/thead rendered by renderUsrTableHead() — the
+                             System-Access zone (Setting/Holiday/Member) only
+                             exists in the DOM for a viewer who has system_setting
+                             themselves (mirrors B-Quest's own canSeeAccess/
+                             mem-col-settings: columns cut from markup entirely
+                             for everyone else, not just visually hidden), so it
+                             can't be static HTML — PROJECT_COLS also drives the
+                             project-access header now instead of a second
+                             hand-written copy that can drift out of sync (it
+                             already had — this header still said "Dashboard"
+                             with 5 columns after PROJECT_COLS was cut to 4). -->
+                        <colgroup id="usr-colgroup"></colgroup>
+                        <thead id="usr-thead"></thead>
                         <tbody id="user-list"></tbody>
                     </table>
                 </div>
@@ -747,8 +858,8 @@
                     <input type="text" id="usr-filter-search" class="usr-filter-search-input" placeholder="Search..." autocomplete="off" oninput="renderColumnFilterList(this.value); toggleSearchClearBtn(this.value);">
                     <button class="usr-filter-search-clear" id="usr-filter-search-clear" onclick="clearColumnFilterSearch()" title="Clear search" style="display:none;"><i class="bi bi-x-circle-fill"></i></button>
                 </div>
-                <button class="cfg-btn-sort" onclick="setUsrSortDirect(filterPopupField, 'asc')" title="Sort A → Z"><i class="bi bi-sort-alpha-down"></i></button>
-                <button class="cfg-btn-sort" onclick="setUsrSortDirect(filterPopupField, 'desc')" title="Sort Z → A"><i class="bi bi-sort-alpha-up"></i></button>
+                <button class="cfg-btn-sort hover-scale" onclick="setUsrSortDirect(filterPopupField, 'asc')" title="Sort A → Z"><i class="bi bi-sort-alpha-down"></i></button>
+                <button class="cfg-btn-sort hover-scale" onclick="setUsrSortDirect(filterPopupField, 'desc')" title="Sort Z → A"><i class="bi bi-sort-alpha-up"></i></button>
             </div>
             <div class="usr-filter-list" id="usr-filter-list"></div>
         </div>
@@ -784,17 +895,22 @@
     // Every project column here is read-only now — nothing on this page
     // grants project access anymore, full stop. bquest/baccount/bfinance
     // are driven live by USR_PROJECT_MEMBER_TABLE (see loadAccessData) —
-    // added on that project's own Add Member page. bdashboard/bcommission
-    // aren't live projects yet (no member table to check), so they always
-    // read as "not a member" here until they exist. The only remaining
-    // toggle on this whole page is System Setting, further down.
+    // added on that project's own Add Member page. bcommission isn't a
+    // live project yet (no member table to check), so it always reads as
+    // "not a member" here until it exists. The remaining toggles are
+    // Setting/Holiday/Member, further down (System-Access zone).
     const PROJECT_COLS = [
         { key: 'bquest',      label: 'B-QUEST' },
-        { key: 'bdashboard',  label: 'Dashboard' },
         { key: 'baccount',    label: 'B-ACCOUNT' },
-        { key: 'bcommission', label: 'Commission' },
-        { key: 'bfinance',    label: 'Finance' },
+        { key: 'bcommission', label: 'B-COMMISSION' },
+        { key: 'bfinance',    label: 'B-FINANCE' },
     ];
+    const PROJECT_COL_TITLE = {
+        bquest: "Read-only — managed from B-Quest's own Settings/Members page",
+        baccount: "Read-only — managed from B-Account's own Settings page",
+        bcommission: 'Not a live project yet',
+        bfinance: "Read-only — managed from B-Finance's own Settings page",
+    };
 
     // ── Departments State ──
     let deptData = [];        // [{name, active, sort_order}] from DB
@@ -808,6 +924,29 @@
     let brandingChanges = {};       // key -> new value (color hex strings only)
     let brandingLogoFiles = {};     // 'header'|'icon' -> staged File object, uploaded on Save
     let brandingLogoPreviews = {};  // 'header'|'icon' -> object URL for the staged file's preview
+
+    // Fixed list, kept in sync by hand with index.html's own PROJECTS
+    // array — a project only exists once real code backs it, so this
+    // page never lets you add/remove one (key/href/live stay fixed here
+    // and in index.html), only set an existing one's status
+    // (Active/Disable/Hide), drag-reorder it, and now rename its display
+    // label / pick its icon — those two are cosmetic-only, stored in
+    // system_project.label/icon, and DEFAULT here means "use this
+    // array's own label/icon" (see projectLabelValue/projectIconValue),
+    // same absent-row-is-default convention as status. GOD always sees
+    // every project on index.html regardless of status — Hide only
+    // removes the card for a regular user, GOD sees it downgraded to the
+    // same grayed treatment as Disable instead, so this switch never
+    // goes fully invisible to whoever's managing it.
+    const PROJECT_LIST = [
+        { key: 'bquest',      label: 'B-QUEST',      icon: 'bi-rocket-takeoff-fill' },
+        { key: 'baccount',    label: 'B-ACCOUNT',    icon: 'bi-person-vcard-fill' },
+        { key: 'bcommission', label: 'B-COMMISSION', icon: 'bi-graph-up-arrow' },
+        { key: 'bfinance',    label: 'B-FINANCE',    icon: 'bi-wallet2' },
+    ];
+    let projectData = {};       // key -> { status, sort_order, label, icon } as loaded from system_project
+    let projectChanges = {};    // key -> { status?, sort_order?, label?, icon? }, staged until Save
+    let projectDragState = null; // key of the row currently being dragged
 
     let allUsers = [];
     let originalUsersById = new Map(); // uid -> pristine {nick_name, full_name, employee_id, department, codename} snapshot from load, used to revert display fields on Undo (onNickChange etc. mutate allUsers in place for immediate feedback)
@@ -837,8 +976,11 @@
         await initLayout(SYSTEM_CONFIG);
         guardSystemSetting();
         saveBar = createSaveBar({ label: 'System Settings', onSave: saveAll, onCancel: cancelAllChanges, onUndo: undoLastChange });
-        await Promise.all([loadUsers(), loadAccessData(), loadDepartments(), loadHolidays(), loadBranding()]);
+        await Promise.all([loadUsers(), loadAccessData(), loadDepartments(), loadHolidays(), loadBranding(), loadProjects()]);
+        applyTabAccessVisibility();
+        renderUsrTableHead();
         renderUsers();
+        setupUsrHeaderHintObserver();
     }
 
     // ── Departments ──
@@ -1097,6 +1239,192 @@
         }).join('');
     }
 
+    const PROJECT_STATUSES = ['active', 'disabled', 'hidden'];
+    const PROJECT_STATUS_LABEL = { active: 'Active', disabled: 'Disable', hidden: 'Hide' };
+    // Light-tint fill + colored border + colored text — same recipe as
+    // every other sliding-pill in the app (.vis-seg-slider,
+    // .fd-mode-seg-slider, .role-seg-slider): a solid full-saturation fill
+    // read visibly darker/heavier than those, which is what stood out
+    // comparing this control side-by-side with B-Quest's.
+    const PROJECT_STATUS_COLOR = {
+        active:   { bg: 'var(--c-accent-light)', border: 'var(--c-accent)', fg: 'var(--c-accent-dark)' },
+        disabled: { bg: '#f1f5f9', border: '#94a3b8', fg: '#475569' },
+        hidden:   { bg: '#fef2f2', border: '#ef4444', fg: '#b91c1c' },
+    };
+
+    async function loadProjects() {
+        const { data, error } = await supabaseClient.from('system_project').select('key, status, sort_order, label, icon');
+        projectData = {};
+        (error ? [] : (data || [])).forEach(row => { projectData[row.key] = { status: row.status, sort_order: row.sort_order, label: row.label, icon: row.icon }; });
+        renderProjects();
+    }
+
+    function projectStatusValue(key) {
+        if (projectChanges[key]?.status !== undefined) return projectChanges[key].status;
+        if (projectData[key]?.status !== undefined) return projectData[key].status;
+        return 'active'; // absent row = active, see the migration's own comment
+    }
+
+    // No staged/DB sort_order yet (column added after most rows already
+    // existed, nullable, no backfill) -> fall back to PROJECT_LIST's own
+    // array position, same convention as the migration comment promises.
+    function projectSortValue(key) {
+        if (projectChanges[key]?.sort_order !== undefined) return projectChanges[key].sort_order;
+        if (projectData[key]?.sort_order !== null && projectData[key]?.sort_order !== undefined) return projectData[key].sort_order;
+        return PROJECT_LIST.findIndex(p => p.key === key);
+    }
+
+    function projEnsureChange(key) {
+        if (!projectChanges[key]) projectChanges[key] = {};
+        return projectChanges[key];
+    }
+
+    function projectDefault(key) {
+        return PROJECT_LIST.find(p => p.key === key) || { label: key, icon: 'bi-grid-3x3-gap-fill' };
+    }
+
+    function projectLabelValue(key) {
+        if (projectChanges[key]?.label !== undefined) return projectChanges[key].label;
+        if (projectData[key]?.label) return projectData[key].label;
+        return projectDefault(key).label;
+    }
+
+    function projectIconValue(key) {
+        if (projectChanges[key]?.icon !== undefined) return projectChanges[key].icon;
+        if (projectData[key]?.icon) return projectData[key].icon;
+        return projectDefault(key).icon;
+    }
+
+    function renderProjects() {
+        const ordered = [...PROJECT_LIST].sort((a, b) => projectSortValue(a.key) - projectSortValue(b.key));
+        document.getElementById('proj-toggle-row').innerHTML = ordered.map(p => {
+            const status = projectStatusValue(p.key);
+            const icon = esc(projectIconValue(p.key));
+            const label = projectLabelValue(p.key);
+            const segBtns = PROJECT_STATUSES.map(s =>
+                `<button type="button" class="proj-status-btn ${s === status ? 'active' : ''}" data-status="${s}" onclick="onProjectStatusChange('${p.key}', '${s}')">${PROJECT_STATUS_LABEL[s]}</button>`
+            ).join('');
+            return `<div class="proj-toggle-item ${status !== 'active' ? 'is-off' : ''}" draggable="true"
+                 ondragstart="projDragStart(event, '${p.key}')" ondragend="projDragEnd(event)"
+                 ondragover="event.preventDefault()" ondragenter="projDragEnterRow(event, '${p.key}')" ondragleave="projDragLeaveRow(event)"
+                 ondrop="projDropOnRow(event, '${p.key}')">
+                <div class="proj-drag-handle"><i class="bi bi-grip-vertical"></i></div>
+                <div class="proj-toggle-icon" title="Change icon" onclick="onProjectIconClick(event, '${p.key}')"><i class="bi ${icon}"></i></div>
+                <input class="proj-toggle-name-input" value="${esc(label)}" placeholder="${esc(projectDefault(p.key).label)}"
+                    oninput="onProjectLabelChange('${p.key}', this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+                <div class="proj-status-seg" id="proj-status-seg-${p.key}">
+                    <div class="proj-status-slider" id="proj-status-slider-${p.key}"></div>
+                    ${segBtns}
+                </div>
+            </div>`;
+        }).join('');
+        // Slider position/size/color can only be measured after the DOM
+        // above actually exists (offsetLeft/offsetWidth need layout) —
+        // same two-step render-then-reposition split as b-quest.js's
+        // createRoleSegControl().
+        ordered.forEach(p => repositionProjStatusSeg(p.key));
+    }
+
+    function repositionProjStatusSeg(key) {
+        const seg = document.getElementById(`proj-status-seg-${key}`);
+        const slider = document.getElementById(`proj-status-slider-${key}`);
+        const active = seg?.querySelector('.proj-status-btn.active');
+        if (!seg || !slider || !active) return;
+        slider.style.left = active.offsetLeft + 'px';
+        slider.style.width = active.offsetWidth + 'px';
+        const c = PROJECT_STATUS_COLOR[active.dataset.status] || PROJECT_STATUS_COLOR.active;
+        slider.style.background = c.bg;
+        slider.style.borderColor = c.border;
+        seg.querySelectorAll('.proj-status-btn').forEach(b => { b.style.color = ''; });
+        active.style.color = c.fg;
+    }
+
+    function onProjectStatusChange(key, status) {
+        projEnsureChange(key).status = status;
+        markDirtyProjects();
+        updateProjectRowStatusUI(key);
+    }
+
+    function onProjectIconClick(event, key) {
+        openIconPicker(event.currentTarget, {
+            getValue: () => projectIconValue(key),
+            onSelect: (ic) => {
+                projEnsureChange(key).icon = ic;
+                markDirtyProjects();
+                renderProjects();
+            },
+        });
+    }
+
+    // Fires on every keystroke — must NOT call renderProjects() (would
+    // rebuild this very input's DOM node mid-type and drop focus/cursor
+    // position), unlike the icon pick above which happens all at once.
+    function onProjectLabelChange(key, value) {
+        projEnsureChange(key).label = value;
+        markDirtyProjects();
+    }
+
+    // Targeted update for one row only — must NOT call renderProjects()
+    // (rebuilds every row's innerHTML from scratch), which was wiping and
+    // recreating every other row's slider too on a single click, making
+    // the whole list flicker instead of just the row that changed.
+    function updateProjectRowStatusUI(key) {
+        const seg = document.getElementById(`proj-status-seg-${key}`);
+        if (!seg) return;
+        const status = projectStatusValue(key);
+        seg.querySelectorAll('.proj-status-btn').forEach(b => b.classList.toggle('active', b.dataset.status === status));
+        seg.closest('.proj-toggle-item')?.classList.toggle('is-off', status !== 'active');
+        repositionProjStatusSeg(key);
+    }
+
+    function markDirtyProjects() {
+        document.getElementById('section-projects').classList.add('is-dirty');
+        pushUndoSnapshot();
+        recomputeSaveBarCount();
+    }
+
+    // ── Drag-reorder — staged in projectChanges like the active toggle,
+    // persisted by saveAll() below. Mirrors deptDrag*() above. ──
+    function projDragStart(e, key) {
+        projectDragState = key;
+        e.currentTarget.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', key);
+    }
+
+    function projDragEnd(e) {
+        e.currentTarget.classList.remove('dragging');
+        document.querySelectorAll('.proj-toggle-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+        projectDragState = null;
+    }
+
+    function projDragEnterRow(e, key) {
+        if (!projectDragState || projectDragState === key) return;
+        e.currentTarget.classList.add('drag-over');
+    }
+
+    function projDragLeaveRow(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+
+    function projDropOnRow(e, key) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+        if (!projectDragState || projectDragState === key) { projectDragState = null; return; }
+
+        const list = [...PROJECT_LIST].sort((a, b) => projectSortValue(a.key) - projectSortValue(b.key));
+        const fromIdx = list.findIndex(p => p.key === projectDragState);
+        const toIdx = list.findIndex(p => p.key === key);
+        if (fromIdx !== -1 && toIdx !== -1) {
+            const [moved] = list.splice(fromIdx, 1);
+            list.splice(toIdx, 0, moved);
+            list.forEach((p, i) => { projEnsureChange(p.key).sort_order = i; });
+            markDirtyProjects();
+            renderProjects();
+        }
+        projectDragState = null;
+    }
+
     function resetBrandingColors() {
         Object.keys(BRAND_DEFAULTS).forEach(key => { brandingChanges[key] = BRAND_DEFAULTS[key]; });
         markDirtyBranding();
@@ -1122,7 +1450,8 @@
         if (!saveBar) return;
         const total = Object.keys(deptChanges).length + Object.keys(accessChanges).length +
             Object.keys(profileChanges).length + Object.keys(holidayChanges).length +
-            Object.keys(brandingChanges).length + Object.keys(brandingLogoFiles).length;
+            Object.keys(brandingChanges).length + Object.keys(brandingLogoFiles).length +
+            Object.keys(projectChanges).length;
         saveBar.setCount(total);
     }
 
@@ -1143,6 +1472,7 @@
             // a staged logo file selection is not undo-able this way
             // (matches Cancel's own behavior of just re-picking a file).
             brandingChanges: JSON.parse(JSON.stringify(brandingChanges)),
+            projectChanges: JSON.parse(JSON.stringify(projectChanges)),
         };
     }
 
@@ -1152,6 +1482,7 @@
         profileChanges = snap.profileChanges;
         holidayChanges = snap.holidayChanges;
         brandingChanges = snap.brandingChanges;
+        projectChanges = snap.projectChanges ?? {};
     }
 
     function pushUndoSnapshot() {
@@ -1189,7 +1520,7 @@
     function undoLastChange() {
         if (!undoStack.length) return;
         undoStack.pop(); // discard the state we're undoing away from
-        applySnapshot(undoStack.length ? undoStack[undoStack.length - 1] : { deptChanges: {}, accessChanges: {}, profileChanges: {}, holidayChanges: {}, brandingChanges: {} });
+        applySnapshot(undoStack.length ? undoStack[undoStack.length - 1] : { deptChanges: {}, accessChanges: {}, profileChanges: {}, holidayChanges: {}, brandingChanges: {}, projectChanges: {} });
         lastSnapshotAt = 0; // next edit should start a new step, not coalesce into this restore
 
         document.querySelectorAll('.section').forEach(el => el.classList.remove('is-dirty'));
@@ -1197,11 +1528,13 @@
         if (Object.keys(holidayChanges).length) document.getElementById('section-holidays').classList.add('is-dirty');
         if (Object.keys(accessChanges).length || Object.keys(profileChanges).length) document.getElementById('section-users').classList.add('is-dirty');
         if (Object.keys(brandingChanges).length || Object.keys(brandingLogoFiles).length) document.getElementById('section-branding').classList.add('is-dirty');
+        if (Object.keys(projectChanges).length) document.getElementById('section-projects').classList.add('is-dirty');
 
         reconcileUsersDisplay();
         renderDepartments();
         renderHolidays();
         renderBranding();
+        renderProjects();
         renderUsers(document.getElementById('table-search').value.trim().toLowerCase());
         recomputeSaveBarCount();
         saveBar.setUndoAvailable(undoStack.length > 0);
@@ -1219,9 +1552,12 @@
         brandingChanges = {};
         brandingLogoFiles = {};
         brandingLogoPreviews = {};
+        projectChanges = {};
         undoStack = [];
         document.querySelectorAll('.section').forEach(el => el.classList.remove('is-dirty'));
-        await Promise.all([loadUsers(), loadAccessData(), loadDepartments(), loadHolidays(), loadBranding()]);
+        await Promise.all([loadUsers(), loadAccessData(), loadDepartments(), loadHolidays(), loadBranding(), loadProjects()]);
+        applyTabAccessVisibility();
+        renderUsrTableHead();
         renderUsers();
     }
 
@@ -1936,17 +2272,146 @@
     // ── Top-level tabs ──
     function switchTopTab(tab) {
         document.getElementById('top-tab-settings').classList.toggle('active', tab === 'settings');
+        document.getElementById('top-tab-holiday').classList.toggle('active', tab === 'holiday');
         document.getElementById('top-tab-access').classList.toggle('active', tab === 'access');
         document.getElementById('tab-settings').style.display = tab === 'settings' ? '' : 'none';
+        document.getElementById('tab-holiday').style.display = tab === 'holiday' ? '' : 'none';
         document.getElementById('tab-access').style.display = tab === 'access' ? '' : 'none';
+        if (tab !== 'access') { const bar = document.getElementById('usr-sticky-hdr'); if (bar) bar.style.display = 'none'; }
     }
 
+    // The page itself now admits anyone with at least one of the 3 tab
+    // flags — which specific tab(s) they land on is decided separately by
+    // applyTabAccessVisibility(). Only a user with none of the 3 gets
+    // bounced, same as having no system_setting used to mean before this
+    // page had more than one tab.
     async function guardAfterLoad() {
         const user = getBxUser();
         if (user?.level === 'god') return;
         const myAccess = accessData[user?.codename];
-        if (!myAccess?.system_setting) {
+        if (!myAccess?.system_setting && !myAccess?.system_holiday && !myAccess?.system_member) {
             window.location.replace('/index.html');
+        }
+    }
+
+    // Viewer's OWN permission, read from the loaded (not staged) access
+    // data — deliberately not accessChanges, so mid-edit staging never
+    // makes this zone flicker in/out from under the person editing it.
+    // Mirrors B-Quest's canSeeAccess = canBquest('setting') exactly: only
+    // a system_setting holder (or GOD) can see or edit anyone's
+    // Setting/Holiday/Member toggles at all.
+    function canSeeSystemAccess() {
+        const user = getBxUser();
+        if (user?.level === 'god') return true;
+        return !!accessData[user?.codename]?.system_setting;
+    }
+
+    // Builds colgroup + thead from scratch — the System-Access zone
+    // (Setting/Holiday/Member) is included only when canSeeSystemAccess()
+    // is true, so it's genuinely absent from the DOM for everyone else,
+    // not just CSS-hidden. Called once per page load, right after
+    // accessData is in (loadPage()'s Promise.all) — canSeeSystemAccess()
+    // doesn't change mid-visit so this never needs to re-run afterward.
+    function renderUsrTableHead() {
+        const canSee = canSeeSystemAccess();
+        document.getElementById('usr-colgroup').innerHTML = `
+            <col style="width:40px">
+            <col style="width:200px">
+            <col style="width:120px">
+            <col style="width:190px">
+            ${PROJECT_COLS.map(() => '<col style="width:100px">').join('')}
+            ${canSee ? '<col style="width:90px"><col style="width:90px"><col style="width:90px">' : ''}
+        `;
+        document.getElementById('usr-thead').innerHTML = `
+            <tr>
+                <th class="usr-col-trash" rowspan="2"></th>
+                <th class="usr-col-name usr-header-sortable" rowspan="2" style="text-align:left" onclick="openColumnFilterPopup('nick_name', 'Member')">Member<span id="usr-sort-nick_name"></span><span id="usr-filter-nick_name"></span></th>
+                <th class="usr-zone-divider usr-header-sortable" rowspan="2" onclick="openColumnFilterPopup('employee_id', 'ID')">ID<span id="usr-sort-employee_id"></span><span id="usr-filter-employee_id"></span></th>
+                <th class="usr-header-sortable" rowspan="2" onclick="openColumnFilterPopup('department', 'Department')">Department<span id="usr-sort-department"></span><span id="usr-filter-department"></span></th>
+                <th class="usr-group-head" colspan="${PROJECT_COLS.length}"><span class="group-label group-access">PROJECT ACCESS</span></th>
+                ${canSee ? `
+                <th class="usr-zone-divider" rowspan="2" title="Can open the Setting tab">Setting</th>
+                <th rowspan="2" title="Can open the Holiday tab">Holiday</th>
+                <th rowspan="2" title="Can open the Member tab">Member</th>` : ''}
+            </tr>
+            <tr>
+                ${PROJECT_COLS.map((p, i) => `<th class="${i === 0 ? 'usr-zone-divider' : ''}" title="${PROJECT_COL_TITLE[p.key] || ''}">${p.label}</th>`).join('')}
+            </tr>
+        `;
+        rebuildUsrStickyHdrClone();
+    }
+
+    // Rebuilds the floating header clone from the real colgroup/thead —
+    // single source of truth, can't drift out of sync the way the old
+    // hand-written 5-column header once did (see PROJECT_COL_TITLE's own
+    // comment). id/onclick are stripped: duplicate ids in the DOM would
+    // break getElementById-based lookups elsewhere (updateUsrSortIcons()
+    // etc.), and this bar is purely visual, same "no function" as before.
+    function rebuildUsrStickyHdrClone() {
+        const bar = document.getElementById('usr-sticky-hdr');
+        const colgroup = document.getElementById('usr-colgroup');
+        const thead = document.getElementById('usr-thead');
+        if (!bar || !colgroup || !thead) return;
+        const stripped = thead.innerHTML.replace(/\sid="[^"]*"/g, '').replace(/\sonclick="[^"]*"/g, '');
+        bar.innerHTML = `<table class="usr-matrix"><colgroup>${colgroup.innerHTML}</colgroup><thead>${stripped}</thead></table>`;
+    }
+
+    // Keeps the clone's left/width and horizontal scroll position glued
+    // to the real #usr-list-wrap, so its columns land exactly above the
+    // real ones instead of a generic centered bar.
+    function syncUsrStickyHdrPosition() {
+        const bar = document.getElementById('usr-sticky-hdr');
+        const wrap = document.getElementById('usr-list-wrap');
+        if (!bar || !wrap || bar.style.display === 'none') return;
+        const rect = wrap.getBoundingClientRect();
+        bar.style.left = rect.left + 'px';
+        bar.style.width = rect.width + 'px';
+        const table = bar.querySelector('table');
+        if (table) table.style.transform = `translateX(${-wrap.scrollLeft}px)`;
+    }
+
+    // Shows the clone once #usr-thead has scrolled entirely above the
+    // fixed top nav; hides it again once it's back in view or the Member
+    // tab itself isn't the active one.
+    let usrHeaderHintObserver = null;
+    function setupUsrHeaderHintObserver() {
+        const thead = document.getElementById('usr-thead');
+        const bar = document.getElementById('usr-sticky-hdr');
+        const wrap = document.getElementById('usr-list-wrap');
+        if (!thead || !bar || !wrap || usrHeaderHintObserver) return;
+        const navHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 64;
+        usrHeaderHintObserver = new IntersectionObserver((entries) => {
+            const theadVisible = entries[0].isIntersecting;
+            const onMemberTab = document.getElementById('tab-access').style.display !== 'none';
+            const show = !theadVisible && onMemberTab;
+            bar.style.display = show ? 'block' : 'none';
+            if (show) syncUsrStickyHdrPosition();
+        }, { rootMargin: `-${navHeight}px 0px 0px 0px`, threshold: 0 });
+        usrHeaderHintObserver.observe(thead);
+        wrap.addEventListener('scroll', syncUsrStickyHdrPosition);
+        window.addEventListener('resize', syncUsrStickyHdrPosition);
+    }
+
+    // Show/hide each top-tab button per the viewer's own Setting/Holiday/
+    // Member flag (GOD sees all 3 always) and land on the first one they
+    // actually have — the Setting tab is the default in the static HTML,
+    // which would show a tab nobody clicked but nothing behind its
+    // button for a Holiday- or Member-only user.
+    function applyTabAccessVisibility() {
+        const user = getBxUser();
+        const isGod = user?.level === 'god';
+        const acc = accessData[user?.codename] || {};
+        const canSetting = isGod || !!acc.system_setting;
+        const canHoliday = isGod || !!acc.system_holiday;
+        const canMember  = isGod || !!acc.system_member;
+
+        document.getElementById('top-tab-settings').style.display = canSetting ? '' : 'none';
+        document.getElementById('top-tab-holiday').style.display = canHoliday ? '' : 'none';
+        document.getElementById('top-tab-access').style.display = canMember ? '' : 'none';
+
+        if (!canSetting) {
+            if (canHoliday) switchTopTab('holiday');
+            else if (canMember) switchTopTab('access');
         }
     }
 
@@ -1965,10 +2430,10 @@
     // there), not the editable system_access.<key> flags they used to be.
     // Access is granted the moment a project's own admin adds someone on
     // that project's own Settings/Members page; there's no separate
-    // per-person platform pre-approval step left to toggle. bdashboard/
-    // bcommission stay editable (not live projects yet, no member table to
-    // check) and system_setting stays editable (no project/member-table
-    // equivalent for it at all).
+    // per-person platform pre-approval step left to toggle. bcommission
+    // stays editable (not a live project yet, no member table to check)
+    // and system_setting/system_holiday/system_member stay editable (no
+    // project/member-table equivalent for any of those).
     const USR_PROJECT_MEMBER_TABLE = { bquest: 'b_quest_member', baccount: 'b_account_setting', bfinance: 'b_finance_setting' };
 
     async function loadAccessData() {
@@ -1987,8 +2452,9 @@
         (data || []).forEach(row => { accessData[row.codename] = row; });
         // A codename can be a project member without ever having a
         // system_access row at all (that row now only matters for
-        // bdashboard/bcommission/system_setting) — make sure such users
-        // still get an accessData entry so their read-only badges render.
+        // bcommission/system_setting/system_holiday/system_member) — make
+        // sure such users still get an accessData entry so their
+        // read-only badges render.
         Object.keys(memberSets).forEach(key => {
             memberSets[key].forEach(codename => {
                 if (!accessData[codename]) accessData[codename] = { codename };
@@ -2027,6 +2493,7 @@
         const container = document.getElementById('user-list');
         updateUsrSortIcons();
         updateUsrFilterIcons();
+        rebuildUsrStickyHdrClone(); // keep the floating clone's sort/filter icons in sync
 
         let rows = allUsers.filter(u => {
             const matchQ = !q ||
@@ -2051,7 +2518,8 @@
         updateCount(rows.length, allUsers.length);
 
         if (!rows.length) {
-            container.innerHTML = `<tr><td colspan="11" class="usr-empty"><i class="bi bi-people"></i><p>No users found</p></td></tr>`;
+            const colspan = 4 + PROJECT_COLS.length + (canSeeSystemAccess() ? 3 : 0);
+            container.innerHTML = `<tr><td colspan="${colspan}" class="usr-empty"><i class="bi bi-people"></i><p>No users found</p></td></tr>`;
             return;
         }
 
@@ -2065,13 +2533,29 @@
                     <span class="usr-access-badge ${acc[p.key] ? 'in' : ''}" title="${acc[p.key] ? 'Added as a member — manage from that project Settings/Members page directly' : 'Not a member of this project yet'}"></span>
                 </td>`).join('');
 
-            const sysToggle = `
+            // Absent entirely (not just hidden) for a viewer without
+            // system_setting — matches the columns renderUsrTableHead()
+            // decided to include, must stay in sync with it or the row
+            // cells and header cells drift out of column alignment.
+            const sysAccessToggles = canSeeSystemAccess() ? `
                 <td class="usr-zone-divider">
                     <label class="bq-toggle t-sys">
-                        <input type="checkbox" ${acc.system_setting ? 'checked' : ''} onchange="onAccessChange('${u.id}','system_setting',this.checked)" ${isDeleted ? 'disabled' : ''}>
+                        <input type="checkbox" ${acc.system_setting ? 'checked' : ''} onchange="onSysSettingToggle('${u.id}',this.checked)" ${isDeleted ? 'disabled' : ''}>
                         <span class="bq-slider"></span>
                     </label>
-                </td>`;
+                </td>
+                <td>
+                    <label class="bq-toggle t-sys">
+                        <input type="checkbox" ${acc.system_holiday ? 'checked' : ''} onchange="onSysHolidayToggle('${u.id}',this.checked)" ${isDeleted ? 'disabled' : ''}>
+                        <span class="bq-slider"></span>
+                    </label>
+                </td>
+                <td>
+                    <label class="bq-toggle t-sys">
+                        <input type="checkbox" ${acc.system_member ? 'checked' : ''} onchange="onSysMemberToggle('${u.id}',this.checked)" ${isDeleted ? 'disabled' : ''}>
+                        <span class="bq-slider"></span>
+                    </label>
+                </td>` : '';
 
             const dis = isDeleted ? 'disabled' : '';
             const actionBtn = isDeleted
@@ -2095,7 +2579,7 @@
                     <button type="button" class="usr-dept-trigger" data-uid="${u.id}" ${dis} onclick="openDeptPicker(this, '${u.id}')">${esc(u.department) || '— Select —'}</button>
                 </td>
                 ${projectToggles}
-                ${sysToggle}
+                ${sysAccessToggles}
             </tr>`;
         }).join('');
     }
@@ -2248,6 +2732,73 @@
         markDirty();
     }
 
+    // Setting/Holiday/Member toggles — Setting is a forced superset of
+    // Member (mirrors B-Quest's own onMemberSettingToggle/
+    // onMemberMemberToggle exactly, see b-quest-members.html): the
+    // permission table itself lives on the Member tab, so a Setting-only
+    // user with Member off could never reach it to manage anyone's
+    // access despite being "top level". Turning Setting on forces Member
+    // on; turning Member off forces Setting off. Holiday has no such
+    // dependency — its tab holds no permission UI, so it's fully
+    // independent of the other two. Every handler warns before letting
+    // the CURRENTLY LOGGED-IN user turn off their own switch (the only
+    // real self-lockout risk); editing someone else's is a normal admin
+    // action already covered by Save/Cancel/Undo.
+    function reRenderUsrRows() {
+        renderUsers(document.getElementById('table-search').value.trim().toLowerCase());
+    }
+
+    function confirmSelfToggleOff(codename, label, extraWarning, apply) {
+        if (codename !== getBxUser()?.codename) { apply(); return; }
+        Swal.fire({
+            icon: 'warning',
+            title: `Turn off your own ${label} access?`,
+            text: `This could lock you out of the ${label} tab.` + (extraWarning ? ` ${extraWarning}` : ''),
+            showCancelButton: true,
+            confirmButtonText: 'Yes, turn it off',
+            cancelButtonText: 'Cancel',
+        }).then(result => { if (result.isConfirmed) apply(); else reRenderUsrRows(); });
+    }
+
+    function onSysSettingToggle(uid, checked) {
+        const codename = allUsers.find(x => x.id === uid)?.codename;
+        if (!codename) return;
+        const apply = () => {
+            onAccessChange(uid, 'system_setting', checked);
+            if (checked) onAccessChange(uid, 'system_member', true);
+            reRenderUsrRows();
+        };
+        if (!checked) confirmSelfToggleOff(codename, 'Setting', null, apply);
+        else apply();
+    }
+
+    function onSysMemberToggle(uid, checked) {
+        const codename = allUsers.find(x => x.id === uid)?.codename;
+        if (!codename) return;
+        const apply = () => {
+            onAccessChange(uid, 'system_member', checked);
+            if (!checked) onAccessChange(uid, 'system_setting', false);
+            reRenderUsrRows();
+        };
+        if (!checked) {
+            const ch = accessChanges[codename];
+            const acc = ch ? { ...(accessData[codename] || {}), ...ch } : (accessData[codename] || {});
+            const extra = acc.system_setting ? '(and your Setting access will be turned off too.)' : '';
+            confirmSelfToggleOff(codename, 'Member', extra, apply);
+        } else apply();
+    }
+
+    function onSysHolidayToggle(uid, checked) {
+        const codename = allUsers.find(x => x.id === uid)?.codename;
+        if (!codename) return;
+        const apply = () => {
+            onAccessChange(uid, 'system_holiday', checked);
+            reRenderUsrRows();
+        };
+        if (!checked) confirmSelfToggleOff(codename, 'Holiday', null, apply);
+        else apply();
+    }
+
     // ── Profile Changes (inline) — keyed by user.id ──
     let profileChanges = {}; // uid -> { _id, nick_name, full_name, employee_id, department, codename }
 
@@ -2339,11 +2890,13 @@
         brandingChanges = {};
         brandingLogoFiles = {};
         brandingLogoPreviews = {};
+        projectChanges = {};
         undoStack = [];
         document.getElementById('section-departments').classList.remove('is-dirty');
         document.getElementById('section-users').classList.remove('is-dirty');
         document.getElementById('section-holidays').classList.remove('is-dirty');
         document.getElementById('section-branding').classList.remove('is-dirty');
+        document.getElementById('section-projects').classList.remove('is-dirty');
         saveBar.clear();
     }
 
@@ -2476,6 +3029,29 @@
                 if (error) errors.push(`Branding save: ${error.message}`);
             }
 
+            // Save project status (active/disabled/hidden) + drag-reorder +
+            // label/icon — carry over each untouched field from
+            // projectData so editing just one (e.g. a reorder drag) never
+            // blanks the others on upsert. A label trimmed to empty saves
+            // as null (= "use PROJECT_LIST's own default") rather than an
+            // empty string, so a cleared field doesn't render as a blank
+            // card title on index.html.
+            const projectUpserts = Object.entries(projectChanges).map(([key, ch]) => {
+                const label = (ch.label !== undefined ? ch.label : projectData[key]?.label ?? '').trim();
+                const icon = (ch.icon !== undefined ? ch.icon : projectData[key]?.icon ?? '').trim();
+                return {
+                    key,
+                    status: ch.status !== undefined ? ch.status : (projectData[key]?.status ?? 'active'),
+                    sort_order: ch.sort_order !== undefined ? ch.sort_order : (projectData[key]?.sort_order ?? null),
+                    label: label || null,
+                    icon: icon || null,
+                };
+            });
+            if (projectUpserts.length) {
+                const { error } = await supabaseClient.from('system_project').upsert(projectUpserts, { onConflict: 'key' });
+                if (error) errors.push(`Projects save: ${error.message}`);
+            }
+
             // 1. Save profile changes (codename, nick_name, full_name, employee_id, department)
             for (const ch of Object.values(profileChanges)) {
                 if (!ch._id) continue;
@@ -2499,11 +3075,13 @@
                 // Every project column is read-only now (see PROJECT_COLS/
                 // USR_PROJECT_MEMBER_TABLE) — system_access's per-project
                 // columns are no longer read or written by anything.
-                // System Setting is the only field left that's ever really
-                // edited on this page.
+                // Setting/Holiday/Member are the only fields left that are
+                // ever really edited on this page.
                 const payload = {
                     codename,
                     system_setting: !!ch.system_setting,
+                    system_holiday: !!ch.system_holiday,
+                    system_member: !!ch.system_member,
                 };
 
                 const { error } = await supabaseClient
@@ -2546,10 +3124,28 @@
                 clearDirty();
             }
 
-            // Reload departments/holidays/branding to sync fresh data
+            // Reload departments/holidays/branding/projects to sync fresh data
             await loadDepartments();
             await loadHolidays();
             await loadBranding();
+            await loadProjects();
+            // loadBranding() only refreshes this page's own Branding form
+            // (previews, hex inputs) — refreshBranding() is the separate
+            // call that re-applies the saved values to this page's own
+            // live header logo/theme colors, so a save shows its effect
+            // immediately without needing a manual reload.
+            if (typeof refreshBranding === 'function') refreshBranding();
+            // accessData was already patched in-place above as each row
+            // saved, so these read fresh values without a re-fetch — but
+            // without this, saving your OWN Setting/Holiday/Member
+            // self-lockout confirm (still lets you turn it off) leaves
+            // the tab buttons and table's admin columns visible until a
+            // full page reload, out of sync with what was just saved.
+            // cancelAllChanges() already does this same pair after its
+            // own reload; saveAll() needs it too.
+            applyTabAccessVisibility();
+            renderUsrTableHead();
+            renderUsers(document.getElementById('table-search').value.trim().toLowerCase());
 
         } catch (e) {
             Swal.fire('Error', e.message, 'error');

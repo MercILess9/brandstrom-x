@@ -276,7 +276,7 @@
         document.getElementById('ov-root').innerHTML = `
         <div class="a4-page">
             <div class="ov-logo-row">
-                <img src="${LOGO_URL}" class="ov-logo" onerror="this.style.display='none'">
+                <img src="${LOGO_URL}" class="ov-logo sys-logo-img" onerror="this.style.display='none'">
             </div>
 
             <div class="ov-head">
@@ -373,6 +373,11 @@
             .order('qt_number');
 
         renderPage(o, qts || []);
+        // .ov-logo only exists from here on — apply branding now so a
+        // cached/custom logo actually lands on it (same reasoning as
+        // system.js's own post-header-injection re-apply).
+        applyCachedBranding();
+        refreshBranding();
     }
 
     async function initPage() {

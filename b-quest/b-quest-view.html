@@ -53,6 +53,9 @@
          and not a self-injecting module like color-picker.js. -->
     <script src="/system/pdf-export.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
+    <!-- Shared toolbar chrome (icon buttons, sticky bar, loading-centering)
+         with b-account/b-opportunity-view.html — see the file itself. -->
+    <link rel="stylesheet" href="/system/view-toolbar.css">
     <link rel="stylesheet" href="b-quest.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
@@ -66,31 +69,6 @@
     <style>
         body { background: #eef1f5; margin: 0; font-family: 'Inter', 'Sarabun', sans-serif; }
 
-        .ov-toolbar { position: sticky; top: 0; z-index: 100; background: #fff; border-bottom: 1px solid var(--c-border); padding: 14px 0; }
-        .ov-toolbar-inner { width: 210mm; max-width: calc(100vw - 24px); margin: 0 auto; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; padding: 0 4px; }
-        /* Icon-only circular buttons (iOS toolbar style — filled tint
-           circle, not an outlined square) instead of text pills. Hover =
-           scale(1.1) + accent tint, active = scale down for tap feedback
-           — the same "pop" every other icon button in this app already
-           uses (.cfg-icon-swatch, .bq-info-btn, .proj-toggle-icon), which
-           these were missing before (just a flat color swap, no motion).
-           title= carries the label as a native tooltip. */
-        .ov-back-btn { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; color: var(--c-slate); background: var(--c-bg); text-decoration: none; transition: transform 0.15s, background 0.15s, color 0.15s; }
-        .ov-back-btn:hover { background: var(--c-accent-light); color: var(--c-accent-dark); transform: scale(1.1); }
-        .ov-back-btn:active { transform: scale(0.94); }
-        .ov-toolbar-actions { display: flex; align-items: center; gap: 8px; }
-        .ov-divider { width: 1px; height: 22px; background: var(--c-border); margin: 0 4px; }
-        .ov-btn { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: none; background: var(--c-bg); color: var(--c-dark); font-size: 1rem; cursor: pointer; font-family: inherit; transition: transform 0.15s, background 0.15s, color 0.15s; }
-        .ov-btn:hover { background: var(--c-accent-light); color: var(--c-accent-dark); transform: scale(1.1); }
-        .ov-btn:active { transform: scale(0.94); }
-        .ov-btn-primary { background: var(--c-dark); color: var(--c-accent); }
-        .ov-btn-primary:hover { background: #0f172a; color: var(--c-accent); transform: scale(1.1); }
-        .ov-btn-primary:active { transform: scale(0.94); }
-        .ov-btn-danger { color: #ef4444; }
-        .ov-btn-danger:hover { background: #fef2f2; color: #dc2626; transform: scale(1.1); }
-        .ov-btn:disabled { cursor: default; opacity: 0.6; transform: none !important; }
-        .spin { display: inline-block; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* Softer floating-card feel — thin accent edge, diffuse shadow
            instead of the old flat "printed form" look (hard boxes/
@@ -101,11 +79,13 @@
         .ov-state { text-align: center; color: var(--c-muted); font-size: 0.9rem; font-weight: 700; padding: 80px 0; }
         /* Toolbar stays visible while loading (Back still works, Edit/
            Delete/PDF are all no-ops until currentQuest is set) — only the
-           content area shows the branded spinner, centered in roughly the
-           visible viewport rather than pinned to .a4-page's own top (which
-           would otherwise put it near the very top of a min-height:297mm
-           block). */
-        #loadingState { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; padding: 0; }
+           content area shows the branded spinner, centered via
+           .ov-loading-wrap (system/view-toolbar.css) rather than pinned to
+           .a4-page's own top (which would otherwise put it near the very
+           top of a min-height:297mm block). This ID rule just cancels
+           .ov-state's own padding: 80px 0 (same specificity, ID beats
+           class regardless of source order). */
+        #loadingState { padding: 0; }
 
         .bqv-head { display: flex; flex-direction: column; gap: 10px; padding-bottom: 22px; margin-bottom: 26px; border-bottom: 1px solid #f1f5f9; }
         .bqv-id-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 800; color: var(--c-accent-dark); letter-spacing: 0.6px; background: var(--c-accent-light); border-radius: 20px; padding: 4px 12px; width: fit-content; }
@@ -198,7 +178,7 @@
     </div>
 
     <div class="a4-page">
-        <div class="ov-state" id="loadingState"></div>
+        <div class="ov-state ov-loading-wrap" id="loadingState"></div>
         <div class="ov-state" id="notFoundState" style="display:none;"><i class="bi bi-exclamation-triangle"></i> Task not found</div>
 
         <div id="contentState" style="display:none;">
@@ -376,16 +356,9 @@
         document.getElementById('taskDetail').textContent = quest.detail || 'No details provided.';
     }
 
-    // Same "flat fill = check the color itself" YIQ-luminance approach as
-    // b-quest-modal.js's pickBadgeTextColor() — small enough to duplicate
-    // rather than pull in that whole edit-modal IIFE for one helper.
-    function pickBadgeTextColor(hex) {
-        const h = (hex || '#94a3b8').replace('#', '');
-        const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
-        const n = parseInt(full, 16);
-        const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-        return (r * 299 + g * 587 + b * 114) / 1000 >= 150 ? '#1e293b' : '#ffffff';
-    }
+    // pickBadgeTextColor() is now the shared helper in b-quest.js (loaded
+    // in <head>, before this inline script runs) — was an identical local
+    // copy here.
 
     function renderRoles(taskRoles, roleById, statusById) {
         const container = document.getElementById('rolesContainer');

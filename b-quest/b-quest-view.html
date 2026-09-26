@@ -11,6 +11,20 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
+    <!-- b-quest-modal.js calls attachDatePicker() at its own top level
+         (not inside a function — runs the instant the script executes) to
+         wire up the Publish Date field, and openBqPicker() calls
+         openSelectPicker() at runtime for every Status/Type/Work trigger.
+         b-quest-list.html loads both of these before b-quest-modal.js for
+         that reason; this page silently missed them, which threw a
+         ReferenceError partway through b-quest-modal.js's own top-level
+         code the instant it ran (before it ever reached
+         `window.openTaskModal = BQuestApp.openModal`) — so Edit looked
+         like it did nothing at all, no modal, no visible error, since the
+         click handler's own openTaskModal(...) call was itself unhandled
+         (see editTask() below). -->
+    <script src="/system/date-picker.js"></script>
+    <script src="/system/select-picker.js"></script>
     <script src="b-quest.js"></script>
     <!-- This page skips initLayout() (see the standalone-document-page
          comment on the main <style> block below), so system.js's own
@@ -33,6 +47,11 @@
          card dropdown — no separate modal built for this page. -->
     <script src="b-quest-modal.js?v=10" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <!-- Shared html2canvas+jsPDF multi-page-slicing export, also used by
+         b-account/b-opportunity-view.html's own Save PDF button — see
+         system/pdf-export.js for why this one function is a plain <script>
+         and not a self-injecting module like color-picker.js. -->
+    <script src="/system/pdf-export.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-quest.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -80,6 +99,13 @@
         .a4-page { width: 210mm; min-height: 297mm; max-width: calc(100vw - 24px); margin: 24px auto 60px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 20px 48px rgba(0,0,0,0.08); padding: 16mm 18mm; box-sizing: border-box; border-radius: 10px; border-top: 4px solid var(--c-accent); }
 
         .ov-state { text-align: center; color: var(--c-muted); font-size: 0.9rem; font-weight: 700; padding: 80px 0; }
+        /* Toolbar stays visible while loading (Back still works, Edit/
+           Delete/PDF are all no-ops until currentQuest is set) — only the
+           content area shows the branded spinner, centered in roughly the
+           visible viewport rather than pinned to .a4-page's own top (which
+           would otherwise put it near the very top of a min-height:297mm
+           block). */
+        #loadingState { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; padding: 0; }
 
         .bqv-head { display: flex; flex-direction: column; gap: 10px; padding-bottom: 22px; margin-bottom: 26px; border-bottom: 1px solid #f1f5f9; }
         .bqv-id-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 800; color: var(--c-accent-dark); letter-spacing: 0.6px; background: var(--c-accent-light); border-radius: 20px; padding: 4px 12px; width: fit-content; }
@@ -172,7 +198,7 @@
     </div>
 
     <div class="a4-page">
-        <div class="ov-state" id="loadingState"><i class="bi bi-hourglass-split"></i> Loading...</div>
+        <div class="ov-state" id="loadingState"></div>
         <div class="ov-state" id="notFoundState" style="display:none;"><i class="bi bi-exclamation-triangle"></i> Task not found</div>
 
         <div id="contentState" style="display:none;">
@@ -224,6 +250,10 @@
 <script>
     let currentQuest = null; // holds the loaded quest row — downloadPDF() reads .id for the saved file's name, editTask()/deleteTaskFromView() read it too
     let workDataList = [];   // b_quest_work rows — same shape editTask()'s modal expects (setupDropdowns()), fetched once here instead of on demand
+
+    // Same branded spinner as b-opportunity-view.html's own loading state
+    // (system.js's bxLoader()) instead of a plain hourglass line.
+    document.getElementById('loadingState').innerHTML = bxLoader('Loading...');
 
     async function loadView() {
         const id = new URLSearchParams(window.location.search).get('id');
@@ -278,9 +308,20 @@
         document.getElementById('ovBtnDelete').style.display = canDel ? 'flex' : 'none';
     }
 
-    function editTask() {
+    async function editTask() {
         if (!currentQuest) return;
-        openTaskModal(currentQuest.id, workDataList);
+        // openTaskModal (BQuestApp.openModal) is async — called bare with
+        // no await/catch, any rejection inside it (e.g. one of its own
+        // Promise.all DB loads failing) was an invisible unhandled
+        // rejection: no exception reaches this onclick handler, so nothing
+        // visibly happens on click at all. await + catch here turns that
+        // into an actual visible error instead of silence.
+        try {
+            await openTaskModal(currentQuest.id, workDataList);
+        } catch (err) {
+            console.error('[B-QUEST View] editTask failed:', err);
+            notify('', `Could not open Edit — ${err?.message || 'unknown error'}`, 'error');
+        }
     }
 
     async function deleteTaskFromView() {
@@ -404,12 +445,10 @@
     // graphics"/"Headers and footers" settings (see the CSS comment on
     // @media print above; that path is still there for anyone who prints
     // via Ctrl+P directly, this button just no longer routes through it).
-    // Screenshots .a4-page via html2canvas, sliced into successive A4
-    // pages since a task's role-card list has no fixed height — this is
-    // the standard jsPDF pattern for a canvas taller than one page:
-    // redraw the same full image on each page, shifted up by one
-    // page-height each time, so the page boundary itself does the slicing.
+    // Actual screenshot+slice logic lives in system/pdf-export.js, shared
+    // with b-opportunity-view.html.
     async function downloadPDF() {
+        if (!currentQuest) return; // still loading (or not found) — nothing real to screenshot yet
         const btn = document.getElementById('ovBtnPdf');
         const target = document.querySelector('.a4-page');
         if (!target) return;
@@ -417,25 +456,7 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i>';
         try {
-            const canvas = await html2canvas(target, { useCORS: true, scale: 2, backgroundColor: '#ffffff' });
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
-
-            const pageWidthMM = 210, pageHeightMM = 297;
-            const imgHeightMM = (canvas.height * pageWidthMM) / canvas.width;
-
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            let heightLeft = imgHeightMM;
-            let position = 0;
-            pdf.addImage(imgData, 'JPEG', 0, position, pageWidthMM, imgHeightMM);
-            heightLeft -= pageHeightMM;
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeightMM;
-                pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, pageWidthMM, imgHeightMM);
-                heightLeft -= pageHeightMM;
-            }
-            pdf.save(`${currentQuest?.id || 'task'}.pdf`);
+            await exportElementToPDF(target, `${currentQuest?.id || 'task'}.pdf`);
         } catch {
             notify('', 'Could not generate PDF', 'error');
         } finally {

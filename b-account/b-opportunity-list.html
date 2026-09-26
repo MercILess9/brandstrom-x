@@ -79,6 +79,15 @@
         .op-card:hover { box-shadow: 0 8px 28px -4px rgba(0,0,0,0.11); transform: translateY(-1px); }
         .op-card.churn { border-left-color: #f97316; }
         .op-card.ended { border-left-color: #64748b; }
+        /* Brief glow so the card openCardFromQuery() just scrolled to and
+           expanded is obvious at a glance, not just "some card, somewhere,
+           opened" — fades out on its own, class removed after. Ref
+           b-quest-list.html's .bqc-open-highlight. */
+        .op-card.op-open-highlight { animation: opOpenPulse 1.8s ease; }
+        @keyframes opOpenPulse {
+            0% { box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.55); }
+            100% { box-shadow: 0 0 0 0 rgba(var(--c-accent-rgb), 0); }
+        }
 
         /* ── Header layout ── */
         .op-header { display: flex; align-items: center; gap: 22px; padding: 12px 18px; cursor: pointer; user-select: none; }
@@ -293,6 +302,7 @@
     var _accMap      = new Map(); // account_id → {account_name, company_name}
     var _buMap       = new Map(); // opportunity_id → Set<bu>
     var _companyQtMap = new Map(); // opportunity_id → Set<company_qt>
+    var _qtNumberMap = new Map(); // opportunity_id → Set<qt_number>, folded into _searchIndex so a QT number finds its opportunity
     var _cfgBU = [], _cfgStatus = [], _cfgType = [];
     var _ownerList = [], _amList = [], _leadList = [];
     var _signedMap = new Map(); // opportunity_id → signed_date sliced to 'YYYY-MM' (unset if no signed_date)
@@ -394,7 +404,7 @@
             supabaseClient.from('b_opportunity_list')
                 .select('opportunity_id, opportunity_name, owner, am, sub_am, lead_source, business_type, status, remark, account_id, signed_date'),
             supabaseClient.from('b_account_list').select('account_id, account_name, company_name'),
-            supabaseClient.from('b_opportunity_qt').select('opportunity_id, company_qt, b_opportunity_qt_item(bu)'),
+            supabaseClient.from('b_opportunity_qt').select('opportunity_id, qt_number, company_qt, b_opportunity_qt_item(bu)'),
             supabaseClient.from('b_opportunity_config').select('type, value').in('type', ['bu', 'status', 'business_type']).order('value')
         ]);
         if (error) { console.error('[B-OPP]', error); return; }
@@ -403,10 +413,15 @@
 
         _buMap = new Map();
         _companyQtMap = new Map();
+        _qtNumberMap = new Map(); // opportunity_id → Set<qt_number>, folded into _searchIndex below
         (qts || []).forEach(q => {
             if (q.company_qt) {
                 if (!_companyQtMap.has(q.opportunity_id)) _companyQtMap.set(q.opportunity_id, new Set());
                 _companyQtMap.get(q.opportunity_id).add(q.company_qt);
+            }
+            if (q.qt_number) {
+                if (!_qtNumberMap.has(q.opportunity_id)) _qtNumberMap.set(q.opportunity_id, new Set());
+                _qtNumberMap.get(q.opportunity_id).add(q.qt_number);
             }
             (q.b_opportunity_qt_item || []).forEach(item => {
                 if (!item.bu) return;
@@ -422,9 +437,10 @@
         _searchIndex = new Map();
         (idx || []).forEach(o => {
             const acc = _accMap.get(o.account_id) || {};
+            const qtNumbers = [...(_qtNumberMap.get(o.opportunity_id) || [])].join(' ');
             _searchIndex.set(o.opportunity_id, [
                 o.opportunity_id, o.opportunity_name, acc.account_name, acc.company_name,
-                o.business_type, o.status, o.owner, o.am, o.sub_am, o.lead_source, o.remark
+                o.business_type, o.status, o.owner, o.am, o.sub_am, o.lead_source, o.remark, qtNumbers
             ].map(f => (f || '').toLowerCase()).join(' '));
         });
 
@@ -848,6 +864,50 @@
         applyFilters();
     }
 
+    // ── Deep link: ?open=<id> ────────────────────────────────────────────────
+    // b-opportunity-view.html's Back button lands here with ?open=<id> so
+    // Edit/Delete can follow immediately instead of making someone
+    // search/scroll for the card manually. Ref b-quest-list.html's
+    // openCardFromQuery() — same mechanism, adapted to this page's own
+    // lazy _cardData/renderCard/toggleCard functions instead of B-Quest's.
+    async function fetchOppById(id) {
+        const { data: o, error } = await supabaseClient.from('b_opportunity_list').select('*').eq('opportunity_id', id).single();
+        if (error || !o) return null;
+        const acc = _accMap.get(o.account_id) || {};
+        return { ...o, _account_name: acc.account_name || o.account_id || '', _company_name: acc.company_name || '' };
+    }
+
+    async function openCardFromQuery() {
+        const id = new URLSearchParams(window.location.search).get('open');
+        if (!id) return;
+
+        const container = document.getElementById('listContainer');
+        let cardEl = container.querySelector(`[data-id="${CSS.escape(id)}"]`);
+
+        if (!cardEl) {
+            const o = await fetchOppById(id);
+            if (!o) return; // not found / filtered out of the current view / no permission — silently no-op, same as any other stale deep link
+            _cardData.set(o.opportunity_id, o);
+            const tmp = document.createElement('div');
+            tmp.innerHTML = renderCard(o);
+            cardEl = tmp.firstElementChild;
+            // Not its "correct" sort position — this is a one-off deep-link
+            // visit, not the list's normal order.
+            container.prepend(cardEl);
+        }
+
+        cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (!cardEl.classList.contains('open')) toggleCard(cardEl);
+
+        cardEl.classList.add('op-open-highlight');
+        setTimeout(() => cardEl.classList.remove('op-open-highlight'), 1800);
+
+        // Strip ?open= so a refresh or Back/Forward doesn't replay this.
+        const url = new URL(window.location.href);
+        url.searchParams.delete('open');
+        history.replaceState(null, '', url);
+    }
+
     // ── Init ──────────────────────────────────────────────────────────────────
     document.getElementById('globalSearch').addEventListener('input', function() {
         document.getElementById('searchClear').style.display = this.value ? 'block' : 'none';
@@ -915,6 +975,7 @@
                 updateResetVisibility();
             }
         });
+        openCardFromQuery();
     });
 </script>
 </body>

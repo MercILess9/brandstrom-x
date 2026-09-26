@@ -7,25 +7,66 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
+    <!-- b-opportunity-modal.js calls attachDatePicker() at its own top
+         level (not inside a function — runs the instant the script
+         executes) to wire up the Signed/Launch date fields, and its
+         BU/Type/Owner/Lead/AM/Sub-AM triggers call openSelectPicker() at
+         runtime. b-opportunity-list.html loads both of these before
+         b-opportunity-modal.js for that reason; this page silently missed
+         them, which threw a ReferenceError partway through
+         b-opportunity-modal.js's own top-level code the instant it ran —
+         so Edit looked like it did nothing at all. Ref b-quest-view.html,
+         which hit and fixed this exact gap first. -->
+    <script src="/system/date-picker.js"></script>
+    <script src="/system/select-picker.js"></script>
     <script src="b-account.js"></script>
+    <!-- This page skips initLayout() (standalone document, no nav header),
+         so system.js's own injectAssets() — the only source of Bootstrap
+         CSS/JS on every other page — never runs here. Needed explicitly
+         now that Edit opens b-opportunity-modal.js's self-injected modal
+         (built on Bootstrap's .modal/.fade/.show classes and the
+         bootstrap.Modal JS API) — without them the modal's own CSS classes
+         carry no styling at all. Same CDN/version injectAssets() itself
+         uses. Ref b-quest-view.html, which hit this exact gap first. -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- defer, matching b-opportunity-list.html's own tag exactly — this
+         file self-injects its modal markup into document.body on load,
+         which needs body to already be parsed. Loaded here so Edit can
+         open the exact same modal as the List page's own card dropdown. -->
+    <script src="b-opportunity-modal.js" defer></script>
+    <!-- Shared html2canvas+jsPDF multi-page-slicing export, also used by
+         b-quest/b-quest-view.html's own Save PDF button. -->
+    <script src="/system/pdf-export.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-account.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         body { background: #eef1f5; padding-bottom: 60px; }
 
-        /* ── Toolbar (screen only) ── */
-        .ov-toolbar { background: #fff; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 90; display: flex; justify-content: center; }
-        .ov-toolbar-inner { width: 210mm; max-width: 100%; display: flex; justify-content: space-between; align-items: center; }
-        .ov-id { font-size: 0.8rem; font-weight: 700; color: #64748b; }
-        .ov-toolbar-actions { display: flex; gap: 8px; }
-        .ov-tb-btn { display: inline-flex; align-items: center; gap: 7px; border: 1.5px solid #e2e8f0; background: #fff; color: var(--c-slate); border-radius: 10px; padding: 8px 16px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: 0.15s; font-family: inherit; }
-        .ov-tb-btn:hover { border-color: #cbd5e1; background: var(--c-bg); }
-        .ov-tb-btn:disabled { opacity: 0.5; cursor: wait; }
-        .ov-tb-btn.primary { border: none; background: var(--c-dark); color: #fff; }
-        .ov-tb-btn.primary:hover { background: #0f172a; }
+        /* ── Toolbar (screen only) — icon-only circular buttons, ref
+           b-quest-view.html's toolbar (the "Menu Icon" pattern this page
+           was asked to adopt). Hover = scale(1.1) + accent tint, active =
+           scale down for tap feedback, same "pop" as .cfg-icon-swatch/
+           .bq-info-btn/.proj-toggle-icon elsewhere in the app. */
+        .ov-toolbar { background: #fff; padding: 14px 0; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 90; display: flex; justify-content: center; }
+        .ov-toolbar-inner { width: 210mm; max-width: calc(100vw - 24px); box-sizing: border-box; padding: 0 4px; display: flex; justify-content: space-between; align-items: center; }
+        .ov-back-btn { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; color: var(--c-slate); background: var(--c-bg); text-decoration: none; transition: transform 0.15s, background 0.15s, color 0.15s; }
+        .ov-back-btn:hover { background: var(--c-accent-light); color: var(--c-accent-dark); transform: scale(1.1); }
+        .ov-back-btn:active { transform: scale(0.94); }
+        .ov-toolbar-actions { display: flex; align-items: center; gap: 8px; }
+        .ov-divider { width: 1px; height: 22px; background: var(--c-border); margin: 0 4px; }
+        .ov-btn { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: none; background: var(--c-bg); color: var(--c-dark); font-size: 1rem; cursor: pointer; font-family: inherit; transition: transform 0.15s, background 0.15s, color 0.15s; }
+        .ov-btn:hover { background: var(--c-accent-light); color: var(--c-accent-dark); transform: scale(1.1); }
+        .ov-btn:active { transform: scale(0.94); }
+        .ov-btn-danger { color: #ef4444; }
+        .ov-btn-danger:hover { background: #fef2f2; color: #dc2626; transform: scale(1.1); }
+        .ov-btn:disabled { cursor: default; opacity: 0.6; transform: none !important; }
+        .spin { display: inline-block; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* ── Page ── */
         .a4-page { width: 210mm; min-height: 297mm; margin: 24px auto; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 14mm 16mm; box-sizing: border-box; border-top: 6px solid var(--c-accent); }
@@ -115,10 +156,22 @@
         .ov-error { text-align: center; padding: 100px 20px; color: #94a3b8; }
         .ov-error i { font-size: 2.4rem; display: block; margin-bottom: 12px; }
 
+        /* Toolbar stays visible while loading (Back still works, Share/PDF
+           are no-ops until _oppId is set) — only #ov-root shows the
+           branded spinner, centered in roughly the visible viewport
+           instead of pinned to the very top under the sticky toolbar. */
+        .ov-loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; }
+
         /* ── Print ── */
         @media print {
             @page { size: A4; margin: 12mm 14mm; }
             body { background: #fff; padding-bottom: 0; }
+            /* Chrome/Brave/Edge strip background-color and drop-shadow from
+               print output by default (ink-saving default) — this forces
+               them back on for anyone printing via Ctrl+P directly (the
+               toolbar button itself no longer routes through window.print(),
+               see downloadPDF() above). Ref b-quest-view.html. */
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
             .ov-toolbar { display: none !important; }
             .a4-page { width: auto; min-height: 0; margin: 0; box-shadow: none; padding: 0; }
         }
@@ -128,11 +181,13 @@
 
 <div class="ov-toolbar no-print">
     <div class="ov-toolbar-inner">
-        <span class="ov-id" id="ov-toolbar-id"></span>
+        <a href="b-opportunity-list" id="backBtn" class="ov-back-btn" title="Back to List"><i class="bi bi-arrow-left"></i></a>
         <div class="ov-toolbar-actions">
-            <button class="ov-tb-btn" id="ov-btn-share" onclick="shareLink()"><i class="bi bi-share-fill"></i> Share</button>
-            <button class="ov-tb-btn" id="ov-btn-image" onclick="downloadImage()"><i class="bi bi-file-earmark-image-fill"></i> Save Image</button>
-            <button class="ov-tb-btn primary" onclick="window.print()"><i class="bi bi-printer-fill"></i> Print / PDF</button>
+            <button type="button" class="ov-btn" id="ovBtnEdit" onclick="editOpportunity()" title="Edit" style="display:none;"><i class="bi bi-pencil-fill"></i></button>
+            <button type="button" class="ov-btn ov-btn-danger" id="ovBtnDelete" onclick="deleteOppFromView()" title="Delete" style="display:none;"><i class="bi bi-trash3-fill"></i></button>
+            <div class="ov-divider"></div>
+            <button type="button" class="ov-btn" id="ov-btn-share" onclick="shareLink()" title="Share (Copy Link)"><i class="bi bi-share-fill"></i></button>
+            <button type="button" class="ov-btn" id="ov-btn-pdf" onclick="downloadPDF()" title="Save PDF"><i class="bi bi-download"></i></button>
         </div>
     </div>
 </div>
@@ -142,7 +197,7 @@
 <script>
     let _oppId = null;
 
-    document.getElementById('ov-root').innerHTML = (typeof bxLoader === 'function') ? bxLoader('Loading...') : 'Loading...';
+    document.getElementById('ov-root').innerHTML = `<div class="ov-loading-wrap">${(typeof bxLoader === 'function') ? bxLoader('Loading...') : 'Loading...'}</div>`;
 
     async function shareLink() {
         try {
@@ -153,23 +208,24 @@
         }
     }
 
-    async function downloadImage() {
-        const btn = document.getElementById('ov-btn-image');
+    // Downloads a real PDF straight away — no print dialog, so none of
+    // window.print()'s dependency on the browser's own "Background
+    // graphics"/"Headers and footers" settings. Actual screenshot+slice
+    // logic lives in system/pdf-export.js, shared with b-quest-view.html.
+    async function downloadPDF() {
+        const btn = document.getElementById('ov-btn-pdf');
         const target = document.querySelector('.a4-page');
         if (!target) return;
+        const originalIcon = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Rendering...';
+        btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i>';
         try {
-            const canvas = await html2canvas(target, { useCORS: true, scale: 2, backgroundColor: '#ffffff' });
-            const link = document.createElement('a');
-            link.download = `${_oppId || 'opportunity'}.jpg`;
-            link.href = canvas.toDataURL('image/jpeg', 0.95);
-            link.click();
+            await exportElementToPDF(target, `${_oppId || 'opportunity'}.pdf`);
         } catch {
-            notify('', 'Could not generate image', 'error');
+            notify('', 'Could not generate PDF', 'error');
         } finally {
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-file-earmark-image-fill"></i> Save Image';
+            btn.innerHTML = originalIcon;
         }
     }
 
@@ -268,8 +324,20 @@
         const pct = gpPct(o.total_gp, o.total_amount);
 
         _oppId = o.opportunity_id;
-        document.getElementById('ov-toolbar-id').textContent = o.opportunity_id;
+        // b-opportunity-list.html reads this and, if the card isn't already
+        // in whatever page of the infinite-scroll list happens to be
+        // loaded, fetches+inserts it on its own then scrolls/expands it —
+        // see openCardFromQuery() there. No .html suffix (see CLAUDE.md's
+        // cleanUrls note — a .html link with a query string loses the
+        // query string on the redirect to the clean URL).
+        document.getElementById('backBtn').href = `b-opportunity-list?open=${encodeURIComponent(o.opportunity_id)}`;
         document.title = `${o.opportunity_id} | ${o.opportunity_name || ''}`;
+
+        // Flat check, no per-role complexity like B-Quest's task-role
+        // model — B-Account's edit/delete permission is a single
+        // account-wide flag each.
+        document.getElementById('ovBtnEdit').style.display = canBaccount('edit') ? 'flex' : 'none';
+        document.getElementById('ovBtnDelete').style.display = canBaccount('delete') ? 'flex' : 'none';
 
         const pctNum = o.total_amount > 0 && o.total_gp > 0 ? Math.min(+o.total_gp / +o.total_amount * 100, 100).toFixed(1) : 0;
 
@@ -378,6 +446,40 @@
         // system.js's own post-header-injection re-apply).
         applyCachedBranding();
         refreshBranding();
+    }
+
+    function editOpportunity() {
+        if (!_oppId) return;
+        BOppApp.openEdit(_oppId);
+    }
+
+    // b-opportunity-modal.js's handleSubmit() calls
+    // `if (typeof loadMasterData === 'function') await loadMasterData();`
+    // on a successful save — that's the exact extension point the List
+    // page plugs its own re-fetch into, so defining it here re-runs this
+    // page's own load instead of leaving stale data on screen after Edit.
+    async function loadMasterData() {
+        await loadOpportunity();
+    }
+
+    async function deleteOppFromView() {
+        if (!_oppId) return;
+        const res = await Swal.fire({
+            title: 'Delete Opportunity',
+            html: `<div style="font-weight:700;">${esc(_oppId)}</div>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Delete',
+            confirmButtonColor: '#ef4444',
+            cancelButtonText: 'Cancel'
+        });
+        if (!res.isConfirmed) return;
+        const { error } = await supabaseClient.from('b_opportunity_list').delete().eq('opportunity_id', _oppId);
+        if (error) { notify('', 'Delete failed', 'error'); return; }
+        // Not location.reload() — the opportunity is gone, reloading this
+        // same page would just land on the "not found" state. Back to the
+        // List makes more sense than staring at that.
+        window.location.href = 'b-opportunity-list';
     }
 
     async function initPage() {

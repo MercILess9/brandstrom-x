@@ -70,6 +70,14 @@
         /* --- Card Styles --- */
         .bqc-card { position: relative; z-index: 1; background: white; border: 1px solid #eef2f7; border-radius: var(--radius-card); margin-bottom: 12px; border-left: 5px solid #e2e8f0; transition: box-shadow 0.2s ease, transform 0.2s ease; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.05); }
         .bqc-card:hover { box-shadow: 0 8px 24px -4px rgba(0,0,0,0.09); transform: translateY(-1px); }
+        /* Brief glow so the card openCardFromQuery() just scrolled to and
+           expanded is obvious at a glance, not just "some card, somewhere,
+           opened" — fades out on its own, class removed after. */
+        .bqc-open-highlight .bqc-card { animation: bqcOpenPulse 1.8s ease; }
+        @keyframes bqcOpenPulse {
+            0% { box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.55); }
+            100% { box-shadow: 0 0 0 0 rgba(var(--c-accent-rgb), 0); }
+        }
         /* :hover's transform gives a card its own stacking context — once
            the mouse moves off the card that opened the dropdown (into the
            dropdown itself, which overlaps the next card below), THAT next
@@ -831,8 +839,13 @@
         }
     };
 
+    // No .html here on purpose — cleanUrls (vercel.json) 308-redirects a
+    // .html-suffixed request to its clean equivalent, and that redirect
+    // drops the query string entirely (confirmed: curl -i on the .html
+    // URL came back with a Location header of just "/b-quest/b-quest-view",
+    // ?id and all). Linking straight to the clean URL skips that hop.
     function handleViewTask(id) {
-        notify('', 'View page coming soon', 'info');
+        window.open(`b-quest-view?id=${encodeURIComponent(id)}`, '_blank');
     }
 
     function resetAllFilters() {
@@ -1013,6 +1026,45 @@
         if (e.target.classList?.contains('bqc-layout-row')) updateCardScrollFade(e.target.closest('.bqc-scroll-wrap'));
     }, true);
 
+    // Deep link from b-quest-view.html's Back button (?open=<id>) — get
+    // straight to a specific task's card and pop it open, instead of
+    // leaving someone to search/scroll for it manually before they can
+    // Edit/Delete. If the card isn't already in whatever page of the
+    // infinite-scroll list happens to be loaded yet, fetches it with the
+    // same fetchQuestById()/buildCardElement() pair refreshSingleCard()
+    // already uses, and prepends it — not its "correct" sort position,
+    // but this is a one-off deep-link visit, not the list's normal order.
+    async function openCardFromQuery() {
+        const id = new URLSearchParams(window.location.search).get('open');
+        if (!id) return;
+
+        const container = document.getElementById('taskContainer');
+        let cardEl = container.querySelector(`[data-id="${CSS.escape(id)}"]`);
+
+        if (!cardEl) {
+            const task = await fetchQuestById(id);
+            if (!task) return; // not found / filtered out of the current view / no permission — silently no-op, same as any other stale deep link
+            document.getElementById('taskEmptyState')?.remove();
+            cardEl = buildCardElement(task);
+            container.prepend(cardEl);
+        }
+
+        cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        const collapseEl = document.getElementById(`collapse-${id}`);
+        if (collapseEl && !collapseEl.classList.contains('show')) {
+            bootstrap.Collapse.getOrCreateInstance(collapseEl).show();
+        }
+
+        cardEl.classList.add('bqc-open-highlight');
+        setTimeout(() => cardEl.classList.remove('bqc-open-highlight'), 1800);
+
+        // Strip ?open= so a refresh or Back/Forward doesn't replay this.
+        const url = new URL(window.location.href);
+        url.searchParams.delete('open');
+        history.replaceState(null, '', url);
+    }
+
     initPage().then(() => {
         observer.observe(document.getElementById('load-more-trigger'));
         createPullToRefresh({
@@ -1025,6 +1077,7 @@
                 updateClearAllVisibility();
             }
         });
+        openCardFromQuery();
     });
 </script>
 </body>

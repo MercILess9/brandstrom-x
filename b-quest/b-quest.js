@@ -326,8 +326,15 @@ async function handleDeleteTask(id) {
     }
 }
 
-// Permission + menu entry ship now; what a share link actually does
-// (generate a URL, copy it, etc.) is designed later.
+// Copies a deep link into b-quest-view.html's read-only page for this
+// task — same clipboard+notify pattern as that page's own shareLink().
+// Absolute path from origin (not relative to whatever page this was
+// called from) and no .html suffix (see CLAUDE.md's cleanUrls note — a
+// .html link with a query string loses the query string on the redirect
+// to the clean URL).
 function handleShareTask(id) {
-    notify('', 'Share coming soon', 'info');
+    const url = `${window.location.origin}/b-quest/b-quest-view?id=${encodeURIComponent(id)}`;
+    navigator.clipboard.writeText(url)
+        .then(() => notify('', 'Link copied', 'success'))
+        .catch(() => notify('', 'Could not copy link', 'error'));
 }

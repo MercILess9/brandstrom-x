@@ -3,7 +3,7 @@
 ## Stack
 - Static HTML + Vanilla JS (no framework)
 - Supabase (auth + database)
-- Vercel (`cleanUrls: true`)
+- Vercel (`cleanUrls: true`) — a `.html`-suffixed request 308-redirects to its clean equivalent, and that redirect **drops the query string entirely** (confirmed via `curl -i`: `.../page.html?id=1` redirects to `Location: /page`, no `?id`). Bit once already as a menu-active-underline mismatch (no query string involved, so silent); bit again building b-quest-view.html (`window.open('page.html?id=...')` — the id vanished after the redirect). Any link/navigation that needs to carry a query string on first load must target the CLEAN url directly (no `.html`), not rely on the redirect to strip it. Internal `window.location.replace('page.html')` calls without a query string are fine as-is (matches the existing convention throughout the codebase) — only query-string-carrying links need this fix.
 - Domain: `bx.brandboxplatform.com` (Google Cloud)
 
 ## Project Structure

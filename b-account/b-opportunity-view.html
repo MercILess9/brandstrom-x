@@ -86,35 +86,33 @@
            glance" facts about the opportunity, so they read as one group.
            flex-wrap so it degrades to stacked rows on a narrow viewport
            instead of squeezing. */
-        /* Owner as one icon item on the left, Amount+GP kept as their own
-           stacked pair on the right (ref the original .ov-sum-card
-           layout) instead of flattening all 3 into one row of equal
-           icon-items — 3 items in a flat row wrapped badly at in-between
-           widths (a lone divider stranded after Amount when GP dropped to
-           its own line). Two zones instead of three wrap far more
-           predictably, and collapse cleanly to stacked rows below 700px. */
+        /* Owner, Amount, GP all in one single horizontal row (ref the QT
+           card's own Amount/GP side-by-side stat pair, .ov-qt-stat) —
+           no flex-wrap here, so the browser can't wrap items one at a
+           time mid-row (that's what stranded a divider after Amount
+           while GP alone dropped to its own line before). Instead this
+           collapses deliberately at the 700px breakpoint, matching
+           .ov-detail-grid's own — stacked rows with a top border, never a
+           partial wrap. */
         .ov-summary-bar { display: flex; align-items: center; gap: 24px; background: #fafbfc; border-radius: 14px; padding: 18px 24px; margin-bottom: 26px; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.05); }
-        .ov-summary-item { display: flex; align-items: center; gap: 12px; }
+        .ov-summary-item { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
         .ov-summary-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--c-accent-light); color: var(--c-accent-dark); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
         .ov-summary-text { display: flex; flex-direction: column; gap: 2px; }
         .ov-summary-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
         .ov-summary-value { font-size: 1.1rem; font-weight: 800; color: var(--c-dark); letter-spacing: -0.2px; }
+        .ov-summary-value.gp { color: #16a34a; }
         .ov-summary-divider { width: 1px; align-self: stretch; background: #eef2f7; flex-shrink: 0; }
 
-        .ov-summary-amtgp { flex: 1 1 200px; min-width: 160px; }
-        .ov-sum-lbl { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--c-muted); }
-        .ov-sum-val { font-size: 1.1rem; font-weight: 800; color: var(--c-dark); letter-spacing: -0.2px; margin-top: 3px; }
-        .ov-sum-val.gp { color: #16a34a; margin-bottom: 6px; }
-        .ov-sum-mini-divider { height: 1px; background: #eef2f7; margin: 10px 0; }
-        .ov-sum-gp-row { display: flex; justify-content: space-between; align-items: baseline; }
-        .ov-sum-gp-pct { font-size: 0.68rem; font-weight: 800; color: #16a34a; }
-        .ov-sum-bar-wrap { width: 100%; max-width: 140px; height: 4px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-top: 4px; }
+        .ov-summary-stat { display: flex; flex-direction: column; gap: 2px; }
+        .ov-sum-gp-pct { font-size: 0.68rem; font-weight: 800; color: #16a34a; margin-left: 4px; }
+        .ov-sum-bar-wrap { width: 90px; height: 4px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-top: 5px; }
         .ov-sum-bar-fill { height: 100%; background: #16a34a; border-radius: 99px; }
 
         @media (max-width: 700px) {
             .ov-summary-bar { flex-direction: column; align-items: stretch; gap: 16px; }
             .ov-summary-divider { display: none; }
-            .ov-summary-amtgp { padding-top: 16px; border-top: 1px solid #eef2f7; }
+            .ov-summary-item, .ov-summary-stat { padding-top: 14px; border-top: 1px solid #eef2f7; }
+            .ov-summary-item:first-child { padding-top: 0; border-top: none; }
         }
 
         /* ── Section title (shared: Detail / Quotations) ── */
@@ -402,15 +400,14 @@
                     </div>
                 </div>
                 <div class="ov-summary-divider"></div>
-                <div class="ov-summary-amtgp">
-                    <div class="ov-sum-lbl">Total Quotation Amount</div>
-                    <div class="ov-sum-val">${fmtAmt(o.total_amount)}</div>
-                    <div class="ov-sum-mini-divider"></div>
-                    <div class="ov-sum-gp-row">
-                        <span class="ov-sum-lbl">Project GP</span>
-                        ${pct ? `<span class="ov-sum-gp-pct">${pct}</span>` : ''}
-                    </div>
-                    <div class="ov-sum-val gp">${fmtGP(o.total_gp)}</div>
+                <div class="ov-summary-stat">
+                    <span class="ov-summary-label">Total Quotation Amount</span>
+                    <span class="ov-summary-value">${fmtAmt(o.total_amount)}</span>
+                </div>
+                <div class="ov-summary-divider"></div>
+                <div class="ov-summary-stat">
+                    <span class="ov-summary-label">Project GP${pct ? ` <span class="ov-sum-gp-pct">${pct}</span>` : ''}</span>
+                    <span class="ov-summary-value gp">${fmtGP(o.total_gp)}</span>
                     <div class="ov-sum-bar-wrap"><div class="ov-sum-bar-fill" style="width:${pctNum}%"></div></div>
                 </div>
             </div>

@@ -515,6 +515,20 @@ async function renderSystemUI(config) {
         userDepartment.innerText = user?.department || '';
     }
 
+    // Same fallback-initials treatment as system/profile-modal.js's own
+    // avatar preview — until avatar_url uploads are wired up, both the
+    // small header button and the larger one inside the dropdown show
+    // initials instead of a generic person icon. DOM methods (not
+    // innerHTML string-building), matching profile-modal.js's own reasoning.
+    [document.getElementById('profile-avatar-btn'), document.getElementById('profile-avatar-lg')].forEach(el => {
+        if (!el) return;
+        el.innerHTML = '';
+        const span = document.createElement('span');
+        span.className = 'sys-avatar-initials';
+        span.textContent = getInitials(user?.nick_name || user?.full_name);
+        el.appendChild(span);
+    });
+
     const avatarBtn = document.getElementById('profile-avatar-btn');
     const profileMenu = document.getElementById('profile-menu');
     if (avatarBtn && profileMenu) {

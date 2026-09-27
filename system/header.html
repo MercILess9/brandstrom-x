@@ -175,6 +175,12 @@
         box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb, 189, 196, 50), 0.4);
     }
 
+    /* Set by renderSystemUI() (system.js) — same fallback-initials
+       convention as system/profile-modal.js's own avatar preview, sized
+       down for these two smaller circles. */
+    .sys-avatar-btn .sys-avatar-initials { font-size: 0.72rem; font-weight: 800; }
+    .sys-avatar-lg .sys-avatar-initials { font-size: 1.15rem; font-weight: 800; }
+
     .sys-profile-menu {
         display: none;
         position: absolute;
@@ -327,7 +333,7 @@
             <button class="sys-avatar-btn" id="profile-avatar-btn" title="Account"><i class="bi bi-person-fill"></i></button>
             <div class="sys-profile-menu" id="profile-menu">
                 <div class="sys-profile-card">
-                    <div class="sys-avatar-lg"><i class="bi bi-person-fill"></i></div>
+                    <div class="sys-avatar-lg" id="profile-avatar-lg"><i class="bi bi-person-fill"></i></div>
                     <div class="sys-profile-name" id="user-display"></div>
                     <div class="sys-profile-fullname" id="user-fullname"></div>
                     <a class="sys-profile-email" id="user-email" href="#"></a>

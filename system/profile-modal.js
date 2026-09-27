@@ -139,9 +139,9 @@ if (!document.getElementById('pfm-styles')) {
         .pfm-close-btn { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #94a3b8; transition: background 0.15s, color 0.15s; }
         .pfm-close-btn:hover { background: #e2e8f0; color: #1e293b; }
 
-        .pfm-body { padding: 22px 24px; max-height: 70vh; overflow-y: auto; }
+        .pfm-body { padding: 18px 24px; max-height: 70vh; overflow-y: auto; }
 
-        .pfm-identity-row { display: flex; align-items: center; gap: 18px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid #eef2f7; }
+        .pfm-identity-row { display: flex; align-items: center; gap: 18px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid #eef2f7; }
         .pfm-avatar-wrap { position: relative; width: 92px; height: 92px; flex-shrink: 0; cursor: pointer; }
         .pfm-avatar-preview { width: 100%; height: 100%; border-radius: 50%; background: var(--c-accent-light); border: 1px solid #eef2f7; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 2.2rem; overflow: hidden; transition: opacity 0.15s; }
         .pfm-avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
@@ -166,19 +166,20 @@ if (!document.getElementById('pfm-styles')) {
            parent's height), which meant the toggle button's top:50% centered
            against that taller box instead of the input's own box, landing
            visibly below center. */
-        .pfm-input-wrap { position: relative; margin-bottom: 14px; }
+        .pfm-input-wrap { position: relative; margin-bottom: 12px; }
+        .pfm-input-wrap:last-child { margin-bottom: 0; }
         .pfm-input-wrap .pfm-input { padding-right: 36px; margin-bottom: 0; }
         .pfm-pass-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: none; border: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 0; transition: color 0.15s; }
         .pfm-pass-toggle:hover { color: var(--c-slate, #626e7f); }
 
-        .pfm-select-wrap { position: relative; margin-bottom: 18px; }
+        .pfm-select-wrap { position: relative; margin-bottom: 14px; }
         .pfm-select-wrap select { position: absolute; inset: 0; opacity: 0; pointer-events: none; margin: 0; }
         .pfm-select-trigger { width: 100%; text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 30px 5px 12px; height: 37px; font-size: 0.85rem; font-family: inherit; color: var(--c-dark, #1e293b); cursor: pointer; position: relative; transition: border-color 0.15s, background 0.15s; }
         .pfm-select-trigger.placeholder { color: #94a3b8; }
         .pfm-select-trigger::after { content: ""; position: absolute; right: 12px; top: 50%; width: 8px; height: 8px; border-right: 1.5px solid #94a3b8; border-bottom: 1.5px solid #94a3b8; transform: translateY(-65%) rotate(45deg); pointer-events: none; }
         .pfm-select-trigger:hover { border-color: #cbd5e1; }
 
-        .pfm-section-title { display: flex; align-items: center; gap: 8px; margin: 4px 0 14px; padding-top: 16px; border-top: 1px solid #f1f5f9; font-size: 0.72rem; font-weight: 800; color: var(--c-slate, #626e7f); text-transform: uppercase; letter-spacing: 0.6px; }
+        .pfm-section-title { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding-top: 12px; border-top: 1px solid #f1f5f9; font-size: 0.72rem; font-weight: 800; color: var(--c-slate, #626e7f); text-transform: uppercase; letter-spacing: 0.6px; }
         .pfm-section-title i { color: #c7c7cc; }
 
         .pfm-footer { padding: 14px 24px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; background: #fff; border-top: 1px solid #f1f5f9; }

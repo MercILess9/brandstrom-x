@@ -86,16 +86,16 @@
            glance" facts about the opportunity, so they read as one group.
            flex-wrap so it degrades to stacked rows on a narrow viewport
            instead of squeezing. */
-        /* Owner, Amount, GP all in one single horizontal row (ref the QT
-           card's own Amount/GP side-by-side stat pair, .ov-qt-stat) —
-           no flex-wrap here, so the browser can't wrap items one at a
-           time mid-row (that's what stranded a divider after Amount
-           while GP alone dropped to its own line before). Instead this
-           collapses deliberately at the 700px breakpoint, matching
-           .ov-detail-grid's own — stacked rows with a top border, never a
-           partial wrap. */
-        .ov-summary-bar { display: flex; align-items: center; gap: 24px; background: #fafbfc; border-radius: 14px; padding: 18px 24px; margin-bottom: 26px; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.05); }
-        .ov-summary-item { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        /* Owner and Amount/GP as two separate cards (not one shared box
+           with a divider down the middle) — Owner is a "who" fact, Amount/
+           GP is a "how much" fact, different enough to read as their own
+           zones. Ref .ov-detail-grid's own People/Timeline split just
+           below. Row wraps as whole cards (never mid-card) below 700px,
+           same safety as the rest of this page's grouped layouts. */
+        .ov-summary-row { display: flex; gap: 14px; margin-bottom: 26px; flex-wrap: wrap; }
+        .ov-summary-card { background: #fafbfc; border-radius: 14px; padding: 16px 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.05); display: flex; align-items: center; }
+        .ov-summary-owner { flex: 1 1 220px; gap: 12px; }
+        .ov-summary-amtgp { flex: 2 1 320px; gap: 24px; }
         .ov-summary-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--c-accent-light); color: var(--c-accent-dark); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
         .ov-summary-text { display: flex; flex-direction: column; gap: 2px; }
         .ov-summary-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
@@ -109,10 +109,7 @@
         .ov-sum-bar-fill { height: 100%; background: #16a34a; border-radius: 99px; }
 
         @media (max-width: 700px) {
-            .ov-summary-bar { flex-direction: column; align-items: stretch; gap: 16px; }
-            .ov-summary-divider { display: none; }
-            .ov-summary-item, .ov-summary-stat { padding-top: 14px; border-top: 1px solid #eef2f7; }
-            .ov-summary-item:first-child { padding-top: 0; border-top: none; }
+            .ov-summary-row { flex-direction: column; }
         }
 
         /* ── Section title (shared: Detail / Quotations) ── */
@@ -391,24 +388,25 @@
                 <div class="ov-subtitle"><i class="bi bi-building"></i><span>${sub}</span></div>
             </div>
 
-            <div class="ov-summary-bar">
-                <div class="ov-summary-item">
+            <div class="ov-summary-row">
+                <div class="ov-summary-card ov-summary-owner">
                     <div class="ov-summary-icon"><i class="bi bi-person-fill"></i></div>
                     <div class="ov-summary-text">
                         <span class="ov-summary-label">Owner</span>
                         <span class="ov-summary-value">${o.owner ? esc(o.owner) : '—'}</span>
                     </div>
                 </div>
-                <div class="ov-summary-divider"></div>
-                <div class="ov-summary-stat">
-                    <span class="ov-summary-label">Total Quotation Amount</span>
-                    <span class="ov-summary-value">${fmtAmt(o.total_amount)}</span>
-                </div>
-                <div class="ov-summary-divider"></div>
-                <div class="ov-summary-stat">
-                    <span class="ov-summary-label">Project GP${pct ? ` <span class="ov-sum-gp-pct">${pct}</span>` : ''}</span>
-                    <span class="ov-summary-value gp">${fmtGP(o.total_gp)}</span>
-                    <div class="ov-sum-bar-wrap"><div class="ov-sum-bar-fill" style="width:${pctNum}%"></div></div>
+                <div class="ov-summary-card ov-summary-amtgp">
+                    <div class="ov-summary-stat">
+                        <span class="ov-summary-label">Total Quotation Amount</span>
+                        <span class="ov-summary-value">${fmtAmt(o.total_amount)}</span>
+                    </div>
+                    <div class="ov-summary-divider"></div>
+                    <div class="ov-summary-stat">
+                        <span class="ov-summary-label">Project GP${pct ? ` <span class="ov-sum-gp-pct">${pct}</span>` : ''}</span>
+                        <span class="ov-summary-value gp">${fmtGP(o.total_gp)}</span>
+                        <div class="ov-sum-bar-wrap"><div class="ov-sum-bar-fill" style="width:${pctNum}%"></div></div>
+                    </div>
                 </div>
             </div>
 

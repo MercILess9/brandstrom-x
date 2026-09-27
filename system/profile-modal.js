@@ -102,7 +102,7 @@ if (!document.getElementById('pfm-styles')) {
     const style = document.createElement('style');
     style.id = 'pfm-styles';
     style.textContent = `
-        .pfm-dialog { max-width: 500px; }
+        .pfm-dialog { max-width: 400px; }
         .pfm-modal-content { background: #f8fafc; border-radius: 20px; border: none; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.14); }
         .pfm-header { background: #fff; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; }
         .pfm-header-title { font-weight: 800; font-size: 1.02rem; color: var(--c-dark, #1e293b); }

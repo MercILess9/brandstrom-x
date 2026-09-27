@@ -64,15 +64,18 @@ const PROFILE_MODAL_HTML = `
 
                 <div class="pfm-section-title"><i class="bi bi-shield-lock"></i><span>Change Password</span></div>
 
+                <label class="pfm-label">Current Password</label>
+                <input type="password" class="pfm-input" id="pfm-current-password" autocomplete="current-password">
+
                 <label class="pfm-label">New Password</label>
-                <input type="password" class="pfm-input" id="pfm-new-password" placeholder="Leave blank to keep current">
+                <input type="password" class="pfm-input" id="pfm-new-password" autocomplete="new-password">
 
                 <label class="pfm-label">Confirm Password</label>
-                <input type="password" class="pfm-input" id="pfm-confirm-password" placeholder="Repeat new password">
+                <input type="password" class="pfm-input" id="pfm-confirm-password" autocomplete="new-password">
             </div>
 
             <div class="pfm-footer">
-                <button type="button" class="pfm-save-btn" onclick="ProfileModal.save()"><i class="bi bi-floppy2-fill"></i><span>Save Changes</span></button>
+                <button type="button" class="pfm-save-btn" onclick="ProfileModal.save()" title="Save Changes"><i class="bi bi-floppy2-fill"></i></button>
             </div>
         </div>
     </div>
@@ -100,8 +103,8 @@ if (!document.getElementById('pfm-styles')) {
         .pfm-avatar-row { display: flex; align-items: center; gap: 16px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid #eef2f7; }
         .pfm-avatar-preview { width: 68px; height: 68px; border-radius: 50%; background: var(--c-bg, #f8fafc); border: 1px solid #eef2f7; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 1.7rem; overflow: hidden; flex-shrink: 0; }
         .pfm-avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
-        .pfm-choose-btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: none; color: var(--c-slate, #626e7f); border: 1px solid var(--c-border, #e2e8f0); border-radius: 20px; padding: 5px 14px; font-size: 0.72rem; font-weight: 700; transition: background 0.15s, border-color 0.15s; }
-        .pfm-choose-btn:hover { background: var(--c-bg, #f8fafc); border-color: #cbd5e1; }
+        .pfm-choose-btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: none; color: var(--c-slate, #626e7f); border: 1px solid var(--c-border, #e2e8f0); border-radius: 20px; padding: 5px 14px; font-size: 0.72rem; font-weight: 700; transition: background 0.15s, border-color 0.15s, color 0.15s; }
+        .pfm-choose-btn:hover { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
         .pfm-hint { font-size: 0.66rem; color: var(--c-muted, #94a3b8); margin-top: 6px; }
 
         .pfm-label { display: block; font-size: 0.6rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
@@ -119,9 +122,9 @@ if (!document.getElementById('pfm-styles')) {
         .pfm-section-title i { color: #c7c7cc; }
 
         .pfm-footer { padding: 14px 24px; display: flex; justify-content: flex-end; background: #fff; border-top: 1px solid #f1f5f9; }
-        .pfm-save-btn { background: var(--c-dark, #1e293b); color: var(--c-accent, #bdc432); border: none; padding: 0 24px; border-radius: 10px; font-weight: 800; height: 38px; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit; font-size: 0.85rem; transition: transform 0.2s, background 0.2s; }
-        .pfm-save-btn:hover { transform: translateY(-1px); background: #0f172a; }
-        .pfm-save-btn:active { transform: translateY(0); }
+        .pfm-save-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--c-dark, #1e293b); color: var(--c-accent, #bdc432); border: none; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; cursor: pointer; transition: transform 0.15s, background 0.15s; }
+        .pfm-save-btn:hover { transform: scale(1.1); background: #0f172a; }
+        .pfm-save-btn:active { transform: scale(0.94); }
     `;
     document.head.appendChild(style);
 }
@@ -134,6 +137,7 @@ const ProfileModal = {
 
         document.getElementById('pfm-full-name').value = user?.full_name || '';
         document.getElementById('pfm-nick-name').value = user?.nick_name || '';
+        document.getElementById('pfm-current-password').value = '';
         document.getElementById('pfm-new-password').value = '';
         document.getElementById('pfm-confirm-password').value = '';
 
@@ -197,8 +201,12 @@ const ProfileModal = {
     // UI preview only — see file header comment. Intentionally does not
     // touch Supabase (no .update(), no Storage, no auth.updateUser()).
     save() {
+        const currentPw = document.getElementById('pfm-current-password').value;
         const newPw = document.getElementById('pfm-new-password').value;
         const confirmPw = document.getElementById('pfm-confirm-password').value;
+        if (newPw && !currentPw) {
+            return notify('', 'Enter your Current Password to change it', 'error');
+        }
         if (newPw && newPw !== confirmPw) {
             return notify('', 'New Password and Confirm Password do not match', 'error');
         }

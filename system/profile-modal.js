@@ -228,6 +228,9 @@ const ProfileModal = {
     openDeptPicker(triggerBtn) {
         const sel = document.getElementById('pfm-department');
         openSelectPicker(triggerBtn, {
+            // Default width (220) reads narrow next to the trigger's full
+            // 352px (400px dialog - 48px .pfm-body padding) — match it.
+            width: 352,
             getOptions: () => [...sel.options].filter(o => o.value !== '').map(o => ({ value: o.value, label: o.textContent })),
             getValue: () => sel.value,
             onSelect: (value) => {

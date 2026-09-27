@@ -45,49 +45,60 @@ const PROFILE_MODAL_HTML = `
             </div>
 
             <div class="pfm-body">
-                <div class="pfm-identity-row">
-                    <label class="pfm-avatar-wrap" for="pfm-avatar-file" title="Change Photo — square image recommended">
-                        <div class="pfm-avatar-preview" id="pfm-avatar-preview"><i class="bi bi-person-fill"></i></div>
-                        <span class="pfm-avatar-edit-badge"><i class="bi bi-camera-fill"></i></span>
-                    </label>
-                    <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none" id="pfm-avatar-file" onchange="ProfileModal.onAvatarFileChange(event)">
-                    <div class="pfm-identity-fields">
-                        <label class="pfm-label">Full Name</label>
-                        <input type="text" class="pfm-input" id="pfm-full-name" placeholder="Full name...">
-                        <label class="pfm-label">Nick Name</label>
-                        <input type="text" class="pfm-input" id="pfm-nick-name" placeholder="Nickname...">
+                <div id="pfm-normal-body">
+                    <div class="pfm-identity-row">
+                        <label class="pfm-avatar-wrap" for="pfm-avatar-file" title="Change Photo — square image recommended">
+                            <div class="pfm-avatar-preview" id="pfm-avatar-preview"><i class="bi bi-person-fill"></i></div>
+                            <span class="pfm-avatar-edit-badge"><i class="bi bi-camera-fill"></i></span>
+                        </label>
+                        <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none" id="pfm-avatar-file" onchange="ProfileModal.onAvatarFileChange(event)">
+                        <div class="pfm-identity-fields">
+                            <label class="pfm-label">Full Name</label>
+                            <input type="text" class="pfm-input" id="pfm-full-name" placeholder="Full name...">
+                            <label class="pfm-label">Nick Name</label>
+                            <input type="text" class="pfm-input" id="pfm-nick-name" placeholder="Nickname...">
+                        </div>
+                    </div>
+
+                    <label class="pfm-label">Department</label>
+                    <div class="pfm-select-wrap">
+                        <select class="pfm-input" id="pfm-department"></select>
+                        <button type="button" class="pfm-select-trigger placeholder" id="pfm-department-trigger" onclick="ProfileModal.openDeptPicker(this)">Select...</button>
+                    </div>
+
+                    <div class="pfm-section-title"><i class="bi bi-shield-lock"></i><span>Change Password</span></div>
+
+                    <label class="pfm-label">Current Password</label>
+                    <div class="pfm-input-wrap">
+                        <input type="password" class="pfm-input" id="pfm-current-password" autocomplete="current-password">
+                        <button type="button" class="pfm-pass-toggle" onclick="ProfileModal.togglePass('pfm-current-password', this)">${PFM_EYE_OFF_ICON}</button>
+                    </div>
+
+                    <label class="pfm-label">New Password</label>
+                    <div class="pfm-input-wrap">
+                        <input type="password" class="pfm-input" id="pfm-new-password" autocomplete="new-password">
+                        <button type="button" class="pfm-pass-toggle" onclick="ProfileModal.togglePass('pfm-new-password', this)">${PFM_EYE_OFF_ICON}</button>
+                    </div>
+
+                    <label class="pfm-label">Confirm Password</label>
+                    <div class="pfm-input-wrap">
+                        <input type="password" class="pfm-input" id="pfm-confirm-password" autocomplete="new-password">
+                        <button type="button" class="pfm-pass-toggle" onclick="ProfileModal.togglePass('pfm-confirm-password', this)">${PFM_EYE_OFF_ICON}</button>
                     </div>
                 </div>
 
-                <label class="pfm-label">Department</label>
-                <div class="pfm-select-wrap">
-                    <select class="pfm-input" id="pfm-department"></select>
-                    <button type="button" class="pfm-select-trigger placeholder" id="pfm-department-trigger" onclick="ProfileModal.openDeptPicker(this)">Select...</button>
-                </div>
-
-                <div class="pfm-section-title"><i class="bi bi-shield-lock"></i><span>Change Password</span></div>
-
-                <label class="pfm-label">Current Password</label>
-                <div class="pfm-input-wrap">
-                    <input type="password" class="pfm-input" id="pfm-current-password" autocomplete="current-password">
-                    <button type="button" class="pfm-pass-toggle" onclick="ProfileModal.togglePass('pfm-current-password', this)">${PFM_EYE_OFF_ICON}</button>
-                </div>
-
-                <label class="pfm-label">New Password</label>
-                <div class="pfm-input-wrap">
-                    <input type="password" class="pfm-input" id="pfm-new-password" autocomplete="new-password">
-                    <button type="button" class="pfm-pass-toggle" onclick="ProfileModal.togglePass('pfm-new-password', this)">${PFM_EYE_OFF_ICON}</button>
-                </div>
-
-                <label class="pfm-label">Confirm Password</label>
-                <div class="pfm-input-wrap">
-                    <input type="password" class="pfm-input" id="pfm-confirm-password" autocomplete="new-password">
-                    <button type="button" class="pfm-pass-toggle" onclick="ProfileModal.togglePass('pfm-confirm-password', this)">${PFM_EYE_OFF_ICON}</button>
+                <div id="pfm-crop-overlay" style="display:none;">
+                    <div class="pfm-crop-stage"><img id="pfm-crop-image" src="" alt=""></div>
+                    <div class="pfm-crop-hint">Drag to reposition, scroll to zoom</div>
                 </div>
             </div>
 
-            <div class="pfm-footer">
+            <div class="pfm-footer" id="pfm-footer-normal">
                 <button type="button" class="pfm-save-btn" onclick="ProfileModal.save()"><i class="bi bi-floppy2-fill"></i><span>Save</span></button>
+            </div>
+            <div class="pfm-footer" id="pfm-footer-crop" style="display:none;">
+                <button type="button" class="pfm-cancel-btn" onclick="ProfileModal.cancelCrop()">Cancel</button>
+                <button type="button" class="pfm-save-btn" onclick="ProfileModal.confirmCrop()"><i class="bi bi-check-lg"></i><span>Use Photo</span></button>
             </div>
         </div>
     </div>
@@ -96,6 +107,24 @@ const PROFILE_MODAL_HTML = `
 
 if (!document.getElementById('edit-profile-modal')) {
     document.body.insertAdjacentHTML('beforeend', PROFILE_MODAL_HTML);
+}
+
+// Cropper.js (CDN) — lets someone reposition/zoom an oversized photo
+// instead of it just getting a blind center-crop. Loaded the same
+// dynamic-<link>/<script>-append way injectAssets() (system.js) loads
+// Bootstrap, since this file has no <head> of its own to put a static
+// tag in. onAvatarFileChange() below checks `typeof Cropper` and falls
+// back to the old raw-preview behavior if the CDN fails.
+if (!document.querySelector('link[href*="cropperjs"]')) {
+    const l = document.createElement('link');
+    l.rel = 'stylesheet';
+    l.href = 'https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css';
+    document.head.appendChild(l);
+}
+if (!document.querySelector('script[src*="cropperjs"]')) {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js';
+    document.head.appendChild(s);
 }
 
 if (!document.getElementById('pfm-styles')) {
@@ -152,19 +181,39 @@ if (!document.getElementById('pfm-styles')) {
         .pfm-section-title { display: flex; align-items: center; gap: 8px; margin: 4px 0 14px; padding-top: 16px; border-top: 1px solid #f1f5f9; font-size: 0.72rem; font-weight: 800; color: var(--c-slate, #626e7f); text-transform: uppercase; letter-spacing: 0.6px; }
         .pfm-section-title i { color: #c7c7cc; }
 
-        .pfm-footer { padding: 14px 24px; display: flex; justify-content: flex-end; background: #fff; border-top: 1px solid #f1f5f9; }
+        .pfm-footer { padding: 14px 24px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; background: #fff; border-top: 1px solid #f1f5f9; }
         .pfm-save-btn { height: 38px; padding: 0 18px; border-radius: 10px; background: var(--c-dark, #1e293b); color: var(--c-accent, #bdc432); border: none; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 800; font-family: inherit; cursor: pointer; transition: transform 0.15s, background 0.15s; }
         .pfm-save-btn:hover { transform: translateY(-1px); background: #0f172a; }
         .pfm-save-btn:active { transform: translateY(0); }
+        .pfm-cancel-btn { height: 38px; padding: 0 18px; border-radius: 10px; background: none; border: 1px solid var(--c-border, #e2e8f0); color: var(--c-slate, #626e7f); font-size: 0.85rem; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+        .pfm-cancel-btn:hover { background: var(--c-bg, #f8fafc); border-color: #cbd5e1; }
+
+        /* Crop step — swaps in for #pfm-normal-body while picking a photo.
+           Round viewport is Cropper.js's standard CSS trick: its own
+           .cropper-view-box/.cropper-face get border-radius:50% so the
+           visible crop area previews as a circle even though the library
+           itself only knows rectangles (getCroppedCanvas() below still
+           reads the square selection — the circular *avatar* mask is what
+           .pfm-avatar-preview applies afterward, same as any other photo). */
+        .pfm-crop-stage { width: 100%; height: 280px; background: #111; border-radius: 12px; overflow: hidden; }
+        .pfm-crop-stage img { display: block; max-width: 100%; }
+        .pfm-crop-stage .cropper-view-box { border-radius: 50%; outline: 1px solid var(--c-accent, #bdc432); }
+        .pfm-crop-stage .cropper-face { border-radius: 50%; }
+        .pfm-crop-hint { font-size: 0.72rem; color: var(--c-muted, #94a3b8); text-align: center; margin-top: 10px; }
     `;
     document.head.appendChild(style);
 }
 
 let pfmAvatarObjectUrl = null;
+let pfmCropper = null;
 
 const ProfileModal = {
     open() {
         const user = (typeof getBxUser === 'function') ? getBxUser() : null;
+
+        // In case the modal was closed mid-crop last time.
+        this.closeCrop();
+        document.getElementById('pfm-avatar-file').value = '';
 
         document.getElementById('pfm-full-name').value = user?.full_name || '';
         document.getElementById('pfm-nick-name').value = user?.nick_name || '';
@@ -249,15 +298,73 @@ const ProfileModal = {
         btn.innerHTML = isPass ? PFM_EYE_ON_ICON : PFM_EYE_OFF_ICON;
     },
 
-    // Local-only preview (URL.createObjectURL) — nothing is uploaded to
-    // Storage yet, that needs the Branding-style upload-on-save wiring
-    // once the DB side (profiles.avatar_url column) exists.
+    // Opens the crop step instead of previewing the raw file directly — a
+    // blind center-crop (which is all a plain object-fit:cover circle
+    // gives you) can cut off exactly the part of the photo that mattered.
+    // Falls back to the old raw-preview behavior if the Cropper.js CDN
+    // failed to load, same "degrade instead of break" reasoning as
+    // handleEditProfile()'s own typeof guard in system.js.
     onAvatarFileChange(e) {
         const file = e.target.files?.[0];
         if (!file) return;
         if (pfmAvatarObjectUrl) URL.revokeObjectURL(pfmAvatarObjectUrl);
         pfmAvatarObjectUrl = URL.createObjectURL(file);
-        document.getElementById('pfm-avatar-preview').innerHTML = `<img src="${pfmAvatarObjectUrl}" alt="">`;
+
+        if (typeof Cropper === 'undefined') {
+            document.getElementById('pfm-avatar-preview').innerHTML = `<img src="${pfmAvatarObjectUrl}" alt="">`;
+            return;
+        }
+
+        document.getElementById('pfm-normal-body').style.display = 'none';
+        document.getElementById('pfm-crop-overlay').style.display = 'block';
+        document.getElementById('pfm-footer-normal').style.display = 'none';
+        document.getElementById('pfm-footer-crop').style.display = 'flex';
+
+        const img = document.getElementById('pfm-crop-image');
+        if (pfmCropper) { pfmCropper.destroy(); pfmCropper = null; }
+        img.onload = () => {
+            pfmCropper = new Cropper(img, {
+                aspectRatio: 1,
+                viewMode: 1,
+                autoCropArea: 1,
+                background: false,
+                guides: false,
+                center: false,
+                highlight: false,
+            });
+        };
+        img.src = pfmAvatarObjectUrl;
+    },
+
+    confirmCrop() {
+        if (!pfmCropper) return;
+        pfmCropper.getCroppedCanvas({ width: 300, height: 300 }).toBlob(blob => {
+            if (pfmAvatarObjectUrl) URL.revokeObjectURL(pfmAvatarObjectUrl);
+            pfmAvatarObjectUrl = URL.createObjectURL(blob);
+            const preview = document.getElementById('pfm-avatar-preview');
+            preview.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = pfmAvatarObjectUrl;
+            img.alt = '';
+            preview.appendChild(img);
+            this.closeCrop();
+        }, 'image/jpeg', 0.92);
+    },
+
+    // File input reset so re-picking the exact same file still fires
+    // onchange next time — the browser otherwise treats an unchanged
+    // selection as a no-op event.
+    cancelCrop() {
+        this.closeCrop();
+        document.getElementById('pfm-avatar-file').value = '';
+    },
+
+    closeCrop() {
+        if (pfmCropper) { pfmCropper.destroy(); pfmCropper = null; }
+        document.getElementById('pfm-normal-body').style.display = '';
+        document.getElementById('pfm-crop-overlay').style.display = 'none';
+        document.getElementById('pfm-footer-normal').style.display = '';
+        document.getElementById('pfm-footer-crop').style.display = 'none';
     },
 
     // UI preview only — see file header comment. Intentionally does not

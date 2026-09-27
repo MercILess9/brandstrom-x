@@ -75,7 +75,7 @@ const PROFILE_MODAL_HTML = `
             </div>
 
             <div class="pfm-footer">
-                <button type="button" class="pfm-save-btn" onclick="ProfileModal.save()" title="Save Changes"><i class="bi bi-floppy2-fill"></i></button>
+                <button type="button" class="pfm-save-btn" onclick="ProfileModal.save()"><i class="bi bi-floppy2-fill"></i><span>Save</span></button>
             </div>
         </div>
     </div>
@@ -110,6 +110,7 @@ if (!document.getElementById('pfm-styles')) {
 
         .pfm-label { display: block; font-size: 0.6rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
         .pfm-input { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 12px; font-size: 0.85rem; height: 37px; margin-bottom: 14px; font-family: inherit; transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; box-sizing: border-box; }
+        .pfm-input:hover { border-color: #cbd5e1; }
         .pfm-input:focus { outline: none; border-color: var(--c-accent, #bdc432); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb, 189,196,50), 0.12); }
 
         .pfm-select-wrap { position: relative; margin-bottom: 18px; }
@@ -123,9 +124,9 @@ if (!document.getElementById('pfm-styles')) {
         .pfm-section-title i { color: #c7c7cc; }
 
         .pfm-footer { padding: 14px 24px; display: flex; justify-content: flex-end; background: #fff; border-top: 1px solid #f1f5f9; }
-        .pfm-save-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--c-dark, #1e293b); color: var(--c-accent, #bdc432); border: none; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; cursor: pointer; transition: transform 0.15s, background 0.15s; }
-        .pfm-save-btn:hover { transform: scale(1.1); background: #0f172a; }
-        .pfm-save-btn:active { transform: scale(0.94); }
+        .pfm-save-btn { height: 38px; padding: 0 18px; border-radius: 10px; background: var(--c-dark, #1e293b); color: var(--c-accent, #bdc432); border: none; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 800; font-family: inherit; cursor: pointer; transition: transform 0.15s, background 0.15s; }
+        .pfm-save-btn:hover { transform: translateY(-1px); background: #0f172a; }
+        .pfm-save-btn:active { transform: translateY(0); }
     `;
     document.head.appendChild(style);
 }

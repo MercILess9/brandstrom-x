@@ -90,18 +90,27 @@
         .ov-section-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--c-slate); margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
         .ov-section-title i { color: #c7c7cc; font-size: 0.85rem; }
 
-        /* Icon-led meta rows instead of a bordered label/value grid — each
-           field reads as a small chip (icon + label + value) rather than
-           a form cell, and wraps naturally instead of locking to 2
-           columns. Two stacked rows (who's-involved / when) keep the same
-           grouping the old 2-column grid had, without a box around each. */
-        .ov-meta-row { display: flex; flex-wrap: wrap; gap: 18px 26px; margin-bottom: 18px; }
-        .ov-meta-item { display: flex; align-items: flex-start; gap: 10px; flex: 1 1 150px; min-width: 0; }
-        .ov-meta-icon { width: 34px; height: 34px; border-radius: 10px; background: var(--c-bg); color: var(--c-slate); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0; }
+        /* Two soft-shadow cards (People / Timeline) instead of one long
+           flowing row of icon chips — a flat wrapping row read as one
+           undifferentiated blob of fields with no sense of which belong
+           together; grouping them ref's the same People/Dates split the
+           create/edit modal (b-opportunity-modal.js) already uses for
+           these exact fields, just in this page's soft-card language
+           instead of the modal's bordered-card-with-left-stripe one. */
+        .ov-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+        .ov-detail-card { background: #fafbfc; border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 14px; }
+        .ov-detail-card-title { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+
+        .ov-meta-item { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+        .ov-meta-icon { width: 34px; height: 34px; border-radius: 10px; background: #fff; color: var(--c-slate); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0; }
         .ov-meta-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 2px; }
         .ov-meta-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
         .ov-meta-value { font-size: 0.84rem; font-weight: 700; color: var(--c-dark); overflow-wrap: break-word; }
         .ov-meta-value.nil { color: #cbd5e1; font-weight: 400; }
+
+        @media (max-width: 700px) {
+            .ov-detail-grid { grid-template-columns: 1fr; }
+        }
 
         .ov-remark-box { margin-bottom: 24px; padding-left: 14px; border-left: 3px solid var(--c-accent-light); }
         .ov-remark-lbl { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--c-muted); margin-bottom: 6px; }
@@ -366,18 +375,22 @@
             </div>
 
             <div class="ov-section-title"><i class="bi bi-info-circle"></i> Detail</div>
-            <div class="ov-meta-row">
-                ${metaItem('bi-person-fill', 'Owner', o.owner)}
-                ${metaItem('bi-person-badge', 'AM', o.am)}
-                ${metaItem('bi-person', 'Sub AM', o.sub_am)}
-                ${metaItem('bi-signpost-split', 'Lead', o.lead_source)}
-            </div>
-            <div class="ov-meta-row">
-                ${metaItem('bi-person-plus', 'Create By', o.create_by)}
-                ${metaItem('bi-calendar-plus', 'Create Date', o.create_date ? fmtDate(o.create_date) : null)}
-                ${metaItem('bi-calendar-check', 'Signed', o.signed_date ? fmtDate(o.signed_date) : null)}
-                ${metaItem('bi-rocket-takeoff', 'Launch', o.launch_date ? fmtDate(o.launch_date) : null)}
-                ${o.churn_date ? metaItem('bi-calendar-x', 'Churn Date', fmtDate(o.churn_date)) : ''}
+            <div class="ov-detail-grid">
+                <div class="ov-detail-card">
+                    <div class="ov-detail-card-title">People</div>
+                    ${metaItem('bi-person-fill', 'Owner', o.owner)}
+                    ${metaItem('bi-person-badge', 'AM', o.am)}
+                    ${metaItem('bi-person', 'Sub AM', o.sub_am)}
+                    ${metaItem('bi-signpost-split', 'Lead', o.lead_source)}
+                    ${metaItem('bi-person-plus', 'Create By', o.create_by)}
+                </div>
+                <div class="ov-detail-card">
+                    <div class="ov-detail-card-title">Timeline</div>
+                    ${metaItem('bi-calendar-plus', 'Create Date', o.create_date ? fmtDate(o.create_date) : null)}
+                    ${metaItem('bi-calendar-check', 'Signed', o.signed_date ? fmtDate(o.signed_date) : null)}
+                    ${metaItem('bi-rocket-takeoff', 'Launch', o.launch_date ? fmtDate(o.launch_date) : null)}
+                    ${o.churn_date ? metaItem('bi-calendar-x', 'Churn Date', fmtDate(o.churn_date)) : ''}
+                </div>
             </div>
 
             <div class="ov-remark-box">

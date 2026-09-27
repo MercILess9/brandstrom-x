@@ -29,6 +29,12 @@
 // system.js), and revert handleEditProfile() back to its old
 // notify(...'coming soon'...) stub.
 
+// Same show/hide eye icons + toggle behavior as auth/signup.html's own
+// togglePass() — copied rather than shared, since signup.html isn't
+// loaded alongside this file (auth pages don't call initLayout()).
+const PFM_EYE_OFF_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+const PFM_EYE_ON_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+
 const PROFILE_MODAL_HTML = `
 <div class="modal fade" id="edit-profile-modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered pfm-dialog">
@@ -62,13 +68,22 @@ const PROFILE_MODAL_HTML = `
                 <div class="pfm-section-title"><i class="bi bi-shield-lock"></i><span>Change Password</span></div>
 
                 <label class="pfm-label">Current Password</label>
-                <input type="password" class="pfm-input" id="pfm-current-password" autocomplete="current-password">
+                <div class="pfm-input-wrap">
+                    <input type="password" class="pfm-input" id="pfm-current-password" autocomplete="current-password">
+                    <button type="button" class="pfm-pass-toggle" onclick="ProfileModal.togglePass('pfm-current-password', this)">${PFM_EYE_OFF_ICON}</button>
+                </div>
 
                 <label class="pfm-label">New Password</label>
-                <input type="password" class="pfm-input" id="pfm-new-password" autocomplete="new-password">
+                <div class="pfm-input-wrap">
+                    <input type="password" class="pfm-input" id="pfm-new-password" autocomplete="new-password">
+                    <button type="button" class="pfm-pass-toggle" onclick="ProfileModal.togglePass('pfm-new-password', this)">${PFM_EYE_OFF_ICON}</button>
+                </div>
 
                 <label class="pfm-label">Confirm Password</label>
-                <input type="password" class="pfm-input" id="pfm-confirm-password" autocomplete="new-password">
+                <div class="pfm-input-wrap">
+                    <input type="password" class="pfm-input" id="pfm-confirm-password" autocomplete="new-password">
+                    <button type="button" class="pfm-pass-toggle" onclick="ProfileModal.togglePass('pfm-confirm-password', this)">${PFM_EYE_OFF_ICON}</button>
+                </div>
             </div>
 
             <div class="pfm-footer">
@@ -114,6 +129,13 @@ if (!document.getElementById('pfm-styles')) {
         .pfm-input:hover { border-color: #cbd5e1; }
         .pfm-input:focus { outline: none; border-color: var(--c-accent, #bdc432); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb, 189,196,50), 0.12); }
 
+        /* Ref auth/signup.html's own .input-wrapper/.password-toggle-btn —
+           same show/hide-password affordance, same icon set. */
+        .pfm-input-wrap { position: relative; }
+        .pfm-input-wrap .pfm-input { padding-right: 42px; }
+        .pfm-pass-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; padding: 0; transition: color 0.15s; }
+        .pfm-pass-toggle:hover { color: var(--c-slate, #626e7f); }
+
         .pfm-select-wrap { position: relative; margin-bottom: 18px; }
         .pfm-select-wrap select { position: absolute; inset: 0; opacity: 0; pointer-events: none; margin: 0; }
         .pfm-select-trigger { width: 100%; text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 30px 5px 12px; height: 37px; font-size: 0.85rem; font-family: inherit; color: var(--c-dark, #1e293b); cursor: pointer; position: relative; transition: border-color 0.15s, background 0.15s; }
@@ -140,9 +162,16 @@ const ProfileModal = {
 
         document.getElementById('pfm-full-name').value = user?.full_name || '';
         document.getElementById('pfm-nick-name').value = user?.nick_name || '';
-        document.getElementById('pfm-current-password').value = '';
-        document.getElementById('pfm-new-password').value = '';
-        document.getElementById('pfm-confirm-password').value = '';
+
+        // Reset value AND visibility state (type + icon) — a password left
+        // toggled to visible on a previous open() shouldn't carry over.
+        ['pfm-current-password', 'pfm-new-password', 'pfm-confirm-password'].forEach(id => {
+            const input = document.getElementById(id);
+            input.value = '';
+            input.type = 'password';
+            const toggleBtn = input.nextElementSibling;
+            if (toggleBtn) toggleBtn.innerHTML = PFM_EYE_OFF_ICON;
+        });
 
         // DOM methods (not innerHTML string-building) for both branches —
         // profile-modal.js is loaded on every page, so it can't assume a
@@ -201,6 +230,14 @@ const ProfileModal = {
                 triggerBtn.classList.remove('placeholder');
             }
         });
+    },
+
+    // Same behavior as auth/signup.html's togglePass().
+    togglePass(id, btn) {
+        const input = document.getElementById(id);
+        const isPass = input.type === 'password';
+        input.type = isPass ? 'text' : 'password';
+        btn.innerHTML = isPass ? PFM_EYE_ON_ICON : PFM_EYE_OFF_ICON;
     },
 
     // Local-only preview (URL.createObjectURL) — nothing is uploaded to

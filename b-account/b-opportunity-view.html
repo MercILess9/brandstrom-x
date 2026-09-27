@@ -58,9 +58,13 @@
         .a4-page { width: 210mm; min-height: 297mm; max-width: calc(100vw - 24px); margin: 24px auto 60px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 20px 48px rgba(0,0,0,0.08); padding: 16mm 18mm; box-sizing: border-box; border-radius: 10px; border-top: 4px solid var(--c-accent); }
 
         /* ── Header ── */
+        /* Full width, not squeezed into a 1.7fr column next to a summary
+           card — a long opportunity name (client project names run long)
+           needs the whole page width to wrap sanely across 2 lines
+           instead of 3+ narrow ones. */
         .ov-logo-row { display: flex; justify-content: flex-end; margin-bottom: 12px; }
         .ov-logo { height: 22px; }
-        .ov-head { display: grid; grid-template-columns: 1.7fr 1fr; gap: 26px; align-items: start; padding-bottom: 22px; margin-bottom: 26px; border-bottom: 1px solid #f1f5f9; }
+        .ov-head { padding-bottom: 22px; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; }
         .ov-badge-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
         .ov-id-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 800; color: var(--c-accent-dark); letter-spacing: 0.6px; background: var(--c-accent-light); border-radius: 20px; padding: 4px 12px; }
         .ov-type-badge { font-size: 0.64rem; font-weight: 800; border-radius: 20px; padding: 4px 11px; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
@@ -75,15 +79,23 @@
         .ov-subtitle { display: flex; align-items: center; gap: 7px; font-size: 0.85rem; font-weight: 600; color: var(--c-slate); }
         .ov-subtitle i { color: #c7c7cc; font-size: 0.9rem; }
 
-        /* ── Summary card ── */
-        .ov-sum-card { background: #fafbfc; border-radius: 14px; padding: 18px 22px; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.05); }
-        .ov-sum-lbl { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--c-muted); }
-        .ov-sum-val { font-size: 1.4rem; font-weight: 800; color: var(--c-dark); letter-spacing: -0.3px; margin-top: 5px; }
-        .ov-sum-val.gp { color: #16a34a; margin-bottom: 8px; }
-        .ov-sum-divider { height: 1px; background: #eef2f7; margin: 14px 0; }
-        .ov-sum-gp-row { display: flex; justify-content: space-between; align-items: baseline; }
-        .ov-sum-gp-pct { font-size: 0.76rem; font-weight: 800; color: #16a34a; }
-        .ov-sum-bar-wrap { height: 4px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+        /* ── Summary bar ── */
+        /* Owner + Amount + GP as one wide horizontal zone instead of a
+           side-by-side split (Owner in its own row, Amount/GP in a card
+           beside the title) — these 3 are the "most important at a
+           glance" facts about the opportunity, so they read as one group.
+           flex-wrap so it degrades to stacked rows on a narrow viewport
+           instead of squeezing. */
+        .ov-summary-bar { display: flex; align-items: center; gap: 28px; background: #fafbfc; border-radius: 14px; padding: 18px 24px; margin-bottom: 26px; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.05); flex-wrap: wrap; }
+        .ov-summary-item { display: flex; align-items: center; gap: 12px; }
+        .ov-summary-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--c-accent-light); color: var(--c-accent-dark); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+        .ov-summary-text { display: flex; flex-direction: column; gap: 2px; }
+        .ov-summary-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .ov-summary-value { font-size: 1.1rem; font-weight: 800; color: var(--c-dark); letter-spacing: -0.2px; }
+        .ov-summary-value.gp { color: #16a34a; }
+        .ov-summary-gp-pct { font-size: 0.68rem; font-weight: 800; color: #16a34a; margin-left: 5px; }
+        .ov-summary-divider { width: 1px; height: 36px; background: #eef2f7; flex-shrink: 0; }
+        .ov-sum-bar-wrap { width: 90px; height: 4px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-top: 5px; }
         .ov-sum-bar-fill { height: 100%; background: #16a34a; border-radius: 99px; }
 
         /* ── Section title (shared: Detail / Quotations) ── */
@@ -101,14 +113,6 @@
         .ov-detail-card { background: #fafbfc; border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 14px; }
         .ov-detail-card-title { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.05); }
 
-        /* Owner pulled out of the People card and promoted on its own —
-           the single "who's responsible" field someone scanning this
-           document needs first, ref b-quest-view's own highlight-row
-           treatment (Work/Deadline promoted above the rest of a role card). */
-        .ov-owner-highlight { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
-        .ov-owner-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--c-accent-light); color: var(--c-accent-dark); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
-        .ov-owner-text { display: flex; flex-direction: column; gap: 2px; }
-        .ov-owner-value { font-size: 1.05rem; font-weight: 800; color: var(--c-dark); }
 
         .ov-meta-item { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
         .ov-meta-icon { width: 34px; height: 34px; border-radius: 10px; background: #fff; color: var(--c-slate); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0; }
@@ -361,37 +365,43 @@
             </div>
 
             <div class="ov-head">
-                <div>
-                    <div class="ov-badge-row">
-                        <span class="ov-id-badge"><i class="bi bi-hash"></i>${esc(o.opportunity_id)}</span>
-                        ${o.business_type ? `<span class="ov-type-badge ${typeClass(o.business_type)}">${esc(o.business_type)}</span>` : ''}
-                        <span class="ov-status-badge${statusClass(o.status)}">${esc(o.status || '')}</span>
-                    </div>
-                    <div class="ov-opp-name">${esc(o.opportunity_name || '')}</div>
-                    <div class="ov-subtitle"><i class="bi bi-building"></i><span>${sub}</span></div>
+                <div class="ov-badge-row">
+                    <span class="ov-id-badge"><i class="bi bi-hash"></i>${esc(o.opportunity_id)}</span>
+                    ${o.business_type ? `<span class="ov-type-badge ${typeClass(o.business_type)}">${esc(o.business_type)}</span>` : ''}
+                    <span class="ov-status-badge${statusClass(o.status)}">${esc(o.status || '')}</span>
                 </div>
-                <div class="ov-sum-card">
-                    <div class="ov-sum-lbl">Total Quotation Amount</div>
-                    <div class="ov-sum-val">${fmtAmt(o.total_amount)}</div>
-                    <div class="ov-sum-divider"></div>
-                    <div class="ov-sum-gp-row">
-                        <span class="ov-sum-lbl">Project GP</span>
-                        ${pct ? `<span class="ov-sum-gp-pct">${pct}</span>` : ''}
+                <div class="ov-opp-name">${esc(o.opportunity_name || '')}</div>
+                <div class="ov-subtitle"><i class="bi bi-building"></i><span>${sub}</span></div>
+            </div>
+
+            <div class="ov-summary-bar">
+                <div class="ov-summary-item">
+                    <div class="ov-summary-icon"><i class="bi bi-person-fill"></i></div>
+                    <div class="ov-summary-text">
+                        <span class="ov-summary-label">Owner</span>
+                        <span class="ov-summary-value">${o.owner ? esc(o.owner) : '—'}</span>
                     </div>
-                    <div class="ov-sum-val gp">${fmtGP(o.total_gp)}</div>
-                    <div class="ov-sum-bar-wrap"><div class="ov-sum-bar-fill" style="width:${pctNum}%"></div></div>
+                </div>
+                <div class="ov-summary-divider"></div>
+                <div class="ov-summary-item">
+                    <div class="ov-summary-icon"><i class="bi bi-cash-stack"></i></div>
+                    <div class="ov-summary-text">
+                        <span class="ov-summary-label">Total Quotation Amount</span>
+                        <span class="ov-summary-value">${fmtAmt(o.total_amount)}</span>
+                    </div>
+                </div>
+                <div class="ov-summary-divider"></div>
+                <div class="ov-summary-item">
+                    <div class="ov-summary-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                    <div class="ov-summary-text">
+                        <span class="ov-summary-label">Project GP${pct ? ` <span class="ov-summary-gp-pct">${pct}</span>` : ''}</span>
+                        <span class="ov-summary-value gp">${fmtGP(o.total_gp)}</span>
+                        <div class="ov-sum-bar-wrap"><div class="ov-sum-bar-fill" style="width:${pctNum}%"></div></div>
+                    </div>
                 </div>
             </div>
 
             <div class="ov-section-title"><i class="bi bi-info-circle"></i> Detail</div>
-
-            <div class="ov-owner-highlight">
-                <div class="ov-owner-icon"><i class="bi bi-person-fill"></i></div>
-                <div class="ov-owner-text">
-                    <span class="ov-meta-label">Owner</span>
-                    <span class="ov-owner-value">${o.owner ? esc(o.owner) : '—'}</span>
-                </div>
-            </div>
 
             <div class="ov-detail-grid">
                 <div class="ov-detail-card">

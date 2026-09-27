@@ -378,26 +378,20 @@ async function loadUserProfile(userId) {
     return data;
 }
 
-// Shared fallback avatar — initials + a deterministic color, for anywhere
-// a person is shown (header, assign pickers, member tables, the profile
-// modal) before/unless they've uploaded a real photo. Color is hashed
-// from a stable seed (codename or id), never random, so the same person
-// always gets the same color across renders/pages. Palette is medium-
-// saturation on purpose so white text always reads on top of it — no
-// per-color contrast check needed, unlike hexToRgba-based badge colors
-// elsewhere which are admin-picked and can't make that assumption.
-const BX_AVATAR_PALETTE = ['#f59e0b', '#ef4444', '#8b5cf6', '#3b82f6', '#10b981', '#ec4899', '#14b8a6', '#f97316'];
+// Shared fallback avatar initials — for anywhere a person is shown
+// (header, assign pickers, member tables, the profile modal) before/
+// unless they've uploaded a real photo. Background/text color is NOT
+// per-person here (was hash-based in an earlier version) — deliberately
+// just the platform's own --c-accent-light/--c-accent-dark badge
+// convention, same as .ov-id-badge etc., since this is expected to be a
+// short-lived placeholder (people are expected to upload their own photo
+// eventually) rather than a permanent per-person identity marker worth
+// its own color.
 function getInitials(name) {
     if (!name) return '?';
     const parts = String(name).trim().split(/\s+/);
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-function getAvatarColor(seed) {
-    const s = String(seed || '');
-    let hash = 0;
-    for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
-    return BX_AVATAR_PALETTE[hash % BX_AVATAR_PALETTE.length];
 }
 
 async function initAuthGuard() {

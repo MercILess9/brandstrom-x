@@ -101,9 +101,9 @@ if (!document.getElementById('pfm-styles')) {
         .pfm-body { padding: 22px 24px; max-height: 70vh; overflow-y: auto; }
 
         .pfm-avatar-row { display: flex; align-items: center; gap: 16px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid #eef2f7; }
-        .pfm-avatar-preview { width: 68px; height: 68px; border-radius: 50%; background: var(--c-bg, #f8fafc); border: 1px solid #eef2f7; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 1.7rem; overflow: hidden; flex-shrink: 0; }
+        .pfm-avatar-preview { width: 68px; height: 68px; border-radius: 50%; background: var(--c-accent-light); border: 1px solid #eef2f7; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 1.7rem; overflow: hidden; flex-shrink: 0; }
         .pfm-avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
-        .pfm-avatar-initials { color: #fff; font-weight: 800; font-size: 1.25rem; letter-spacing: 0.5px; }
+        .pfm-avatar-initials { color: var(--c-accent-dark); font-weight: 800; font-size: 1.25rem; letter-spacing: 0.5px; }
         .pfm-choose-btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: none; color: var(--c-slate, #626e7f); border: 1px solid var(--c-border, #e2e8f0); border-radius: 20px; padding: 5px 14px; font-size: 0.72rem; font-weight: 700; transition: background 0.15s, border-color 0.15s, color 0.15s; }
         .pfm-choose-btn:hover { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
         .pfm-hint { font-size: 0.66rem; color: var(--c-muted, #94a3b8); margin-top: 6px; }
@@ -149,14 +149,11 @@ const ProfileModal = {
         const preview = document.getElementById('pfm-avatar-preview');
         preview.innerHTML = '';
         if (user?.avatar_url) {
-            preview.style.background = '';
             const img = document.createElement('img');
             img.src = user.avatar_url;
             img.alt = '';
             preview.appendChild(img);
         } else {
-            const seed = user?.codename || user?.id || '';
-            preview.style.background = getAvatarColor(seed);
             const span = document.createElement('span');
             span.className = 'pfm-avatar-initials';
             span.textContent = getInitials(user?.nick_name || user?.full_name);

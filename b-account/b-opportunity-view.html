@@ -101,6 +101,15 @@
         .ov-detail-card { background: #fafbfc; border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 14px; }
         .ov-detail-card-title { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.05); }
 
+        /* Owner pulled out of the People card and promoted on its own —
+           the single "who's responsible" field someone scanning this
+           document needs first, ref b-quest-view's own highlight-row
+           treatment (Work/Deadline promoted above the rest of a role card). */
+        .ov-owner-highlight { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+        .ov-owner-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--c-accent-light); color: var(--c-accent-dark); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+        .ov-owner-text { display: flex; flex-direction: column; gap: 2px; }
+        .ov-owner-value { font-size: 1.05rem; font-weight: 800; color: var(--c-dark); }
+
         .ov-meta-item { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
         .ov-meta-icon { width: 34px; height: 34px; border-radius: 10px; background: #fff; color: var(--c-slate); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0; }
         .ov-meta-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 2px; }
@@ -375,18 +384,24 @@
             </div>
 
             <div class="ov-section-title"><i class="bi bi-info-circle"></i> Detail</div>
+
+            <div class="ov-owner-highlight">
+                <div class="ov-owner-icon"><i class="bi bi-person-fill"></i></div>
+                <div class="ov-owner-text">
+                    <span class="ov-meta-label">Owner</span>
+                    <span class="ov-owner-value">${o.owner ? esc(o.owner) : '—'}</span>
+                </div>
+            </div>
+
             <div class="ov-detail-grid">
                 <div class="ov-detail-card">
                     <div class="ov-detail-card-title">People</div>
-                    ${metaItem('bi-person-fill', 'Owner', o.owner)}
                     ${metaItem('bi-person-badge', 'AM', o.am)}
                     ${metaItem('bi-person', 'Sub AM', o.sub_am)}
                     ${metaItem('bi-signpost-split', 'Lead', o.lead_source)}
-                    ${metaItem('bi-person-plus', 'Create By', o.create_by)}
                 </div>
                 <div class="ov-detail-card">
                     <div class="ov-detail-card-title">Timeline</div>
-                    ${metaItem('bi-calendar-plus', 'Create Date', o.create_date ? fmtDate(o.create_date) : null)}
                     ${metaItem('bi-calendar-check', 'Signed', o.signed_date ? fmtDate(o.signed_date) : null)}
                     ${metaItem('bi-rocket-takeoff', 'Launch', o.launch_date ? fmtDate(o.launch_date) : null)}
                     ${o.churn_date ? metaItem('bi-calendar-x', 'Churn Date', fmtDate(o.churn_date)) : ''}

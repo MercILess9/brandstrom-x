@@ -105,7 +105,7 @@ if (!document.getElementById('pfm-styles')) {
         .pfm-avatar-initials { color: var(--c-accent-dark); font-weight: 800; font-size: 1.7rem; letter-spacing: 0.5px; }
         .pfm-avatar-edit-badge { position: absolute; bottom: -2px; right: -2px; width: 28px; height: 28px; border-radius: 50%; background: var(--c-dark, #1e293b); color: var(--c-accent, #bdc432); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; }
         .pfm-identity-fields { flex: 1; min-width: 0; }
-        .pfm-identity-fields .pfm-input { height: 32px; padding: 3px 10px; margin-bottom: 10px; }
+        .pfm-identity-fields .pfm-input { height: 28px; padding: 2px 10px; font-size: 0.8rem; margin-bottom: 8px; }
         .pfm-identity-fields .pfm-input:last-child { margin-bottom: 0; }
         .pfm-identity-fields .pfm-label { margin-bottom: 4px; }
 

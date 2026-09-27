@@ -131,8 +131,14 @@ if (!document.getElementById('pfm-styles')) {
 
         /* Ref auth/signup.html's own .input-wrapper/.password-toggle-btn —
            same show/hide-password affordance, same icon set. */
-        .pfm-input-wrap { position: relative; }
-        .pfm-input-wrap .pfm-input { padding-right: 36px; }
+        /* margin-bottom moved from the input to the wrap itself — the input's
+           own 14px margin was inflating .pfm-input-wrap's auto height (input
+           is inline-block-ish, so its bottom margin counts toward the
+           parent's height), which meant the toggle button's top:50% centered
+           against that taller box instead of the input's own box, landing
+           visibly below center. */
+        .pfm-input-wrap { position: relative; margin-bottom: 14px; }
+        .pfm-input-wrap .pfm-input { padding-right: 36px; margin-bottom: 0; }
         .pfm-pass-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: none; border: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 0; transition: color 0.15s; }
         .pfm-pass-toggle:hover { color: var(--c-slate, #626e7f); }
 

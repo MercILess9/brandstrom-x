@@ -97,14 +97,17 @@ if (!document.getElementById('pfm-styles')) {
 
         .pfm-body { padding: 22px 24px; max-height: 70vh; overflow-y: auto; }
 
-        .pfm-identity-row { display: flex; align-items: flex-start; gap: 16px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid #eef2f7; }
-        .pfm-avatar-wrap { position: relative; width: 68px; height: 68px; flex-shrink: 0; cursor: pointer; }
-        .pfm-avatar-preview { width: 100%; height: 100%; border-radius: 50%; background: var(--c-accent-light); border: 1px solid #eef2f7; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 1.7rem; overflow: hidden; transition: opacity 0.15s; }
+        .pfm-identity-row { display: flex; align-items: center; gap: 18px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid #eef2f7; }
+        .pfm-avatar-wrap { position: relative; width: 92px; height: 92px; flex-shrink: 0; cursor: pointer; }
+        .pfm-avatar-preview { width: 100%; height: 100%; border-radius: 50%; background: var(--c-accent-light); border: 1px solid #eef2f7; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 2.2rem; overflow: hidden; transition: opacity 0.15s; }
         .pfm-avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
         .pfm-avatar-wrap:hover .pfm-avatar-preview { opacity: 0.85; }
-        .pfm-avatar-initials { color: var(--c-accent-dark); font-weight: 800; font-size: 1.25rem; letter-spacing: 0.5px; }
-        .pfm-avatar-edit-badge { position: absolute; bottom: -2px; right: -2px; width: 24px; height: 24px; border-radius: 50%; background: var(--c-dark, #1e293b); color: var(--c-accent, #bdc432); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 0.66rem; }
+        .pfm-avatar-initials { color: var(--c-accent-dark); font-weight: 800; font-size: 1.7rem; letter-spacing: 0.5px; }
+        .pfm-avatar-edit-badge { position: absolute; bottom: -2px; right: -2px; width: 28px; height: 28px; border-radius: 50%; background: var(--c-dark, #1e293b); color: var(--c-accent, #bdc432); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; }
         .pfm-identity-fields { flex: 1; min-width: 0; }
+        .pfm-identity-fields .pfm-input { height: 32px; padding: 3px 10px; margin-bottom: 10px; }
+        .pfm-identity-fields .pfm-input:last-child { margin-bottom: 0; }
+        .pfm-identity-fields .pfm-label { margin-bottom: 4px; }
 
         .pfm-label { display: block; font-size: 0.6rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
         .pfm-input { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 12px; font-size: 0.85rem; height: 37px; margin-bottom: 14px; font-family: inherit; transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; box-sizing: border-box; }

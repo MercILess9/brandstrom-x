@@ -513,7 +513,8 @@ async function renderSystemUI(config) {
 }
 
 function handleEditProfile() {
-    notify('', 'Edit Profile coming soon', 'info');
+    if (typeof openEditProfileModal === 'function') openEditProfileModal();
+    else notify('', 'Edit Profile coming soon', 'info');
 }
 
 async function renderSystemMenu(config) {
@@ -563,6 +564,22 @@ const links = [
     if (!document.querySelector('script[src*="bootstrap.bundle"]')) {
         const s = document.createElement('script');
         s.src = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js";
+        document.head.appendChild(s);
+    }
+
+    // Edit Profile modal (system/profile-modal.js) is triggered from the
+    // header's own account dropdown, which every initLayout() page shows —
+    // needs to be loaded everywhere that dropdown exists, same reasoning
+    // as Bootstrap above. select-picker.js is its Department field's own
+    // dependency (openSelectPicker), not otherwise loaded on every page.
+    if (!document.querySelector('script[src*="select-picker.js"]')) {
+        const s = document.createElement('script');
+        s.src = "/system/select-picker.js";
+        document.head.appendChild(s);
+    }
+    if (!document.querySelector('script[src*="profile-modal.js"]')) {
+        const s = document.createElement('script');
+        s.src = "/system/profile-modal.js";
         document.head.appendChild(s);
     }
 

@@ -1,0 +1,211 @@
+// Self-injecting "Edit Profile" modal — UI PREVIEW ONLY for now, per user
+// request ("ขอดูแค่ UI ก่อน... ถ้าไม่เวิคก็ลบง่ายๆ"). Nothing here writes to
+// Supabase yet: no profiles.update(), no Storage upload, no auth.updateUser()
+// — Save just closes the modal with a "preview only" toast. Wiring real saves
+// needs a DB migration first (profiles.avatar_url column + a self-update RLS
+// policy + a trigger protecting level/codename/employee_id — see the planned
+// migration, not yet written/applied).
+//
+// Follows the self-injecting convention of color-picker.js/select-picker.js:
+// this file injects its OWN complete <style> (not just markup) rather than
+// depending on b-quest.css's .bq-* classes — those only exist on B-Quest
+// pages, and this modal is triggered from the account dropdown that's
+// present on EVERY page (index.html, every project, system/setting.html),
+// so it can't assume any project's own stylesheet is loaded. First attempt
+// at this file reused .bq-* class names by reference and rendered
+// completely unstyled everywhere outside b-quest/ — same class of bug as
+// b-quest-view.html's missing-Bootstrap issue earlier this session, just
+// for CSS instead of a CDN script. Visual language (spacing, radii, colors)
+// is still modeled on b-quest-modal.js's own — just redefined locally under
+// pfm- names.
+//
+// Department dropdown uses the same openSelectPicker() call shape as
+// auth/signup.html's own Department field. Avatar upload slot mirrors
+// system/setting.html's Branding logo-upload-slot markup, sized/rounded for
+// a circular avatar instead of a wordmark.
+//
+// To remove this feature entirely: delete this file, delete the
+// system/profile-modal.js <script> block in injectAssets() (system/
+// system.js), and revert handleEditProfile() back to its old
+// notify(...'coming soon'...) stub.
+
+const PROFILE_MODAL_HTML = `
+<div class="modal fade" id="edit-profile-modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered pfm-dialog">
+        <div class="modal-content pfm-modal-content">
+            <div class="pfm-header">
+                <div class="pfm-header-title"><i class="bi bi-person-circle"></i>Edit Profile</div>
+                <button type="button" class="pfm-close-btn" data-bs-dismiss="modal"><i class="bi bi-x"></i></button>
+            </div>
+
+            <div class="pfm-body">
+                <div class="pfm-avatar-row">
+                    <div class="pfm-avatar-preview" id="pfm-avatar-preview"><i class="bi bi-person-fill"></i></div>
+                    <div>
+                        <label class="pfm-choose-btn">
+                            <i class="bi bi-upload"></i> Change Photo
+                            <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none" id="pfm-avatar-file" onchange="ProfileModal.onAvatarFileChange(event)">
+                        </label>
+                        <div class="pfm-hint">Square image recommended</div>
+                    </div>
+                </div>
+
+                <label class="pfm-label">Full Name</label>
+                <input type="text" class="pfm-input" id="pfm-full-name" placeholder="Full name...">
+
+                <label class="pfm-label">Nick Name</label>
+                <input type="text" class="pfm-input" id="pfm-nick-name" placeholder="Nickname...">
+
+                <label class="pfm-label">Department</label>
+                <div class="pfm-select-wrap">
+                    <select class="pfm-input" id="pfm-department"></select>
+                    <button type="button" class="pfm-select-trigger placeholder" id="pfm-department-trigger" onclick="ProfileModal.openDeptPicker(this)">Select...</button>
+                </div>
+
+                <div class="pfm-section-title"><i class="bi bi-shield-lock"></i><span>Change Password</span></div>
+
+                <label class="pfm-label">New Password</label>
+                <input type="password" class="pfm-input" id="pfm-new-password" placeholder="Leave blank to keep current">
+
+                <label class="pfm-label">Confirm Password</label>
+                <input type="password" class="pfm-input" id="pfm-confirm-password" placeholder="Repeat new password">
+            </div>
+
+            <div class="pfm-footer">
+                <button type="button" class="pfm-save-btn" onclick="ProfileModal.save()"><i class="bi bi-floppy2-fill"></i><span>Save Changes</span></button>
+            </div>
+        </div>
+    </div>
+</div>
+`;
+
+if (!document.getElementById('edit-profile-modal')) {
+    document.body.insertAdjacentHTML('beforeend', PROFILE_MODAL_HTML);
+}
+
+if (!document.getElementById('pfm-styles')) {
+    const style = document.createElement('style');
+    style.id = 'pfm-styles';
+    style.textContent = `
+        .pfm-dialog { max-width: 440px; }
+        .pfm-modal-content { background: #f8fafc; border-radius: 20px; border: none; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.14); }
+        .pfm-header { background: #fff; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; }
+        .pfm-header-title { font-weight: 800; font-size: 1.02rem; color: var(--c-dark, #1e293b); }
+        .pfm-header-title i { margin-right: 8px; color: var(--c-accent, #bdc432); }
+        .pfm-close-btn { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #94a3b8; transition: background 0.15s, color 0.15s; }
+        .pfm-close-btn:hover { background: #e2e8f0; color: #1e293b; }
+
+        .pfm-body { padding: 22px 24px; max-height: 70vh; overflow-y: auto; }
+
+        .pfm-avatar-row { display: flex; align-items: center; gap: 16px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid #eef2f7; }
+        .pfm-avatar-preview { width: 68px; height: 68px; border-radius: 50%; background: var(--c-bg, #f8fafc); border: 1px solid #eef2f7; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 1.7rem; overflow: hidden; flex-shrink: 0; }
+        .pfm-avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .pfm-choose-btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: none; color: var(--c-slate, #626e7f); border: 1px solid var(--c-border, #e2e8f0); border-radius: 20px; padding: 5px 14px; font-size: 0.72rem; font-weight: 700; transition: background 0.15s, border-color 0.15s; }
+        .pfm-choose-btn:hover { background: var(--c-bg, #f8fafc); border-color: #cbd5e1; }
+        .pfm-hint { font-size: 0.66rem; color: var(--c-muted, #94a3b8); margin-top: 6px; }
+
+        .pfm-label { display: block; font-size: 0.6rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+        .pfm-input { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 12px; font-size: 0.85rem; height: 37px; margin-bottom: 14px; font-family: inherit; transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; box-sizing: border-box; }
+        .pfm-input:focus { outline: none; border-color: var(--c-accent, #bdc432); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb, 189,196,50), 0.12); }
+
+        .pfm-select-wrap { position: relative; margin-bottom: 18px; }
+        .pfm-select-wrap select { position: absolute; inset: 0; opacity: 0; pointer-events: none; margin: 0; }
+        .pfm-select-trigger { width: 100%; text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 30px 5px 12px; height: 37px; font-size: 0.85rem; font-family: inherit; color: var(--c-dark, #1e293b); cursor: pointer; position: relative; transition: border-color 0.15s, background 0.15s; }
+        .pfm-select-trigger.placeholder { color: #94a3b8; }
+        .pfm-select-trigger::after { content: ""; position: absolute; right: 12px; top: 50%; width: 8px; height: 8px; border-right: 1.5px solid #94a3b8; border-bottom: 1.5px solid #94a3b8; transform: translateY(-65%) rotate(45deg); pointer-events: none; }
+        .pfm-select-trigger:hover { border-color: #cbd5e1; }
+
+        .pfm-section-title { display: flex; align-items: center; gap: 8px; margin: 4px 0 14px; padding-top: 16px; border-top: 1px solid #f1f5f9; font-size: 0.72rem; font-weight: 800; color: var(--c-slate, #626e7f); text-transform: uppercase; letter-spacing: 0.6px; }
+        .pfm-section-title i { color: #c7c7cc; }
+
+        .pfm-footer { padding: 14px 24px; display: flex; justify-content: flex-end; background: #fff; border-top: 1px solid #f1f5f9; }
+        .pfm-save-btn { background: var(--c-dark, #1e293b); color: var(--c-accent, #bdc432); border: none; padding: 0 24px; border-radius: 10px; font-weight: 800; height: 38px; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit; font-size: 0.85rem; transition: transform 0.2s, background 0.2s; }
+        .pfm-save-btn:hover { transform: translateY(-1px); background: #0f172a; }
+        .pfm-save-btn:active { transform: translateY(0); }
+    `;
+    document.head.appendChild(style);
+}
+
+let pfmAvatarObjectUrl = null;
+
+const ProfileModal = {
+    open() {
+        const user = (typeof getBxUser === 'function') ? getBxUser() : null;
+
+        document.getElementById('pfm-full-name').value = user?.full_name || '';
+        document.getElementById('pfm-nick-name').value = user?.nick_name || '';
+        document.getElementById('pfm-new-password').value = '';
+        document.getElementById('pfm-confirm-password').value = '';
+
+        const preview = document.getElementById('pfm-avatar-preview');
+        preview.innerHTML = user?.avatar_url
+            ? `<img src="${user.avatar_url}" alt="">`
+            : `<i class="bi bi-person-fill"></i>`;
+
+        this.loadDepartments(user?.department || '');
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('edit-profile-modal')).show();
+    },
+
+    async loadDepartments(current) {
+        const sel = document.getElementById('pfm-department');
+        const trigger = document.getElementById('pfm-department-trigger');
+        sel.innerHTML = '<option value="" disabled selected hidden></option>';
+
+        const { data } = await supabaseClient.from('system_department').select('name').order('name', { ascending: true });
+        (data || []).forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.name;
+            opt.textContent = d.name;
+            sel.appendChild(opt);
+        });
+
+        if (current) {
+            sel.value = current;
+            trigger.textContent = current;
+            trigger.classList.remove('placeholder');
+        } else {
+            trigger.textContent = 'Select...';
+            trigger.classList.add('placeholder');
+        }
+    },
+
+    openDeptPicker(triggerBtn) {
+        const sel = document.getElementById('pfm-department');
+        openSelectPicker(triggerBtn, {
+            getOptions: () => [...sel.options].filter(o => o.value !== '').map(o => ({ value: o.value, label: o.textContent })),
+            getValue: () => sel.value,
+            onSelect: (value) => {
+                sel.value = value;
+                triggerBtn.textContent = value;
+                triggerBtn.classList.remove('placeholder');
+            }
+        });
+    },
+
+    // Local-only preview (URL.createObjectURL) — nothing is uploaded to
+    // Storage yet, that needs the Branding-style upload-on-save wiring
+    // once the DB side (profiles.avatar_url column) exists.
+    onAvatarFileChange(e) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (pfmAvatarObjectUrl) URL.revokeObjectURL(pfmAvatarObjectUrl);
+        pfmAvatarObjectUrl = URL.createObjectURL(file);
+        document.getElementById('pfm-avatar-preview').innerHTML = `<img src="${pfmAvatarObjectUrl}" alt="">`;
+    },
+
+    // UI preview only — see file header comment. Intentionally does not
+    // touch Supabase (no .update(), no Storage, no auth.updateUser()).
+    save() {
+        const newPw = document.getElementById('pfm-new-password').value;
+        const confirmPw = document.getElementById('pfm-confirm-password').value;
+        if (newPw && newPw !== confirmPw) {
+            return notify('', 'New Password and Confirm Password do not match', 'error');
+        }
+        notify('', 'Preview only — saving isn\'t wired up yet', 'info');
+        bootstrap.Modal.getInstance(document.getElementById('edit-profile-modal'))?.hide();
+    }
+};
+
+window.ProfileModal = ProfileModal;
+window.openEditProfileModal = () => ProfileModal.open();

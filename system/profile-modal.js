@@ -32,8 +32,8 @@
 // Same show/hide eye icons + toggle behavior as auth/signup.html's own
 // togglePass() — copied rather than shared, since signup.html isn't
 // loaded alongside this file (auth pages don't call initLayout()).
-const PFM_EYE_OFF_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
-const PFM_EYE_ON_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+const PFM_EYE_OFF_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+const PFM_EYE_ON_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
 
 const PROFILE_MODAL_HTML = `
 <div class="modal fade" id="edit-profile-modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
@@ -132,8 +132,8 @@ if (!document.getElementById('pfm-styles')) {
         /* Ref auth/signup.html's own .input-wrapper/.password-toggle-btn —
            same show/hide-password affordance, same icon set. */
         .pfm-input-wrap { position: relative; }
-        .pfm-input-wrap .pfm-input { padding-right: 42px; }
-        .pfm-pass-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; padding: 0; transition: color 0.15s; }
+        .pfm-input-wrap .pfm-input { padding-right: 36px; }
+        .pfm-pass-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: none; border: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 0; transition: color 0.15s; }
         .pfm-pass-toggle:hover { color: var(--c-slate, #626e7f); }
 
         .pfm-select-wrap { position: relative; margin-bottom: 18px; }

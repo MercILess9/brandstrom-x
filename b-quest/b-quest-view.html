@@ -87,6 +87,13 @@
            class regardless of source order). */
         #loadingState { padding: 0; }
 
+        /* Ref b-opportunity-view.html's .ov-logo-row/.ov-logo — same
+           top-right placement + height, .sys-logo-img is what
+           applyBrandingValues() (system.js) swaps to an admin-uploaded
+           logo if one's set. */
+        .bqv-logo-row { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+        .bqv-logo { height: 22px; }
+
         .bqv-head { display: flex; flex-direction: column; gap: 10px; padding-bottom: 22px; margin-bottom: 26px; border-bottom: 1px solid #f1f5f9; }
         .bqv-id-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 800; color: var(--c-accent-dark); letter-spacing: 0.6px; background: var(--c-accent-light); border-radius: 20px; padding: 4px 12px; width: fit-content; }
         .bqv-title { font-size: 1.65rem; font-weight: 800; color: var(--c-dark); margin: 2px 0 0; line-height: 1.2; }
@@ -182,6 +189,9 @@
         <div class="ov-state" id="notFoundState" style="display:none;"><i class="bi bi-exclamation-triangle"></i> Task not found</div>
 
         <div id="contentState" style="display:none;">
+            <div class="bqv-logo-row">
+                <img id="viewLogo" src="" class="bqv-logo sys-logo-img" onerror="this.style.display='none'">
+            </div>
             <div class="bqv-head">
                 <span class="bqv-id-badge"><i class="bi bi-hash"></i><span id="taskId"></span></span>
                 <div class="bqv-title" id="taskName"></div>
@@ -234,6 +244,16 @@
     // Same branded spinner as b-opportunity-view.html's own loading state
     // (system.js's bxLoader()) instead of a plain hourglass line.
     document.getElementById('loadingState').innerHTML = bxLoader('Loading...');
+
+    // #viewLogo exists in static markup from the start (unlike
+    // b-opportunity-view.html's fully JS-templated page), so this can run
+    // synchronously right away rather than waiting for loadView() — same
+    // "as early as possible" reasoning as system.js's own
+    // applyCachedBranding() comment. Also re-applies theme accent colors,
+    // which this standalone page (no initLayout()) never picked up before.
+    document.getElementById('viewLogo').src = LOGO_URL;
+    applyCachedBranding();
+    refreshBranding();
 
     async function loadView() {
         const id = new URLSearchParams(window.location.search).get('id');

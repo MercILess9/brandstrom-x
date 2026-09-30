@@ -181,7 +181,7 @@ if (!document.getElementById('pfm-styles')) {
 
         .pfm-select-wrap { position: relative; margin-bottom: 14px; }
         .pfm-select-wrap select { position: absolute; inset: 0; opacity: 0; pointer-events: none; margin: 0; }
-        .pfm-select-trigger { width: 100%; text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 30px 5px 12px; height: 37px; font-size: 0.85rem; font-family: inherit; color: var(--c-dark, #1e293b); cursor: pointer; position: relative; transition: border-color 0.15s, background 0.15s; }
+        .pfm-select-trigger { width: 100%; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 30px 5px 12px; height: 37px; font-size: 0.85rem; font-family: inherit; color: var(--c-dark, #1e293b); cursor: pointer; position: relative; transition: border-color 0.15s, background 0.15s; }
         .pfm-select-trigger.placeholder { color: #94a3b8; }
         .pfm-select-trigger::after { content: ""; position: absolute; right: 12px; top: 50%; width: 8px; height: 8px; border-right: 1.5px solid #94a3b8; border-bottom: 1.5px solid #94a3b8; transform: translateY(-65%) rotate(45deg); pointer-events: none; }
         .pfm-select-trigger:hover { border-color: #cbd5e1; }

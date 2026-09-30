@@ -300,7 +300,6 @@ const B_QUEST_MODAL_HTML = `
 
             <div class="bq-modern-header">
                 <div class="bq-header-left">
-                    <span class="bq-modal-id-badge" id="modal-id-badge" style="display:none;"><i class="bi bi-hash"></i><span id="modal-id-badge-text"></span></span>
                     <div class="bq-owner-wrap">
                         <div class="bq-owner-icon"><i class="bi bi-person-fill"></i></div>
                         <div>
@@ -308,6 +307,7 @@ const B_QUEST_MODAL_HTML = `
                             <div class="bq-owner-name" id="modal-owner-display">—</div>
                         </div>
                     </div>
+                    <span class="bq-modal-id-badge" id="modal-id-badge" style="display:none;"><i class="bi bi-hash"></i><span id="modal-id-badge-text"></span></span>
                 </div>
                 <div id="b-quest-modal-label-text" style="display:none;"></div>
                 <button type="button" class="bq-modal-close" data-bs-dismiss="modal"><i class="bi bi-x"></i></button>

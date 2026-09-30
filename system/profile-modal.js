@@ -1,10 +1,17 @@
-// Self-injecting "Edit Profile" modal — UI PREVIEW ONLY for now, per user
-// request ("ขอดูแค่ UI ก่อน... ถ้าไม่เวิคก็ลบง่ายๆ"). Nothing here writes to
-// Supabase yet: no profiles.update(), no Storage upload, no auth.updateUser()
-// — Save just closes the modal with a "preview only" toast. Wiring real saves
-// needs a DB migration first (profiles.avatar_url column + a self-update RLS
-// policy + a trigger protecting level/codename/employee_id — see the planned
-// migration, not yet written/applied).
+// Self-injecting "Edit Profile" modal. Save now does real work:
+// - Full Name / Nick Name / Department: real profiles.update(), codename
+//   recomputed from nick_name (same formula system/setting.html's admin
+//   edit uses). Needs supabase/migrations/20260930000001_profiles_self_
+//   update_rls.sql applied first (self-update RLS policy + a trigger
+//   guarding employee_id/level/codename from a non-admin) — until then
+//   this update silently affects 0 rows (RLS blocks it), same failure
+//   mode documented in that migration's own comment.
+// - Change Password: real auth.signInWithPassword() (to verify Current
+//   Password) + auth.updateUser() (to actually change it) — no DB
+//   migration needed for this part, Supabase Auth doesn't go through
+//   profiles/RLS at all.
+// - Avatar: still preview-only (local blob URL) — profiles.avatar_url
+//   column + a Storage upload aren't wired up yet.
 //
 // Follows the self-injecting convention of color-picker.js/select-picker.js:
 // this file injects its OWN complete <style> (not just markup) rather than
@@ -368,20 +375,84 @@ const ProfileModal = {
         document.getElementById('pfm-footer-crop').style.display = 'none';
     },
 
-    // UI preview only — see file header comment. Intentionally does not
-    // touch Supabase (no .update(), no Storage, no auth.updateUser()).
-    save() {
+    // Profile fields (name/nick/department) need no password and save
+    // independently of any password change attempted in the same Save
+    // click. Avatar upload is still preview-only — profiles.avatar_url
+    // and its Storage upload aren't wired up yet.
+    //
+    // Password change order matches what was asked for: check New ==
+    // Confirm first (cheap, no network), THEN verify Current Password is
+    // actually correct (via signInWithPassword — Supabase has no
+    // standalone "verify password" call, this is the standard pattern;
+    // it does refresh the session to a new token as a side effect, which
+    // is harmless here since it's still the same signed-in user), and
+    // only then call auth.updateUser() to actually change it. A wrong
+    // Current Password clears just that one field — New/Confirm are left
+    // alone since they weren't the problem.
+    async save() {
+        const user = (typeof getBxUser === 'function') ? getBxUser() : null;
+        if (!user) return;
+
+        const fullName = document.getElementById('pfm-full-name').value.trim();
+        const nickName = document.getElementById('pfm-nick-name').value.trim();
+        const department = document.getElementById('pfm-department').value;
         const currentPw = document.getElementById('pfm-current-password').value;
         const newPw = document.getElementById('pfm-new-password').value;
         const confirmPw = document.getElementById('pfm-confirm-password').value;
-        if (newPw && !currentPw) {
-            return notify('', 'Enter your Current Password to change it', 'error');
+
+        if (newPw) {
+            if (newPw !== confirmPw) {
+                return notify('', 'New Password and Confirm Password do not match', 'error');
+            }
+            if (!currentPw) {
+                return notify('', 'Enter your Current Password to change it', 'error');
+            }
         }
-        if (newPw && newPw !== confirmPw) {
-            return notify('', 'New Password and Confirm Password do not match', 'error');
+
+        const btn = document.querySelector('#pfm-footer-normal .pfm-save-btn');
+        btn.disabled = true;
+        let allOk = true;
+
+        // Same buildCodename() formula as system/setting.html's admin
+        // edit flow (nick_name + employee_id) — the DB trigger added in
+        // 20260930000001_profiles_self_update_rls.sql only allows a
+        // self-edit's codename to change to exactly this computed value,
+        // never an arbitrary one, and the existing cascade-rename trigger
+        // then propagates it everywhere else codename is stored.
+        const codename = user.employee_id ? `${nickName} (${user.employee_id})` : nickName;
+        const { error: profileErr } = await supabaseClient
+            .from('profiles')
+            .update({ full_name: fullName, nick_name: nickName, department, codename })
+            .eq('id', user.id);
+
+        if (profileErr) {
+            allOk = false;
+            notify('', 'Could not save profile — ' + profileErr.message, 'error');
+        } else {
+            sessionStorage.setItem('bx_user', JSON.stringify({ ...user, full_name: fullName, nick_name: nickName, department, codename }));
         }
-        notify('', 'Preview only — saving isn\'t wired up yet', 'info');
-        bootstrap.Modal.getInstance(document.getElementById('edit-profile-modal'))?.hide();
+
+        if (newPw) {
+            const { error: signInErr } = await supabaseClient.auth.signInWithPassword({ email: user.email, password: currentPw });
+            if (signInErr) {
+                allOk = false;
+                document.getElementById('pfm-current-password').value = '';
+                notify('', 'Current Password is incorrect', 'error');
+            } else {
+                const { error: pwErr } = await supabaseClient.auth.updateUser({ password: newPw });
+                if (pwErr) {
+                    allOk = false;
+                    notify('', 'Could not update password — ' + pwErr.message, 'error');
+                }
+            }
+        }
+
+        btn.disabled = false;
+
+        if (allOk) {
+            notify('', 'Profile saved', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('edit-profile-modal'))?.hide();
+        }
     }
 };
 

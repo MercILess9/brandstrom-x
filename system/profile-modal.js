@@ -150,9 +150,9 @@ if (!document.getElementById('pfm-styles')) {
 
         .pfm-identity-row { display: flex; align-items: center; gap: 18px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid #eef2f7; }
         .pfm-avatar-wrap { position: relative; width: 92px; height: 92px; flex-shrink: 0; cursor: pointer; }
-        .pfm-avatar-preview { width: 100%; height: 100%; border-radius: 50%; background: var(--c-accent-light); border: 1px solid #eef2f7; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 2.2rem; overflow: hidden; transition: opacity 0.15s; }
+        .pfm-avatar-preview { width: 100%; height: 100%; border-radius: 50%; background: var(--c-accent-light); border: 1px solid #eef2f7; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 2.2rem; overflow: hidden; transition: opacity 0.15s, box-shadow 0.2s, transform 0.2s; }
         .pfm-avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
-        .pfm-avatar-wrap:hover .pfm-avatar-preview { opacity: 0.85; outline: 2px solid var(--c-dark, #1e293b); outline-offset: 2px; }
+        .pfm-avatar-wrap:hover .pfm-avatar-preview { opacity: 0.92; transform: scale(1.03); box-shadow: 0 0 0 4px var(--c-accent-light), 0 6px 20px rgba(var(--c-accent-rgb, 189, 196, 50), 0.35); }
         .pfm-avatar-initials { color: var(--c-accent-dark); font-weight: 800; font-size: 1.7rem; letter-spacing: 0.5px; }
         .pfm-avatar-edit-badge { position: absolute; bottom: -2px; right: -2px; width: 28px; height: 28px; border-radius: 50%; background: var(--c-dark, #1e293b); color: var(--c-accent, #bdc432); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; }
         .pfm-identity-fields { flex: 1; min-width: 0; }

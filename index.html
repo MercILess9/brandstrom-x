@@ -211,9 +211,9 @@
             font-size: 1.1rem;
             cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            transition: background 0.15s;
+            transition: background 0.15s, box-shadow 0.15s;
         }
-        .portal-avatar-btn:hover { background: var(--brand-dark); }
+        .portal-avatar-btn:hover { background: var(--brand-dark); box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--c-accent, #bdc432); }
 
         /* Set by initIndex() below — same fallback-initials convention as
            system/profile-modal.js's own avatar preview / system.js's

@@ -11,6 +11,12 @@ const B_QUEST_MODAL_HTML = `
     .bq-modal-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #94a3b8; transition: 0.2s; flex-shrink: 0; }
     .bq-modal-close:hover { background: #e2e8f0; color: #1e293b; }
 
+    /* Task ID pill — shown only when editing an existing task (a new one
+       has no id yet), sits beside the Owner block. Ref b-quest-view.html's
+       own .bqv-id-badge — same pill so a task's id reads the same way in
+       both places instead of inventing a second convention for it here. */
+    .bq-header-left { display: flex; align-items: center; gap: 10px; }
+    .bq-modal-id-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 800; color: var(--c-accent-dark); letter-spacing: 0.6px; background: var(--c-accent-light); border-radius: 20px; padding: 6px 12px; }
     .bq-owner-wrap { display: flex; align-items: center; gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 7px 14px 7px 8px; }
     /* Circular, matching the person-avatar convention used elsewhere
        (e.g. Add Member modal) — a rounded square here read as a generic
@@ -293,11 +299,14 @@ const B_QUEST_MODAL_HTML = `
             </div>
 
             <div class="bq-modern-header">
-                <div class="bq-owner-wrap">
-                    <div class="bq-owner-icon"><i class="bi bi-person-fill"></i></div>
-                    <div>
-                        <div class="bq-owner-label">Owner</div>
-                        <div class="bq-owner-name" id="modal-owner-display">—</div>
+                <div class="bq-header-left">
+                    <span class="bq-modal-id-badge" id="modal-id-badge" style="display:none;"><i class="bi bi-hash"></i><span id="modal-id-badge-text"></span></span>
+                    <div class="bq-owner-wrap">
+                        <div class="bq-owner-icon"><i class="bi bi-person-fill"></i></div>
+                        <div>
+                            <div class="bq-owner-label">Owner</div>
+                            <div class="bq-owner-name" id="modal-owner-display">—</div>
+                        </div>
                     </div>
                 </div>
                 <div id="b-quest-modal-label-text" style="display:none;"></div>
@@ -1120,6 +1129,8 @@ const BQuestApp = (() => {
             if (taskId) {
                 el('btn-submit-icon').className  = 'bi bi-floppy2-fill';
                 el('btn-submit-label').textContent = 'Save Changes';
+                el('modal-id-badge-text').textContent = taskId;
+                show('modal-id-badge', true, 'inline-flex');
 
                 const [data, roleRows] = await Promise.all([BQuestService.getQuestById(taskId), BQuestService.getTaskRoles(taskId)]);
                 if (data) {
@@ -1171,6 +1182,7 @@ const BQuestApp = (() => {
                 el('btn-submit-icon').className  = 'bi bi-plus-circle-fill';
                 el('btn-submit-label').textContent = 'Create Task';
                 el('modal-owner-display').innerText = getBxUser()?.codename || '—';
+                show('modal-id-badge', false);
                 show('btn-delete-task', false);
                 State.visibleRoles.forEach(role => {
                     el(`check-${role.id}`).checked = false;

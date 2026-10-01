@@ -2606,7 +2606,7 @@ const CLIENT_SORT_FIELDS = {
     gp:    { label: 'GP',          get: (key, d) => d.gp,   type: 'number' },
     gpPct: { label: 'GP%',         get: (key, d) => d.amt ? d.gp / d.amt : -1, type: 'number' }
 };
-let _clientSortKey = 'amt';
+let _clientSortKey = 'gp';
 let _clientAccountMap = null;
 let _clientGrandAmt = 0;
 

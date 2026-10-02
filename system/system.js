@@ -402,9 +402,19 @@ async function loadUserProfile(userId) {
 // its own color.
 function getInitials(name) {
     if (!name) return '?';
-    const parts = String(name).trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    // Strip the "(EMPLOYEE_ID)" suffix and any emoji before taking the
+    // first 2 characters — codenames here are nicknames (single word:
+    // "Fluke", "Miw", "MOD"), not first+last names, so there's no "first
+    // letter of each word" convention worth splitting for. This also
+    // fixes a real bug: a codename like "Fluke 💜(CB002)" (emoji directly
+    // against the parenthesis, no space) used to let the raw string's
+    // 2nd character land mid-emoji (surrogate pair), rendering as a
+    // broken half-character glyph instead of a letter.
+    const cleaned = String(name)
+        .replace(/\([^)]*\)\s*$/, '')
+        .replace(/\p{Extended_Pictographic}/gu, '')
+        .trim();
+    return Array.from(cleaned).slice(0, 2).join('').toUpperCase() || '?';
 }
 
 async function initAuthGuard() {

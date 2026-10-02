@@ -103,12 +103,18 @@
         .op-qt-tag { font-size: 0.62rem; font-weight: 700; color: #475569; background: #f1f5f9; border: 1px solid var(--c-border); border-radius: 20px; padding: 2px 8px; white-space: nowrap; }
 
         /* ── Name + sub ── */
-        .op-main { flex: 1; min-width: 0; max-width: 600px; }
+        /* 600→560: still freed some width for the Owner avatar added to
+           .omb-meta below (.op-meta-badges no longer carries margin-left:
+           auto, so this reduction shifts Amount/GP/Owner left with it
+           instead of leaving blank space) — but 480 left too big a dead
+           gap before the hover-only .ac-actions icons (which hold the
+           margin-left:auto now), so brought back up partway. */
+        .op-main { flex: 1; min-width: 0; max-width: 560px; }
         .op-name { font-size: 0.95rem; font-weight: 700; color: var(--c-text-main); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; user-select: text; line-height: 1.3; }
         .op-sub  { font-size: 0.8rem; color: var(--c-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; user-select: text; }
 
         /* ── Amount/GP block ── */
-        .op-meta-badges { display: flex; gap: 28px; align-items: center; flex-shrink: 0; margin-left: auto; }
+        .op-meta-badges { display: flex; gap: 28px; align-items: center; flex-shrink: 0; }
         .omb-amt { width: 190px; display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
         .omb-amt-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
         .omb-lbl { font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
@@ -123,15 +129,23 @@
         /* ── Owner/date block ── */
         /* Divider + weight ref B-Quest's .bqc-meta-zone/.bqc-meta-line —
            was a 2px darker border with bold dark owner text, heavier than
-           the rest of the card's own muted/light meta styling. */
-        .omb-meta { width: 148px; border-left: 1px solid #eef2f7; padding-left: 16px; display: flex; flex-direction: column; justify-content: center; gap: 6px; flex-shrink: 0; }
+           the rest of the card's own muted/light meta styling. Widened
+           148→190 (same +42 as B-Quest's own avatar rollout: 34px avatar +
+           8px gap) to fit the Owner avatar without cramping the text. */
+        .omb-meta { width: 190px; border-left: 1px solid #eef2f7; padding-left: 16px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .omb-owner-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--c-accent-light); color: var(--c-accent-dark); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 0.6rem; font-weight: 800; }
+        .omb-owner-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .omb-meta-lines { min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
         .omb-owner-row { display: flex; align-items: center; gap: 6px; }
         .omb-owner-row i, .omb-meta-date i { font-size: 0.68rem; color: #64748b; }
         .omb-meta-owner { font-size: 0.7rem; font-weight: 400; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .omb-meta-date { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: #64748b; white-space: nowrap; }
 
         /* ── Hover actions ── */
-        .ac-actions { display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
+        /* margin-left:auto moved here from .op-meta-badges — this is the
+           only thing that still needs to stay pinned to the card's right
+           edge regardless of name/meta width. */
+        .ac-actions { display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; margin-left: auto; }
         .op-card:hover .ac-actions { opacity: 1; }
         .ac-action-icon { border: none; background: transparent; border-radius: 50%; width: 31px; height: 31px; display: flex; align-items: center; justify-content: center; color: var(--c-text-muted); cursor: pointer; transition: 0.15s; font-size: 1.05rem; }
         .ac-action-icon:hover { background: #f1f5f9; color: var(--c-slate); }
@@ -300,6 +314,7 @@
     var _searchIndex = new Map(); // opportunity_id → searchString (lightweight)
     var _cardData    = new Map(); // opportunity_id → full enriched record (loaded pages)
     var _accMap      = new Map(); // account_id → {account_name, company_name}
+    var _profileMap  = new Map(); // codename → {nick_name, avatar_url} — feeds the Owner avatar on each card
     var _buMap       = new Map(); // opportunity_id → Set<bu>
     var _companyQtMap = new Map(); // opportunity_id → Set<company_qt>
     var _qtNumberMap = new Map(); // opportunity_id → Set<qt_number>, folded into _searchIndex so a QT number finds its opportunity
@@ -400,16 +415,18 @@
     }
 
     async function loadMasterData() {
-        const [{ data: idx, error }, { data: accs }, { data: qts }, { data: cfg }] = await Promise.all([
+        const [{ data: idx, error }, { data: accs }, { data: qts }, { data: cfg }, { data: profiles }] = await Promise.all([
             supabaseClient.from('b_opportunity_list')
                 .select('opportunity_id, opportunity_name, owner, am, sub_am, lead_source, business_type, status, remark, account_id, signed_date'),
             supabaseClient.from('b_account_list').select('account_id, account_name, company_name'),
             supabaseClient.from('b_opportunity_qt').select('opportunity_id, qt_number, company_qt, b_opportunity_qt_item(bu)'),
-            supabaseClient.from('b_opportunity_config').select('type, value').in('type', ['bu', 'status', 'business_type']).order('value')
+            supabaseClient.from('b_opportunity_config').select('type, value').in('type', ['bu', 'status', 'business_type']).order('value'),
+            supabaseClient.from('profiles').select('codename, nick_name, avatar_url')
         ]);
         if (error) { console.error('[B-OPP]', error); return; }
 
         _accMap = new Map((accs || []).map(a => [a.account_id, a]));
+        _profileMap = new Map((profiles || []).map(p => [p.codename, p]));
 
         _buMap = new Map();
         _companyQtMap = new Map();
@@ -580,9 +597,16 @@
 
     function renderMetaBlock(o) {
         if (!o.owner && !o.update_date) return '';
+        const op = _profileMap.get(o.owner);
+        const avatar = o.owner ? (op?.avatar_url
+            ? `<img src="${esc(op.avatar_url)}" alt="">`
+            : `<span>${esc(getInitials((op?.nick_name || o.owner || '').replace(/\s*\(.*$/, '')))}</span>`) : '';
         return `<div class="omb-meta">
-            ${o.owner ? `<div class="omb-owner-row"><i class="bi bi-person-fill"></i><span class="omb-meta-owner">${esc(o.owner)}</span></div>` : ''}
-            ${o.update_date ? `<div class="omb-meta-date"><i class="bi bi-clock"></i>${fmtDate(o.update_date)}</div>` : ''}
+            ${o.owner ? `<div class="omb-owner-avatar">${avatar}</div>` : ''}
+            <div class="omb-meta-lines">
+                ${o.owner ? `<div class="omb-owner-row"><i class="bi bi-person-fill"></i><span class="omb-meta-owner">${esc(o.owner)}</span></div>` : ''}
+                ${o.update_date ? `<div class="omb-meta-date"><i class="bi bi-clock"></i>${fmtDate(o.update_date)}</div>` : ''}
+            </div>
         </div>`;
     }
 
@@ -842,7 +866,7 @@
         const url = `${window.location.origin}/b-account/b-opportunity-view?id=${encodeURIComponent(id)}`;
         try {
             await navigator.clipboard.writeText(url);
-            notify('', 'Copied link to clipboard', 'success');
+            notify('Link copied', url, 'success', 3000);
         } catch {
             notify('', 'Could not copy link', 'error');
         }

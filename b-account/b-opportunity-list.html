@@ -126,6 +126,22 @@
         .omb-bar-pct  { display: inline-flex; align-items: center; margin-left: 6px; font-size: 0.62rem; font-weight: 800; color: #16a34a; background: rgba(22,163,74,0.1); border: 1px solid rgba(22,163,74,0.35); border-radius: 20px; padding: 1px 7px; }
         .omb-bar-pct:empty { margin: 0; padding: 0; background: none; border: none; }
 
+        /* ── Churn cards' Amount/GP block ── Same labels ("Amount"/"GP",
+           no "Churn" prefix), same text size, same .omb-amt box as a
+           normal card — an outline (not border/padding, so it adds no
+           extra layout space) plus a recolor are the only visual
+           differences for the orange (loss) box specifically.
+           Full churn (nothing remains): single box, normal card height —
+           shows the loss as a negative Amount/GP.
+           Partial churn: two stacked boxes — current remaining on top in
+           completely normal styling (no outline, it's the real live
+           number), the actual loss below in the orange/outlined box. */
+        .omb-amt-stack { width: 190px; display: flex; flex-direction: column; gap: 14px; flex-shrink: 0; }
+        .omb-amt-stack .omb-amt { width: auto; gap: 6px; }
+        .omb-amt-churn-frame { outline: 1.5px solid rgba(249,115,22,0.45); outline-offset: 7px; border-radius: 6px; }
+        .omb-lbl.churn { color: #f97316; }
+        .omb-val.churn { color: #f97316; }
+
         /* ── Owner/date block ── */
         /* Divider + weight ref B-Quest's .bqc-meta-zone/.bqc-meta-line —
            was a 2px darker border with bold dark owner text, heavier than
@@ -189,7 +205,8 @@
         .op-qt-group.churn-group .op-qt-card { border-left: 3px solid #f97316; }
         .op-qt-group.sign-group { border: 1px solid #e2e8f0; background: #fafafa; opacity: 0.55; pointer-events: none; }
         .op-qt-group.sign-group .op-qt-group-label { color: #94a3b8; }
-        .op-churn-summary { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .op-churn-summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .op-churn-summary-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         /* color: #f97316 (not the old #c2410c) — matches
            b-opportunity-modal.js's own Churn Amount/GP value color exactly
            (.bopp-hdr-lost-zone .bopp-hdr-tval), same orange used for every
@@ -298,6 +315,23 @@
         return `${+dy} ${MONTHS[+mo - 1]} ${+yr}`;
     }
     function fmtGP(n) { return n != null && !isNaN(+n) ? fmtMoney(n) + ' ฿' : '—'; }
+    // A "loss" occasionally computing negative (a gain) shows as "+" instead
+    // of a nonsensical double-negative "-(-X)" — shared by every churn-loss
+    // display on this page (renderAmtBlock, loadQTs' card-detail summary).
+    function fmtLost(v) { return (v >= 0 ? '-' : '+') + fmtAmt(Math.abs(v)); }
+    // The original Sign total for a Churn-status opportunity — needed
+    // because total_amount/total_gp are status-aware at the DB layer
+    // (fn_recompute_opp_totals) and mean "what remains" once status is
+    // Churn, not the original signed amount. o.b_opportunity_qt must be
+    // present (both fetchPage and fetchOppById join it for this reason).
+    function signTotals(o) {
+        if (o.status !== 'Churn') return { signAmt: null, signGP: null };
+        const origItems = (o.b_opportunity_qt || []).filter(q => q.qt_type !== 'churn').flatMap(q => q.b_opportunity_qt_item || []);
+        return {
+            signAmt: origItems.reduce((s, i) => s + (+i.amount || 0), 0),
+            signGP:  origItems.reduce((s, i) => s + (+i.gp || 0), 0),
+        };
+    }
     function typeClass(t) {
         if (t === 'Retention')    return 'retention';
         if (t === 'New Business') return 'new-biz';
@@ -516,7 +550,13 @@
             return [];
         }
 
-        let query = supabaseClient.from('b_opportunity_list').select('*');
+        // b_opportunity_qt(...) nested embed only actually matters for
+        // Churn-status rows (needs the original Sign total so the card
+        // can show the real loss amount — see renderAmtBlock) but is
+        // cheap to carry for every row given the page size here is just
+        // 10 (infinite scroll), not worth a second round-trip query
+        // filtered to Churn only.
+        let query = supabaseClient.from('b_opportunity_list').select('*, b_opportunity_qt(qt_type, b_opportunity_qt_item(amount, gp))');
         if (idFilter)              query = query.in('opportunity_id', [...idFilter]);
         if (_typeFilters.length)   query = query.in('business_type', _typeFilters);
         if (_statusFilter)         query = query.eq('status', _statusFilter);
@@ -545,7 +585,8 @@
 
             const enriched = data.map(o => {
                 const acc = _accMap.get(o.account_id) || {};
-                return { ...o, _account_name: acc.account_name || o.account_id || '', _company_name: acc.company_name || '' };
+                const { signAmt: _signAmt, signGP: _signGP } = signTotals(o);
+                return { ...o, _account_name: acc.account_name || o.account_id || '', _company_name: acc.company_name || '', _signAmt, _signGP };
             });
             enriched.forEach(o => _cardData.set(o.opportunity_id, o));
 
@@ -587,16 +628,58 @@
         </div>`;
     }
 
+    // The orange "loss" box is identical markup for both the full-churn
+    // (single box, needs its own data-amt-block to size as the whole
+    // .op-meta-badges flex item) and partial-churn (bottom of the stack,
+    // sized by its .omb-amt-stack parent instead) cases — only the
+    // amount/GP fed in, and whether it's the sole/outer box, differ.
+    function churnLossBox(amt, gp, standalone) {
+        return `<div class="omb-amt omb-amt-churn-frame"${standalone ? ' data-amt-block' : ''}>
+            <div class="omb-amt-row"><span class="omb-lbl amt churn">Amount</span><span class="omb-val amt churn">${fmtLost(amt)}</span></div>
+            <div class="omb-amt-row"><span class="omb-lbl gp churn">GP</span><span class="omb-val gp churn">${fmtLost(gp)}</span></div>
+        </div>`;
+    }
+
     function renderAmtBlock(o, hasAmt, hasGP, pct) {
         if (!hasAmt) return '';
-        // fmtAmt() collapses 0 down to "—" (right for "nothing entered
-        // yet"), but a churned opportunity's 0 is a real, meaningful
-        // value — use fmtGP()'s plain formatting there instead so it
-        // reads as "0.00 ฿", not a blank dash that looks like missing data.
-        const amtText = o.status === 'Churn' ? fmtGP(o.total_amount) : fmtAmt(o.total_amount);
+        const isChurn    = o.status === 'Churn';
+        const remainAmt  = +o.total_amount || 0;
+        const remainGP   = +o.total_gp || 0;
+        const isFullChurn = isChurn && remainAmt <= 0 && remainGP <= 0;
+        // _signAmt/_signGP (the original Sign total) come from the
+        // original-type QT items fetched alongside this row (see
+        // fetchPage/fetchOppById) — total_amount/total_gp can't supply
+        // this once status is Churn, since they're status-aware at the
+        // DB layer (fn_recompute_opp_totals) and mean "what remains".
+        const signAmt = isChurn ? (+o._signAmt || 0) : 0;
+        const signGP  = isChurn ? (+o._signGP  || 0) : 0;
+
+        if (isFullChurn) {
+            // 100% lost — one box, same size/position/labels as a normal
+            // card (just orange text + outline), showing the loss as a
+            // negative Amount/GP.
+            return churnLossBox(signAmt, signGP, true);
+        }
+
+        if (isChurn) {
+            // Partial churn — two stacked boxes: what's left on top
+            // (normal styling, no outline — it's the real live number),
+            // what was actually lost below (orange + outline).
+            const lostAmt = signAmt - remainAmt;
+            const lostGP  = signGP - remainGP;
+            const remainPct = gpPct(remainGP, remainAmt);
+            return `<div class="omb-amt-stack" data-amt-block>
+                <div class="omb-amt">
+                    <div class="omb-amt-row"><span class="omb-lbl amt">Amount</span><span class="omb-val amt">${fmtGP(remainAmt)}</span></div>
+                    <div class="omb-amt-row"><span class="omb-lbl gp">GP<span class="omb-bar-pct">${remainPct || ''}</span></span><span class="omb-val gp">${fmtGP(remainGP)}</span></div>
+                </div>
+                ${churnLossBox(lostAmt, lostGP)}
+            </div>`;
+        }
+
         return `<div class="omb-amt" data-amt-block>
-            <div class="omb-amt-row"><span class="omb-lbl amt">Amount</span><span class="omb-val amt" data-amt-val>${amtText}</span></div>
-            ${hasGP ? `<div class="omb-amt-row"><span class="omb-lbl gp">GP<span class="omb-bar-pct" data-gp-pct>${pct || ''}</span></span><span class="omb-val gp" data-gp-val>${fmtGP(o.total_gp)}</span></div>` : ''}
+            <div class="omb-amt-row"><span class="omb-lbl amt">Amount</span><span class="omb-val amt" data-amt-val>${fmtAmt(remainAmt)}</span></div>
+            ${hasGP ? `<div class="omb-amt-row"><span class="omb-lbl gp">GP<span class="omb-bar-pct" data-gp-pct>${pct || ''}</span></span><span class="omb-val gp" data-gp-val>${fmtGP(remainGP)}</span></div>` : ''}
         </div>`;
     }
 
@@ -770,42 +853,32 @@
                 const signGP     = signItems.reduce((s, i) => s + (+i.gp  || 0), 0);
                 const lostAmt    = signAmt - churnAmt;
                 const lostGP     = signGP  - churnGP;
-                // Same sign-flip as the modal's own fmt() — a churn QT
-                // occasionally being worth MORE than the sign QT (lostAmt
-                // negative) shows as a gain (+) instead of a nonsensical
-                // "-(negative number)".
-                const fmtLost  = v => (v >= 0 ? '-' : '+') + fmtAmt(Math.abs(v));
+                // % of the original Sign amount that was lost — same metric
+                // as the Dashboard's Churn Analysis "Churn%" column, so a
+                // 100% badge here flags the same "nothing was ever reduced"
+                // data-entry gap the Dashboard surfaces (see
+                // fix(b-account-dashboard) churn-aware totals commit).
+                const lostPct  = signAmt > 0 ? (Math.abs(lostAmt) / signAmt * 100).toFixed(1) + '%' : null;
                 const rec      = _cardData.get(oppId);
                 const cDate    = rec?.churn_date ? fmtDate(rec.churn_date) : '';
                 const summary  = `<div class="op-churn-summary">
-                    ${lostAmt ? `<span class="op-churn-badge"><span class="op-churn-badge-lbl">Churn Amt</span>${fmtLost(lostAmt)}</span>` : ''}
-                    ${lostGP  ? `<span class="op-churn-badge"><span class="op-churn-badge-lbl">Churn GP</span>${fmtLost(lostGP)}</span>` : ''}
-                    ${cDate ? `<span class="op-churn-badge"><span class="op-churn-badge-lbl">Churn Date</span>${cDate}</span>` : ''}
+                    ${cDate ? `<span class="op-churn-badge"><span class="op-churn-badge-lbl">Churn Date</span>${cDate}</span>` : '<span></span>'}
+                    <div class="op-churn-summary-right">
+                        ${lostPct ? `<span class="op-churn-badge">${(lostAmt >= 0 ? '-' : '+')}${lostPct}</span>` : ''}
+                        ${lostAmt ? `<span class="op-churn-badge"><span class="op-churn-badge-lbl">Churn Amount</span>${fmtLost(lostAmt)}</span>` : ''}
+                        ${lostGP  ? `<span class="op-churn-badge"><span class="op-churn-badge-lbl">Churn GP</span>${fmtLost(lostGP)}</span>` : ''}
+                    </div>
                 </div>`;
                 zone.innerHTML = `
                     ${summary}
-                    <div class="op-qt-group churn-group">
+                    ${churnQTs.length ? `<div class="op-qt-group churn-group">
                         <div class="op-qt-group-label">CHURN</div>
-                        ${churnQTs.length ? churnQTs.map(renderQT).join('') : '<p class="op-qt-empty">No churn quotations</p>'}
-                    </div>
+                        ${churnQTs.map(renderQT).join('')}
+                    </div>` : ''}
                     <div class="op-qt-group sign-group">
                         <div class="op-qt-group-label">SIGN</div>
                         ${signQTs.length ? signQTs.map(renderQT).join('') : '<p class="op-qt-empty">No sign quotations</p>'}
                     </div>`;
-                // Update summary to show churn totals
-                const card = zone.closest('.op-card');
-                if (card && churnQTs.length) {
-                    const allItems = churnQTs.flatMap(q => q.b_opportunity_qt_item || []);
-                    const cAmt = allItems.reduce((s, i) => s + (+i.amount || 0), 0);
-                    const cGP  = allItems.reduce((s, i) => s + (+i.gp  || 0), 0);
-                    const cPct = cAmt > 0 && cGP > 0 ? `${(cGP / cAmt * 100).toFixed(1)}%` : '';
-                    const amtEl  = card.querySelector('[data-amt-val]');
-                    const gpEl   = card.querySelector('[data-gp-val]');
-                    const pctEl  = card.querySelector('[data-gp-pct]');
-                    if (amtEl) amtEl.textContent = fmtAmt(cAmt);
-                    if (gpEl)  gpEl.textContent  = fmtGP(cGP);
-                    if (pctEl) pctEl.textContent = cPct;
-                }
             } else {
                 zone.innerHTML = data.map(renderQT).join('');
             }
@@ -904,10 +977,11 @@
     // openCardFromQuery() — same mechanism, adapted to this page's own
     // lazy _cardData/renderCard/toggleCard functions instead of B-Quest's.
     async function fetchOppById(id) {
-        const { data: o, error } = await supabaseClient.from('b_opportunity_list').select('*').eq('opportunity_id', id).single();
+        const { data: o, error } = await supabaseClient.from('b_opportunity_list').select('*, b_opportunity_qt(qt_type, b_opportunity_qt_item(amount, gp))').eq('opportunity_id', id).single();
         if (error || !o) return null;
         const acc = _accMap.get(o.account_id) || {};
-        return { ...o, _account_name: acc.account_name || o.account_id || '', _company_name: acc.company_name || '' };
+        const { signAmt: _signAmt, signGP: _signGP } = signTotals(o);
+        return { ...o, _account_name: acc.account_name || o.account_id || '', _company_name: acc.company_name || '', _signAmt, _signGP };
     }
 
     async function openCardFromQuery() {

@@ -431,7 +431,7 @@
     function shareLink() {
         const url = window.location.href;
         navigator.clipboard.writeText(url)
-            .then(() => notify('Link copied', url, 'success', 3500))
+            .then(() => notify('Link copied', url, 'success', 3000))
             .catch(() => notify('', 'Could not copy link', 'error'));
     }
 

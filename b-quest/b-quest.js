@@ -377,6 +377,6 @@ async function handleDeleteTask(id) {
 function handleShareTask(id) {
     const url = `${window.location.origin}/b-quest/b-quest-view?id=${encodeURIComponent(id)}`;
     navigator.clipboard.writeText(url)
-        .then(() => notify('Link copied', url, 'success', 3500))
+        .then(() => notify('Link copied', url, 'success', 3000))
         .catch(() => notify('', 'Could not copy link', 'error'));
 }

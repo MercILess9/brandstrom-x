@@ -224,9 +224,10 @@
     document.getElementById('ov-root').innerHTML = `<div class="ov-loading-wrap">${(typeof bxLoader === 'function') ? bxLoader('Loading...') : 'Loading...'}</div>`;
 
     async function shareLink() {
+        const url = window.location.href;
         try {
-            await navigator.clipboard.writeText(window.location.href);
-            notify('', 'Copied link to clipboard', 'success');
+            await navigator.clipboard.writeText(url);
+            notify('Link copied', url, 'success', 3000);
         } catch {
             notify('', 'Could not copy link', 'error');
         }

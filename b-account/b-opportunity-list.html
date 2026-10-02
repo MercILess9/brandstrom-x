@@ -604,7 +604,7 @@
         return `<div class="omb-meta">
             ${o.owner ? `<div class="omb-owner-avatar">${avatar}</div>` : ''}
             <div class="omb-meta-lines">
-                ${o.owner ? `<div class="omb-owner-row"><i class="bi bi-person-fill"></i><span class="omb-meta-owner">${esc(o.owner)}</span></div>` : ''}
+                ${o.owner ? `<div class="omb-owner-row"><span class="omb-meta-owner">${esc(o.owner)}</span></div>` : ''}
                 ${o.update_date ? `<div class="omb-meta-date"><i class="bi bi-clock"></i>${fmtDate(o.update_date)}</div>` : ''}
             </div>
         </div>`;

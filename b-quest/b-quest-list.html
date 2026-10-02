@@ -740,7 +740,7 @@
                                     : `<span>${esc(getInitials((op?.nick_name || task.owner || '').replace(/\s*\(.*$/, '')))}</span>`;
                             })()}</div>
                             <div class="bqc-meta-lines">
-                                <div class="bqc-meta-line"><i class="bi bi-person-fill"></i><span class="val">${esc(task.owner) || '-'}</span></div>
+                                <div class="bqc-meta-line"><span class="val">${esc(task.owner) || '-'}</span></div>
                                 <div class="bqc-meta-line"><i class="bi bi-clock"></i><span class="val">${formatDate(task.last_update)}</span></div>
                             </div>
                         </div>

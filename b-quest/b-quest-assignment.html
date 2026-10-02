@@ -636,7 +636,7 @@
                                 : `<span>${esc(getInitials((op?.nick_name || q.owner || '').replace(/\s*\(.*$/, '')))}</span>`;
                         })()}</div>
                         <div class="ac-meta-lines">
-                            <div class="ac-meta-line"><i class="bi bi-person-fill"></i><span class="val">${esc(q.owner) || '-'}</span></div>
+                            <div class="ac-meta-line"><span class="val">${esc(q.owner) || '-'}</span></div>
                             <div class="ac-meta-line ${dlUrgency(r.deadline)}"><i class="bi bi-calendar3"></i><span class="val">${r.deadline ? formatDate(r.deadline) : '-'}</span></div>
                         </div>
                     </div>

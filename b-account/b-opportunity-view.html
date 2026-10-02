@@ -333,16 +333,25 @@
         const churnQTs = qts.filter(q => q.qt_type === 'churn');
         const signQTs  = qts.filter(q => q.qt_type !== 'churn');
 
-        if (!churnQTs.length) {
+        // Gate on status, not churnQTs.length — the "ALL" toggle
+        // (b-opportunity-modal.js's setChurnAllMode) represents "100%
+        // churned, nothing left" as deliberately ZERO churn-type QT rows.
+        // Falling back to the plain non-churn layout for that case (the
+        // old behavior) dropped the "Sign" label too, making a
+        // fully-churned opportunity look like a normal active one here —
+        // the empty Churn box itself is still omitted below (nothing to
+        // show), but the Sign wrap/label stays so it's clear this is the
+        // original quotation of a now-churned deal, not an active one.
+        if (o.status !== 'Churn') {
             return qts.length ? qts.map(renderQT).join('') : '<div class="ov-qt-empty">No quotations</div>';
         }
 
         return `
-            <div class="ov-churn-wrap">
+            ${churnQTs.length ? `<div class="ov-churn-wrap">
                 <span class="ov-churn-label">Churn</span>
                 ${o.churn_date ? `<span class="ov-churn-date-badge">Churn Date: ${fmtDate(o.churn_date)}</span>` : ''}
                 ${churnQTs.map(renderQT).join('')}
-            </div>
+            </div>` : ''}
             <div class="ov-sign-wrap">
                 <span class="ov-sign-label">Sign</span>
                 ${signQTs.length ? signQTs.map(renderQT).join('') : '<div class="ov-qt-empty">No sign quotations</div>'}

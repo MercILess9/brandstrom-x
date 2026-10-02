@@ -258,10 +258,14 @@
            sideways through the project-access columns. */
         .usr-matrix th.usr-col-trash, .usr-matrix td.usr-col-trash { position: sticky; left: 0; z-index: 1; background: #fff; width: 40px; }
         .usr-matrix th.usr-col-trash { z-index: 3; }
-        .usr-matrix th.usr-col-name, .usr-matrix td.usr-col-name { position: sticky; left: 40px; z-index: 1; background: #fff; text-align: left; width: 200px; }
+        .usr-matrix th.usr-col-name, .usr-matrix td.usr-col-name { position: sticky; left: 40px; z-index: 1; background: #fff; text-align: left; width: 228px; }
         .usr-matrix th.usr-col-name { z-index: 3; }
         .usr-matrix td { padding: 11px 16px; text-align: center; border-bottom: 1px solid var(--c-bg); vertical-align: middle; }
         .usr-matrix td.usr-col-name { white-space: nowrap; padding: 10px 16px; }
+        .usr-name-cell { display: flex; align-items: center; gap: 10px; }
+        .usr-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--c-accent-light); color: var(--c-accent-dark); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 0.8rem; font-weight: 800; }
+        .usr-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .usr-name-fields { min-width: 0; flex: 1; }
         .usr-matrix .usr-zone-divider { border-left: 1px solid var(--c-border); }
 
         .usr-matrix .usr-header-sortable { cursor: pointer; user-select: none; transition: color 0.15s; }
@@ -2566,10 +2570,15 @@
             <tr class="usr-row ${isDeleted ? 'is-deleted' : ''}" data-uid="${u.id}">
                 <td class="usr-col-trash">${actionBtn}</td>
                 <td class="usr-col-name">
-                    <input class="inline-input" value="${(u.nick_name || '').replace(/"/g,'&quot;')}" placeholder="Nick Name" ${dis}
-                        onchange="onNickChange('${u.id}',this.value)">
-                    <input class="inline-input muted" value="${(u.full_name || '').replace(/"/g,'&quot;')}" placeholder="Full Name" ${dis}
-                        onchange="onProfileChange('${u.id}','full_name',this.value)">
+                    <div class="usr-name-cell">
+                        <div class="usr-avatar">${u.avatar_url ? `<img src="${esc(u.avatar_url)}" alt="">` : `<span>${esc(getInitials(u.nick_name || u.full_name))}</span>`}</div>
+                        <div class="usr-name-fields">
+                            <input class="inline-input" value="${(u.nick_name || '').replace(/"/g,'&quot;')}" placeholder="Nick Name" ${dis}
+                                onchange="onNickChange('${u.id}',this.value)">
+                            <input class="inline-input muted" value="${(u.full_name || '').replace(/"/g,'&quot;')}" placeholder="Full Name" ${dis}
+                                onchange="onProfileChange('${u.id}','full_name',this.value)">
+                        </div>
+                    </div>
                 </td>
                 <td class="usr-zone-divider">
                     <input class="inline-input center" value="${(u.employee_id || '').replace(/"/g,'&quot;')}" placeholder="ID" ${dis}

@@ -31,7 +31,13 @@
 
         const style = document.createElement('style');
         style.textContent = `
-            .bx-ap-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.4); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
+            /* 1000 used to be plenty when this only ever opened over a plain
+               page (b-quest-assignment.html). Now the B-Quest Modal also
+               opens it from inside itself — a Bootstrap modal/backdrop sits
+               at z-index 1050-1055, so 1000 rendered this BEHIND it. Matched
+               to b-quest-modal.js's own #bq-search-overlay (10001), the
+               convention every overlay nested inside that modal already uses. */
+            .bx-ap-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.4); z-index: 10001; display: none; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
             .bx-ap-card { background: #fff; width: 480px; max-height: 80vh; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.15); }
             .bx-ap-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--c-border); }
             .bx-ap-title { font-size: 1rem; font-weight: 800; color: var(--c-dark); margin: 0; display: flex; align-items: center; gap: 8px; }
@@ -46,13 +52,17 @@
             .bx-ap-list { min-height: 280px; overflow-y: auto; flex: 1; padding-right: 5px; }
             .bx-ap-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: background 0.15s; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
             .bx-ap-item:hover { background: #f1f5f9; }
-            .bx-ap-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--c-accent-light); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: var(--c-accent-dark); flex-shrink: 0; }
+            .bx-ap-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--c-accent-light); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 800; color: var(--c-accent-dark); flex-shrink: 0; overflow: hidden; }
+            .bx-ap-avatar img { width: 100%; height: 100%; object-fit: cover; }
+            .bx-ap-avatar span { font-size: 0.68rem; }
             .bx-ap-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
             .bx-ap-nick { font-size: 0.85rem; font-weight: 700; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             .bx-ap-line2 { font-size: 0.72rem; color: var(--c-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             .bx-ap-dept { flex-shrink: 0; font-size: 0.65rem; font-weight: 700; color: var(--c-slate); background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
             .bx-ap-empty { padding: 30px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
-            .bx-ap-clear-row .bx-ap-avatar { background: #f1f5f9; color: #94a3b8; }
+            .bx-ap-clear-row .bx-ap-avatar { background: #fee2e2; color: #dc2626; }
+            .bx-ap-clear-row .bx-ap-nick { color: #dc2626; }
+            .bx-ap-clear-row:hover { background: #fef2f2; }
         `;
         document.head.appendChild(style);
 
@@ -126,8 +136,11 @@
             matches.forEach(c => {
                 const btn = document.createElement('button');
                 btn.className = 'bx-ap-item w-100';
+                const avatarHtml = c.avatar_url
+                    ? `<img src="${escHtml(c.avatar_url)}" alt="">`
+                    : `<span>${escHtml(getInitials((c.nick_name || c.full_name || c.codename || '').replace(/\s*\(.*$/, '')))}</span>`;
                 btn.innerHTML = `
-                    <div class="bx-ap-avatar"><i class="bi bi-person-fill"></i></div>
+                    <div class="bx-ap-avatar">${avatarHtml}</div>
                     <div class="bx-ap-info">
                         <span class="bx-ap-nick">${escHtml(c.codename)}</span>
                         ${c.full_name ? `<span class="bx-ap-line2">${escHtml(c.full_name)}</span>` : ''}

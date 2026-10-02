@@ -26,6 +26,7 @@
     <script src="/system/date-picker.js"></script>
     <script src="/system/select-picker.js"></script>
     <script src="b-quest.js"></script>
+    <script src="b-quest-assign-picker.js"></script>
     <!-- This page skips initLayout() (see the standalone-document-page
          comment on the main <style> block below), so system.js's own
          injectAssets() — which is what every other page's Bootstrap
@@ -428,8 +429,9 @@
     }
 
     function shareLink() {
-        navigator.clipboard.writeText(window.location.href)
-            .then(() => notify('', 'Link copied', 'success'))
+        const url = window.location.href;
+        navigator.clipboard.writeText(url)
+            .then(() => notify('Link copied', url, 'success', 3500))
             .catch(() => notify('', 'Could not copy link', 'error'));
     }
 

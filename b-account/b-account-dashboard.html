@@ -248,6 +248,11 @@
         .rep-row { cursor: pointer; }
         .rep-chevron { font-size: 0.6rem; color: #cbd5e1; margin-right: 6px; display: inline-block; transition: transform 0.15s; }
         .rep-row.open .rep-chevron { transform: rotate(90deg); }
+        /* Same 24px as .rank-badge next to it — kept deliberately small/
+           inline for this compact table, not the 30-42px size used on
+           card-style layouts elsewhere. */
+        .rep-avatar { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--c-accent-light); color: var(--c-accent-dark); font-size: 0.56rem; font-weight: 800; overflow: hidden; vertical-align: middle; margin-right: 8px; }
+        .rep-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .rep-bu-row td { background: #fafbfc; font-size: 0.74rem; }
         .rep-bu-row .bu-mini-badge { font-size: 0.62rem; margin-left: 20px; }
         .dash-tbl td { padding: 9px 10px; border-bottom: 1px solid #f8fafc; font-size: 0.79rem; vertical-align: middle; color: #475569; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -257,6 +262,10 @@
         .dash-tbl .strong { font-weight: 700; color: #1e293b; }
         .dash-tbl .amt-red { color: #dc2626; font-weight: 700; }
         .dash-tbl .amt-green { color: #16a34a; font-weight: 700; }
+        /* Churned Opportunity names run long (campaign period in brackets
+           etc.) — clamp to 2 lines instead of forcing the row to overflow
+           sideways like every other .dash-tbl's single-line cells. */
+        .churn-opp-name { white-space: normal; max-width: 360px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .bu-mini-badge { background: #f1f5f9; color: #64748b; font-size: 0.66rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
         /* Same pill treatment as .bu-card-gp-badge, red instead of green —
            amount + its % share as one grouped unit instead of two separate
@@ -487,6 +496,7 @@
 let _opps  = [];
 let _qtMap = new Map(); // oppId → [{qt_type, b_opportunity_qt_item:[{bu,qty,price,discount,gp}]}]
 let _accMap = new Map(); // account_id → {account_name}
+let _profileMap = new Map(); // codename → {nick_name, avatar_url} — feeds the Owner avatar on Sales Performance/Churned Opportunity
 let _cfgBU  = []; // ordered list of BU values from config — drives chip order + stable color assignment
 let _yearFilters  = new Set(); // the range picker only ever sets exactly one year — kept as a Set (not a scalar) because the filtering logic below still treats it generically
 let _monthFilters = new Set(); // '01'..'12', empty = all months
@@ -804,7 +814,8 @@ async function loadData() {
         { data: qts,      error: e2 },
         { data: items,    error: e3 },
         { data: accs,     error: e4 },
-        { data: cfgBU }
+        { data: cfgBU },
+        { data: profiles }
     ] = await Promise.all([
         supabaseClient.from('b_opportunity_list')
             // total_amount/total_gp not selected — every aggregate on this page
@@ -818,13 +829,15 @@ async function loadData() {
             .select('qt_id, bu, qty, price, discount, gp')
             .limit(20000),
         supabaseClient.from('b_account_list').select('account_id, account_name'),
-        supabaseClient.from('b_opportunity_config').select('value').eq('type','bu').order('value')
+        supabaseClient.from('b_opportunity_config').select('value').eq('type','bu').order('value'),
+        supabaseClient.from('profiles').select('codename, nick_name, avatar_url')
     ]);
 
     if (e1 || e2 || e3 || e4) { console.error('[dash]', e1 || e2 || e3 || e4); return; }
 
     _opps = opps || [];
     _accMap = new Map((accs || []).map(a => [a.account_id, a]));
+    _profileMap = new Map((profiles || []).map(p => [p.codename, p]));
     _cfgBU = (cfgBU || []).map(c => c.value);
     // _buFilters is already set by initFilterDropdowns() (restored from
     // sessionStorage, or the empty "all BUs" default) — drop any BU that
@@ -907,11 +920,17 @@ function computeData() {
         const accName = _accMap.get(opp.account_id)?.account_name || 'Unknown';
         // Churning creates one churn QT PER original QT (b-opportunity-
         // modal.js: _churnQTs = _qts.map(...)), all sharing one churn_date
-        // — one real churn event, just split across QT records. Accumulate
-        // across all of them and push a single row per opportunity below,
-        // or remainAmt would be computed against the full original amount
-        // once per QT instead of what's actually left after all of them.
-        let oppChurnAmt = 0, oppChurnGP = 0;
+        // — one real churn event, just split across QT records. A churn-type
+        // QT holds what's LEFT after the churn (the modal clones the
+        // original QTs into _churnQTs and lets the user edit/delete items
+        // down to what remains — see b-opportunity-modal.js), NOT the lost
+        // amount itself. So oppRemainAmt/oppRemainGP below accumulate the
+        // leftover, and the actual churned/lost amount is oppOrigAmt minus
+        // that leftover, computed once after the loop (previously this was
+        // added to grand totals and pushed to the table as-is, which showed
+        // the leftover in the "Churn" column and the lost amount in "Net" —
+        // swapped).
+        let oppRemainAmt = 0, oppRemainGP = 0;
         const oppChurnBUs = new Set();
         const hasChurnQT = qts.some(qt => qt.qt_type === 'churn');
         // Only worth the extra scan for opportunities that actually churned.
@@ -919,6 +938,10 @@ function computeData() {
             .filter(qt => qt.qt_type !== 'churn')
             .flatMap(qt => (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other')))
             .reduce((s, item) => s + Math.max(0, (+(item.qty) || 0) * (+(item.price) || 0) - (+(item.discount) || 0)), 0);
+        const oppOrigGP = !hasChurnQT ? 0 : qts
+            .filter(qt => qt.qt_type !== 'churn')
+            .flatMap(qt => (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other')))
+            .reduce((s, item) => s + (+(item.gp) || 0), 0);
 
         for (const qt of qts) {
             const rawItems = (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other'));
@@ -929,14 +952,11 @@ function computeData() {
                     const amt = Math.max(0, (+(item.qty) || 0) * (+(item.price) || 0) - (+(item.discount) || 0));
                     const gp  = +(item.gp) || 0;
                     const bu  = item.bu || 'Other';
-                    oppChurnAmt += amt;
-                    oppChurnGP  += gp;
-                    grandChurnAmt += amt;
-                    grandChurnGP  += gp;
+                    oppRemainAmt += amt;
+                    oppRemainGP  += gp;
                     oppChurnBUs.add(bu);
                     if (!buMap.has(bu)) buMap.set(bu, { deals: new Set(), accounts: new Set(), origAmt: 0, origGP: 0, churnAmt: 0 });
                     buMap.get(bu).deals.add(opp.opportunity_id);
-                    buMap.get(bu).churnAmt += amt;
                 }
                 continue;
             }
@@ -975,15 +995,19 @@ function computeData() {
             }
         }
 
-        if (oppChurnAmt > 0) {
+        if (hasChurnQT) {
+            const oppLostAmt = Math.max(0, oppOrigAmt - oppRemainAmt);
+            const oppLostGP  = oppOrigGP - oppRemainGP;
+            grandChurnAmt += oppLostAmt;
+            grandChurnGP  += oppLostGP;
             churnRows.push({
                 opportunity: opp.opportunity_name || opp.opportunity_id,
                 opportunity_id: opp.opportunity_id,
                 bu: [...oppChurnBUs].join(', '),
-                amt: oppChurnAmt,
+                amt: oppLostAmt,
                 origAmt: oppOrigAmt,
-                remainAmt: oppOrigAmt - oppChurnAmt,
-                gp: oppChurnGP,
+                remainAmt: oppRemainAmt,
+                gp: oppLostGP,
                 owner,
                 date: opp.churn_date
             });
@@ -2353,6 +2377,14 @@ function renderTypeDonut({ typeMap }) {
 }
 
 // ── Churn Analysis ────────────────────────────────────────────────────────────
+// r.date is ISO (YYYY-MM-DD) — sort stays on that raw form (lexicographic ==
+// chronological for ISO), only the displayed cell is reformatted to dd-mm-yyyy.
+const fmtChurnDate = d => {
+    if (!d) return '';
+    const [y, m, day] = String(d).split('-');
+    return (y && m && day) ? `${day}-${m}-${y}` : d;
+};
+
 function renderChurnSection({ churnRows, grandChurnAmt, grandOrigAmt, grandChurnGP, grandOrigGP }) {
     const rate   = pctStr(grandChurnAmt, grandOrigAmt + grandChurnAmt);
     const gpRate = pctStr(grandChurnGP, grandOrigGP + grandChurnGP);
@@ -2407,14 +2439,14 @@ function renderChurnSection({ churnRows, grandChurnAmt, grandOrigAmt, grandChurn
                 ${sorted.map(r => {
                     const pct = pctStr(r.amt, r.origAmt);
                     return `<tr>
-                    <td class="strong">${esc(r.opportunity)}</td>
+                    <td class="strong churn-opp-name" title="${esc(r.opportunity)}">${esc(r.opportunity)}</td>
                     <td class="c"><span class="bu-mini-badge">${esc(r.bu || '—')}</span></td>
                     <td class="r" style="border-left:2px solid #f1f5f9">${fmtN(r.origAmt)} ฿</td>
                     <td class="r">${fmtN(r.remainAmt)} ฿</td>
                     <td class="r amt-red">-${fmtN(r.amt)} ฿</td>
                     <td class="c">${pct ? `<span class="churn-pct-badge">-${pct}</span>` : '—'}</td>
                     <td class="c">${esc(r.owner)}</td>
-                    <td class="c">${esc(r.date) || '—'}</td>
+                    <td class="c">${fmtChurnDate(r.date) || '—'}</td>
                     <td class="c"><a class="churn-view-btn" href="b-opportunity-view.html?id=${encodeURIComponent(r.opportunity_id)}" target="_blank" rel="noopener" title="Details"><i class="bi bi-info-circle"></i></a></td>
                 </tr>`;
                 }).join('')}
@@ -2577,7 +2609,13 @@ function renderRepTable({ ownerMap, grandOrigAmt }) {
                         }).join('');
                     return `<tr class="rep-row${isOpen ? ' open' : ''}" onclick="toggleRepRow('${esc(owner).replace(/'/g, "\\'")}')">
                         <td class="c">${rankBadge(i)}</td>
-                        <td class="strong"><i class="bi bi-chevron-right rep-chevron"></i>${esc(owner)}</td>
+                        <td class="strong"><i class="bi bi-chevron-right rep-chevron"></i>${(() => {
+                            const op = _profileMap.get(owner);
+                            const avatar = op?.avatar_url
+                                ? `<img src="${esc(op.avatar_url)}" alt="">`
+                                : `<span>${esc(getInitials((op?.nick_name || owner || '').replace(/\s*\(.*$/, '')))}</span>`;
+                            return `<span class="rep-avatar">${avatar}</span>`;
+                        })()}${esc(owner)}</td>
                         <td class="r"><span class="share-badge">${pct}%</span></td>
                         <td class="r strong">${fmtN(d.amt)} ฿</td>
                         <td class="r amt-green">${fmtN(d.gp)} ฿</td>

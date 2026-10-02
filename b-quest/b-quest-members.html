@@ -184,8 +184,12 @@
            trash at the very left edge, Member right after it. */
         .mem-matrix th.mem-col-trash, .mem-matrix td.mem-col-trash { position: sticky; left: 0; z-index: 1; background: #fff; width: 40px; }
         .mem-matrix th.mem-col-trash { z-index: 3; }
-        .mem-matrix th.mem-col-name, .mem-matrix td.mem-col-name { position: sticky; left: 40px; z-index: 1; background: #fff; text-align: left; width: 200px; }
+        .mem-matrix th.mem-col-name, .mem-matrix td.mem-col-name { position: sticky; left: 40px; z-index: 1; background: #fff; text-align: left; width: 228px; }
         .mem-matrix th.mem-col-name { z-index: 3; }
+        .mem-name-cell { display: flex; align-items: center; gap: 10px; }
+        .mem-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--c-accent-light); color: var(--c-accent-dark); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 0.8rem; font-weight: 800; }
+        .mem-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .mem-name-fields { min-width: 0; flex: 1; }
         .mem-matrix td { padding: 11px 16px; text-align: center; border-bottom: 1px solid var(--c-bg); vertical-align: middle; }
         .mem-matrix td.mem-col-name { white-space: nowrap; padding: 10px 16px; }
         .mem-nick, .mem-fullname, .mem-matrix td.mem-col-code, .mem-matrix td.mem-col-dept { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -732,7 +736,7 @@
     }
 
     async function loadAllProfiles() {
-        const { data } = await supabaseClient.from('profiles').select('codename, nick_name, full_name, employee_id, department, level').neq('level', 'god').order('codename');
+        const { data } = await supabaseClient.from('profiles').select('codename, nick_name, full_name, employee_id, department, level, avatar_url').neq('level', 'god').order('codename');
         allProfiles = data || [];
     }
 
@@ -968,8 +972,13 @@
                                 : `<button class="btn-remove" onclick="removeMember('${esc(member.codename)}')" title="Remove"><i class="bi bi-trash3"></i></button>`}
                         </td>
                         <td class="mem-col-name">
-                            <div class="mem-nick">${esc(p?.nick_name || member.codename)}</div>
-                            ${p?.full_name ? `<div class="mem-fullname">${esc(p.full_name)}</div>` : ''}
+                            <div class="mem-name-cell">
+                                <div class="mem-avatar">${p?.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="">` : `<span>${esc(getInitials(p?.nick_name || p?.full_name || member.codename.replace(/\s*\(.*$/, '')))}</span>`}</div>
+                                <div class="mem-name-fields">
+                                    <div class="mem-nick">${esc(p?.nick_name || member.codename)}</div>
+                                    ${p?.full_name ? `<div class="mem-fullname">${esc(p.full_name)}</div>` : ''}
+                                </div>
+                            </div>
                         </td>
                         <td class="mem-col-code">${esc(p?.employee_id || '-')}</td>
                         <td class="mem-col-dept">${esc(p?.department || '-')}</td>

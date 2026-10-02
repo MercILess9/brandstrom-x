@@ -208,6 +208,8 @@
             background: var(--c-accent);
             color: #fff;
             border: none;
+            padding: 0;
+            overflow: hidden;
             font-size: 1.1rem;
             cursor: pointer;
             display: flex; align-items: center; justify-content: center;
@@ -247,6 +249,7 @@
             border-radius: 50%;
             background: var(--c-accent);
             color: #fff;
+            overflow: hidden;
             font-size: 1.6rem;
             display: flex; align-items: center; justify-content: center;
             margin-bottom: 10px;
@@ -447,10 +450,18 @@
             [document.getElementById('portal-avatar-btn'), document.getElementById('portal-avatar-lg')].forEach(el => {
                 if (!el) return;
                 el.innerHTML = '';
-                const span = document.createElement('span');
-                span.className = 'portal-avatar-initials';
-                span.textContent = getInitials(user.nick_name || user.full_name);
-                el.appendChild(span);
+                if (user.avatar_url) {
+                    const img = document.createElement('img');
+                    img.src = user.avatar_url;
+                    img.alt = '';
+                    img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                    el.appendChild(img);
+                } else {
+                    const span = document.createElement('span');
+                    span.className = 'portal-avatar-initials';
+                    span.textContent = getInitials(user.nick_name || user.full_name);
+                    el.appendChild(span);
+                }
             });
 
             const avatarBtn = document.getElementById('portal-avatar-btn');

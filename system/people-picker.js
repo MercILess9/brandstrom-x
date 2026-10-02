@@ -24,8 +24,9 @@
 //       onConfirm: (codenames) => { ... },   // array of selected codenames — caller stages/saves
 //   });
 //
-// Profile shape expected: { codename, nick_name?, full_name?, employee_id?, department? }
-// — same fields both original call sites already searched across.
+// Profile shape expected: { codename, nick_name?, full_name?, employee_id?, department?, avatar_url? }
+// — same fields both original call sites already searched across, plus
+// avatar_url (optional — falls back to initials when absent/not fetched).
 
 (function () {
     let injected = false;
@@ -63,8 +64,10 @@
             .bx-pp-item:hover { background: #f1f5f9; }
             .bx-pp-item.checked { background: var(--c-accent-light); }
             .bx-pp-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--c-accent-light);
-                display: flex; align-items: center; justify-content: center; font-size: 1.05rem;
-                color: var(--c-accent-dark); flex-shrink: 0; }
+                display: flex; align-items: center; justify-content: center; font-size: 1.05rem; font-weight: 800;
+                color: var(--c-accent-dark); flex-shrink: 0; overflow: hidden; }
+            .bx-pp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+            .bx-pp-avatar span { font-size: 0.72rem; }
             .bx-pp-item.checked .bx-pp-avatar { background: var(--c-accent); }
             .bx-pp-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
             .bx-pp-nick { font-size: 0.88rem; font-weight: 700; color: #1e293b; overflow: hidden;
@@ -156,7 +159,9 @@
             ${avail.map(p => `
                 <label class="bx-pp-item${selected.has(p.codename) ? ' checked' : ''}" data-codename="${escHtml(p.codename)}">
                     <input type="checkbox" class="bx-pp-cb bx-pp-item-cb" ${selected.has(p.codename) ? 'checked' : ''}>
-                    <div class="bx-pp-avatar"><i class="bi bi-person-fill"></i></div>
+                    <div class="bx-pp-avatar">${p.avatar_url
+                        ? `<img src="${escHtml(p.avatar_url)}" alt="">`
+                        : `<span>${escHtml(getInitials((p.nick_name || p.full_name || p.codename || '').replace(/\s*\(.*$/, '')))}</span>`}</div>
                     <div class="bx-pp-info">
                         <span class="bx-pp-nick">${escHtml(nameOf(p))}</span>
                         ${p.full_name ? `<span class="bx-pp-line2">${escHtml(p.full_name)}</span>` : ''}

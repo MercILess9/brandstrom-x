@@ -10,8 +10,12 @@
 //   Password) + auth.updateUser() (to actually change it) — no DB
 //   migration needed for this part, Supabase Auth doesn't go through
 //   profiles/RLS at all.
-// - Avatar: still preview-only (local blob URL) — profiles.avatar_url
-//   column + a Storage upload aren't wired up yet.
+// - Avatar: uploads the cropped photo to the "Brandbox" Storage bucket
+//   (avatars/<user.id>.jpg, upsert) and saves the public URL to
+//   profiles.avatar_url. Needs supabase/migrations/20261001000001_
+//   profiles_avatar_url.sql applied first (adds the column) — until then
+//   the profiles.update() below fails outright (unknown column), same
+//   "needs its migration applied" situation as the self-update RLS one.
 //
 // Follows the self-injecting convention of color-picker.js/select-picker.js:
 // this file injects its OWN complete <style> (not just markup) rather than
@@ -214,6 +218,34 @@ if (!document.getElementById('pfm-styles')) {
 
 let pfmAvatarObjectUrl = null;
 let pfmCropper = null;
+let pfmAvatarBlob = null; // cropped (or raw, if Cropper failed to load) file pending upload on Save
+
+// Mirrors the initials-fallback/avatar-img rendering that system.js's
+// initLayout() and index.html's initIndex() each do inline for their own
+// header avatar circles (profile-avatar-*/portal-avatar-*) — duplicated
+// here rather than calling into either, since this modal is loaded on
+// every page and can't assume which one (if either) is even present.
+// Called right after a successful Save so the header reflects a new
+// photo/name immediately, without needing a full page reload.
+function pfmRefreshAvatarUI(user) {
+    ['profile-avatar-btn', 'profile-avatar-lg', 'portal-avatar-btn', 'portal-avatar-lg'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = '';
+        if (user?.avatar_url) {
+            const img = document.createElement('img');
+            img.src = user.avatar_url;
+            img.alt = '';
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;';
+            el.appendChild(img);
+        } else {
+            const span = document.createElement('span');
+            span.className = id.startsWith('portal') ? 'portal-avatar-initials' : 'sys-avatar-initials';
+            span.textContent = getInitials(user?.nick_name || user?.full_name);
+            el.appendChild(span);
+        }
+    });
+}
 
 const ProfileModal = {
     open() {
@@ -222,6 +254,7 @@ const ProfileModal = {
         // In case the modal was closed mid-crop last time.
         this.closeCrop();
         document.getElementById('pfm-avatar-file').value = '';
+        pfmAvatarBlob = null;
 
         document.getElementById('pfm-full-name').value = user?.full_name || '';
         document.getElementById('pfm-nick-name').value = user?.nick_name || '';
@@ -319,6 +352,7 @@ const ProfileModal = {
         pfmAvatarObjectUrl = URL.createObjectURL(file);
 
         if (typeof Cropper === 'undefined') {
+            pfmAvatarBlob = file;
             document.getElementById('pfm-avatar-preview').innerHTML = `<img src="${pfmAvatarObjectUrl}" alt="">`;
             return;
         }
@@ -347,6 +381,7 @@ const ProfileModal = {
     confirmCrop() {
         if (!pfmCropper) return;
         pfmCropper.getCroppedCanvas({ width: 300, height: 300 }).toBlob(blob => {
+            pfmAvatarBlob = blob;
             if (pfmAvatarObjectUrl) URL.revokeObjectURL(pfmAvatarObjectUrl);
             pfmAvatarObjectUrl = URL.createObjectURL(blob);
             const preview = document.getElementById('pfm-avatar-preview');
@@ -375,10 +410,18 @@ const ProfileModal = {
         document.getElementById('pfm-footer-crop').style.display = 'none';
     },
 
-    // Profile fields (name/nick/department) need no password and save
-    // independently of any password change attempted in the same Save
-    // click. Avatar upload is still preview-only — profiles.avatar_url
-    // and its Storage upload aren't wired up yet.
+    // Profile fields (name/nick/department/avatar) need no password and
+    // save independently of any password change attempted in the same
+    // Save click. A staged avatar (pfmAvatarBlob) uploads to the same
+    // "Brandbox" Storage bucket system/setting.html's Branding section
+    // already uses (supabase/migrations/20260922000005_system_config_
+    // branding.sql — public read, authenticated write, no per-user path
+    // restriction) under avatars/<user.id>.jpg — a fixed filename so
+    // re-uploading never needs to know/delete a previous one, same
+    // upsert:true reasoning as that migration's own logic. Needs
+    // supabase/migrations/20261001000001_profiles_avatar_url.sql applied
+    // (adds the avatar_url column) in addition to the self-update RLS
+    // migration below.
     //
     // Password change order matches what was asked for: check New ==
     // Confirm first (cheap, no network), THEN verify Current Password is
@@ -413,6 +456,26 @@ const ProfileModal = {
         btn.disabled = true;
         let allOk = true;
 
+        // Upload first (if a photo was staged) so the resulting public URL
+        // can go into the same profiles.update() call below as everything
+        // else — one row write, not two. A failed upload doesn't block the
+        // other fields from saving; it just leaves avatar_url unchanged.
+        let avatarUrl = user.avatar_url || null;
+        if (pfmAvatarBlob) {
+            const path = `avatars/${user.id}.jpg`;
+            const { error: upErr } = await supabaseClient.storage.from('Brandbox').upload(path, pfmAvatarBlob, { upsert: true, contentType: 'image/jpeg' });
+            if (upErr) {
+                allOk = false;
+                notify('', 'Could not upload photo — ' + upErr.message, 'error');
+            } else {
+                const { data: pub } = supabaseClient.storage.from('Brandbox').getPublicUrl(path);
+                // Cache-bust — the filename is reused on every re-upload
+                // (upsert), so without this the browser/CDN would keep
+                // showing the old cached image at the same URL.
+                avatarUrl = pub.publicUrl + '?t=' + Date.now();
+            }
+        }
+
         // Same buildCodename() formula as system/setting.html's admin
         // edit flow (nick_name + employee_id) — the DB trigger added in
         // 20260930000001_profiles_self_update_rls.sql only allows a
@@ -422,14 +485,17 @@ const ProfileModal = {
         const codename = user.employee_id ? `${nickName} (${user.employee_id})` : nickName;
         const { error: profileErr } = await supabaseClient
             .from('profiles')
-            .update({ full_name: fullName, nick_name: nickName, department, codename })
+            .update({ full_name: fullName, nick_name: nickName, department, codename, avatar_url: avatarUrl })
             .eq('id', user.id);
 
         if (profileErr) {
             allOk = false;
             notify('', 'Could not save profile — ' + profileErr.message, 'error');
         } else {
-            sessionStorage.setItem('bx_user', JSON.stringify({ ...user, full_name: fullName, nick_name: nickName, department, codename }));
+            const updatedUser = { ...user, full_name: fullName, nick_name: nickName, department, codename, avatar_url: avatarUrl };
+            sessionStorage.setItem('bx_user', JSON.stringify(updatedUser));
+            pfmRefreshAvatarUI(updatedUser);
+            pfmAvatarBlob = null;
         }
 
         if (newPw) {
@@ -452,6 +518,14 @@ const ProfileModal = {
         if (allOk) {
             notify('', 'Profile saved', 'success');
             bootstrap.Modal.getInstance(document.getElementById('edit-profile-modal'))?.hide();
+            // Updating sessionStorage/pfmRefreshAvatarUI only fixes the
+            // header/portal avatar instantly — everywhere else a page
+            // fetches profiles itself (list cards, member tables, assign
+            // pickers, ...) read the OLD name/photo until their own query
+            // re-runs, which on a static multi-page site only happens on a
+            // fresh load. A short delay lets the toast/modal-close actually
+            // show before the reload cuts them off.
+            setTimeout(() => window.location.reload(), 700);
         }
     }
 };

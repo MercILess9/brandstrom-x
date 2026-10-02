@@ -274,6 +274,19 @@ if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') 
 
 // ── BX Loader HTML (branded loading spinner — use for popups or inline placeholders) ──
 function bxLoader(label) {
+    // Was hardcoded to /favicon.ico, which was never an actual file at the
+    // site root — every loader showed a broken-image icon (404) instead of
+    // a logo. Pull the real icon mark from the same branding cache
+    // applyCachedBranding()/refreshBranding() already maintain (see
+    // BX_BRANDING_CACHE_KEY above) — same DB-driven logo as the header/auth
+    // pages, not a separate static asset. onerror hides the <img> entirely
+    // (just the spinner ring + label) rather than showing a broken icon,
+    // for the case this runs before the cache is populated at all.
+    let logoSrc = '';
+    try {
+        const cached = JSON.parse(localStorage.getItem(BX_BRANDING_CACHE_KEY) || 'null');
+        logoSrc = cached?.logo_icon_url || '';
+    } catch {}
     return `
         <svg width="0" height="0" style="position:absolute">
             <defs>
@@ -295,19 +308,19 @@ function bxLoader(label) {
             <svg class="bx-loader__arc" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="46"/>
             </svg>
-            <img class="bx-loader__logo" src="/favicon.ico" alt=""/>
+            ${logoSrc ? `<img class="bx-loader__logo" src="${logoSrc}" alt="" onerror="this.style.display='none'"/>` : ''}
         </div>
         <div class="bx-label">${label}</div>
     `;
 }
 
-function notify(title, text, icon = 'success') {
+function notify(title, text, icon = 'success', timer = 2000) {
     if (typeof Swal !== 'undefined') {
         Swal.fire({
             title: title,
             text: text,
             icon: icon,
-            timer: 2000,
+            timer: timer,
             showConfirmButton: false,
             confirmButtonColor: 'rgb(45, 71, 57)'
         });
@@ -515,18 +528,25 @@ async function renderSystemUI(config) {
         userDepartment.innerText = user?.department || '';
     }
 
-    // Same fallback-initials treatment as system/profile-modal.js's own
-    // avatar preview — until avatar_url uploads are wired up, both the
-    // small header button and the larger one inside the dropdown show
-    // initials instead of a generic person icon. DOM methods (not
-    // innerHTML string-building), matching profile-modal.js's own reasoning.
+    // Shows the uploaded photo (profiles.avatar_url) when there is one,
+    // same fallback-initials treatment as system/profile-modal.js's own
+    // avatar preview otherwise. DOM methods (not innerHTML string-building),
+    // matching profile-modal.js's own reasoning.
     [document.getElementById('profile-avatar-btn'), document.getElementById('profile-avatar-lg')].forEach(el => {
         if (!el) return;
         el.innerHTML = '';
-        const span = document.createElement('span');
-        span.className = 'sys-avatar-initials';
-        span.textContent = getInitials(user?.nick_name || user?.full_name);
-        el.appendChild(span);
+        if (user?.avatar_url) {
+            const img = document.createElement('img');
+            img.src = user.avatar_url;
+            img.alt = '';
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            el.appendChild(img);
+        } else {
+            const span = document.createElement('span');
+            span.className = 'sys-avatar-initials';
+            span.textContent = getInitials(user?.nick_name || user?.full_name);
+            el.appendChild(span);
+        }
     });
 
     const avatarBtn = document.getElementById('profile-avatar-btn');

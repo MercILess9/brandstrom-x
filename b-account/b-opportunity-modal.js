@@ -1443,7 +1443,11 @@ const BOppApp = (() => {
             return;
         }
         const activeQTs = isChurnMode() ? _churnQTs : _qts;
-        if (!activeQTs.length) { notify('','Please add at least 1 QT', 'warning'); return; }
+        // Churn's "ALL" state (everything churned, nothing remaining) is
+        // represented by an intentionally EMPTY _churnQTs (see
+        // setChurnAllMode) — this check only guards the normal/ITEMS case
+        // where a genuinely empty QT list means the user forgot to add one.
+        if (!activeQTs.length && !isChurnMode()) { notify('','Please add at least 1 QT', 'warning'); return; }
         const qtContainer = el('bopp-qt-container');
         // รอบ 1: ชื่อ QT
         let firstEmptyName = null;

@@ -4,7 +4,7 @@ const B_FINANCE_CONFIG = {
     accessKey: 'bfinance',
     menus: [
         { name: "Finance",  link: "b-finance-list.html" },
-        { name: "Settings", link: "b-finance-settings.html", perm: "setting" },
+        { name: "Settings", link: "b-finance-settings.html", perm: "setting", activeAlso: ["b-finance-members.html"] },
     ]
 };
 

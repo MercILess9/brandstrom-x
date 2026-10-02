@@ -103,8 +103,16 @@
         .task-link:hover { opacity: 1; }
 
         /* Meta zone — same divider + stacked icon-line pattern as the
-           List page's .bqc-meta-zone/.bqc-meta-line. */
-        .ac-meta { width: 200px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+           List page's .bqc-meta-zone/.bqc-meta-line, now also with the
+           same owner avatar. Widened from 200->230 to fit it WITHOUT
+           moving the left border (the "|" against ac-mid) — the extra
+           30px is reclaimed from .ac-actions (240->210 below), which had
+           slack beyond what its buttons actually need, rather than from
+           ac-mid (flex:1, would've shifted the divider left instead). */
+        .ac-meta { width: 230px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+        .ac-owner-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--c-accent-light); color: var(--c-accent-dark); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 0.6rem; font-weight: 800; }
+        .ac-owner-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .ac-meta-lines { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
         .ac-meta-line { font-size: 0.72rem; font-weight: 600; color: #64748b; display: flex; align-items: center; gap: 5px; min-width: 0; }
         .ac-meta-line i { font-size: 0.8rem; width: 14px; text-align: center; flex-shrink: 0; }
         .ac-meta-line .val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -118,7 +126,7 @@
            next to it — without this, picking a name changes this zone's
            content width, which (being the only non-fixed neighbor) shifts
            ac-meta's boundary and rows stop lining up with each other. */
-        .ac-actions { width: 240px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 18px; }
+        .ac-actions { width: 210px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 18px; }
         /* View is purely incidental (hover-only, always). The Assign
            dropdown gets its own visibility instead — it also stays
            visible whenever a selection is pending, so the picked name
@@ -225,6 +233,7 @@
     let workList  = [];         // [{work, role_id}]
     let typeList  = [];         // [{name}] — active types, for the Type multi-select
     let ownerList = [];
+    let profileMap = {};        // codename -> {nick_name, avatar_url} — feeds the Owner avatar on each card
     // createMultiSelect() instances — all initialized once in loadPage()
     let statusFilter, typeFilter, workFilter, ownerFilter;
     let deadlineFilter; // createDatePicker() instance — initialized in setupMultiSelects()
@@ -244,7 +253,7 @@
         sessionStorage.removeItem('bx_perms_bquest');
         await initLayout(B_QUEST_CONFIG);
         guardBquestPage('assign');
-        await Promise.all([loadRoles(), loadAssignCandidates(), loadWorkList(), loadStatusList(), loadTypeList(), loadOwnerList()]);
+        await Promise.all([loadRoles(), loadAssignCandidates(), loadWorkList(), loadStatusList(), loadTypeList(), loadOwnerList(), loadProfileMap()]);
         renderRoleSeg();
         await loadRows(true);
         setupSearch();
@@ -323,7 +332,7 @@
         const { data: memberRoles } = await supabaseClient.from('b_quest_member_role').select('codename, role_id').eq('accept', true);
         const codenames = [...new Set((memberRoles || []).map(r => r.codename))];
         const { data: profiles } = codenames.length
-            ? await supabaseClient.from('profiles').select('codename, full_name, department').in('codename', codenames)
+            ? await supabaseClient.from('profiles').select('codename, nick_name, full_name, department, avatar_url').in('codename', codenames)
             : { data: [] };
         const profileMap = Object.fromEntries((profiles || []).map(p => [p.codename, p]));
         assignCandidates = {};
@@ -478,6 +487,11 @@
         populateFilterOwner();
     }
 
+    async function loadProfileMap() {
+        const { data } = await supabaseClient.from('profiles').select('codename, nick_name, avatar_url');
+        profileMap = Object.fromEntries((data || []).map(p => [p.codename, p]));
+    }
+
     function setupInfiniteScroll() {
         const trigger = document.getElementById('assign-load-more-trigger');
         if (!trigger) return;
@@ -615,8 +629,16 @@
                     </div>
 
                     <div class="ac-zone ac-meta" ${toggleAttr}>
-                        <div class="ac-meta-line ${dlUrgency(r.deadline)}"><i class="bi bi-calendar3"></i><span class="val">${r.deadline ? formatDate(r.deadline) : '-'}</span></div>
-                        <div class="ac-meta-line"><i class="bi bi-person-fill"></i><span class="val">${esc(q.owner) || '-'}</span></div>
+                        <div class="ac-owner-avatar">${(() => {
+                            const op = profileMap[q.owner];
+                            return op?.avatar_url
+                                ? `<img src="${esc(op.avatar_url)}" alt="">`
+                                : `<span>${esc(getInitials((op?.nick_name || q.owner || '').replace(/\s*\(.*$/, '')))}</span>`;
+                        })()}</div>
+                        <div class="ac-meta-lines">
+                            <div class="ac-meta-line"><span class="val">${esc(q.owner) || '-'}</span></div>
+                            <div class="ac-meta-line ${dlUrgency(r.deadline)}"><i class="bi bi-calendar3"></i><span class="val">${r.deadline ? formatDate(r.deadline) : '-'}</span></div>
+                        </div>
                     </div>
 
                     <div class="ac-actions">
@@ -664,11 +686,12 @@
         return row() + row() + row() + row();
     }
 
-    // Placeholder — same "coming soon" pattern as the List page's own View
-    // button (handleViewTask in b-quest.js) until there's an actual detail
-    // page to link to.
+    // Same clean-URL View link as b-quest-list.html's handleViewTask — no
+    // .html here on purpose, cleanUrls (vercel.json) 308-redirects a
+    // .html-suffixed request to its clean equivalent and drops the query
+    // string entirely, so linking straight to the clean URL skips that hop.
     function handleViewAssignTask(questId) {
-        notify('', 'View page coming soon', 'info');
+        window.open(`b-quest-view?id=${encodeURIComponent(questId)}`, '_blank');
     }
 
     function dlUrgency(dateStr) {

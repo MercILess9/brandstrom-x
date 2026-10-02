@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>B-ACCOUNT | Member</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/system/config.js"></script>
+    <script src="/system/system.js"></script>
+    <script src="/system/save-bar.js"></script>
+    <script src="b-account.js"></script>
+    <link rel="stylesheet" href="/system/theme.css">
+    <link rel="stylesheet" href="b-account.css">
+    <style>
+        /* Cross-document View Transitions — see b-account-settings.html for
+           the full explanation; needs this same declaration on both pages
+           of the Setting/Member pair to engage. */
+        @view-transition {
+            navigation: auto;
+        }
+
+        .settings-wrapper { max-width: 1300px; margin: 0 auto; padding: 36px 20px 140px; }
+        .page-header { margin-bottom: 28px; }
+        .page-header h1 { font-size: 1.4rem; font-weight: 800; color: var(--c-dark); margin: 0; }
+
+        .settings-tabnav { display: flex; gap: 8px; margin-bottom: 20px; }
+        .settings-tab { display: flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; color: var(--c-slate); text-decoration: none; border: 1px solid var(--c-border); background: #fff; transition: 0.15s; }
+        .settings-tab:hover { border-color: var(--c-accent); color: var(--c-dark); }
+        .settings-tab.active { background: var(--c-dark); color: var(--c-accent); border-color: var(--c-dark); }
+
+        /* ── Section ── */
+        .section { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; margin-bottom: 20px; overflow: hidden; }
+        .section-header { display: flex; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--c-border); }
+        .section-title { font-size: 0.82rem; font-weight: 800; color: var(--c-dark); text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 8px; }
+        .section-title i { font-size: 1rem; }
+        .section-body { padding: 20px 24px; }
+        .cfg-count-badge { font-size: 0.66rem; font-weight: 700; color: var(--c-slate); text-transform: none; letter-spacing: 0; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 1px 8px; }
+        .dirty-dot { width: 7px; height: 7px; background: #f59e0b; border-radius: 50%; display: none; }
+        .section.is-dirty .dirty-dot { display: inline-block; }
+        .section.is-dirty { border-color: #fde68a; }
+        .cfg-empty { padding: 20px; text-align: center; color: var(--c-muted); font-size: 0.8rem; font-weight: 600; }
+        .cfg-btn-add { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 7px 14px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: 0.15s; }
+        .cfg-btn-add:hover { background: #0f172a; transform: scale(1.06); }
+        .cfg-btn-sort { background: none; border: 1px solid var(--c-border); color: var(--c-slate); border-radius: 9px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; margin-left: auto; flex-shrink: 0; transition: 0.15s; }
+        .cfg-btn-sort:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
+        .cfg-btn-undo { background: none; border: none; color: var(--c-danger); cursor: pointer; padding: 5px; border-radius: 7px; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; flex-shrink: 0; }
+        .cfg-btn-undo:hover { color: #dc2626; }
+
+        /* ── Members header bar ── */
+        .section-header .table-search-wrap { max-width: 450px; }
+        /* True geometric centering (grid, not flex free-space margin:auto) —
+           the search box lands at the exact same x-position across every
+           project's Members page regardless of how wide the title or the
+           right-hand button group happens to be on that page. */
+        /* Middle column is capped at 450px directly (not auto) — an auto
+           track sizes to its item's own intrinsic content, and a
+           justify-self:center item with only a max-width (no width) never
+           actually grows to fill it, so the search box silently ignored
+           the 450px max-width no matter what it was set to. Capping the
+           TRACK itself and letting the item stretch (width:100%) to fill
+           that track is what actually makes it reach 450px. */
+        .section-header.mem-header-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,450px) minmax(0,1fr); }
+        .mem-header-grid .section-title { justify-self: start; }
+        .mem-header-grid .table-search-wrap { width: 100%; margin: 0; }
+        .mem-header-grid .mem-header-right-group { justify-self: end; }
+        .mem-header-right-group { display: flex; align-items: center; gap: 16px; }
+        .mem-advmode-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; font-weight: 700; color: var(--c-slate); }
+        .section.adv-mode-active { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.15); }
+        .section.adv-mode-active > .section-header { background: #fffbeb; }
+        .mem-col-adv { cursor: pointer; transition: background 0.15s, color 0.15s; }
+        .mem-col-adv:hover { background: #fffbeb; color: #b45309; }
+        .mem-bulk-row-btn { background: #f59e0b; border: none; color: #fff; border-radius: 7px; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.76rem; transition: 0.15s; box-shadow: 0 2px 6px rgba(245,158,11,0.35); }
+        .mem-bulk-row-btn:hover { background: #d97706; transform: scale(1.1); }
+        .mem-matrix td.mem-col-bulk-row, .mem-matrix th.mem-col-bulk-row { padding: 6px 4px; text-align: center; }
+
+        .table-search-wrap { position: relative; flex: 1; max-width: 260px; }
+        .table-search-input { width: 100%; border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 12px 7px 32px; font-size: 0.82rem; color: var(--c-dark); background: var(--c-bg); outline: none; font-family: inherit; transition: 0.2s; }
+        .table-search-input:focus { border-color: var(--c-accent); background: #fff; }
+        .table-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.8rem; pointer-events: none; }
+
+        /* ── Member matrix table ── */
+        .mem-matrix-wrap { overflow-x: auto; overflow-y: visible; border-radius: 12px; }
+        /* width:100% + table-layout:fixed — the identity columns (Member/
+           ID/Department) keep their exact <col> px widths always; the 4
+           toggle columns are left width-less in the colgroup on purpose
+           (see .mem-col-action's min-width comment below) so THEY absorb
+           whatever space is left to reach 100%, instead of every column
+           stretching proportionally (the original bug) or the table
+           sitting narrower than its container with a dead gap on the
+           right (width:auto, tried and rejected — looked unbalanced). */
+        .mem-matrix { border-collapse: collapse; width: 100%; font-size: 0.8rem; table-layout: fixed; }
+        /* Not sticky — .mem-matrix-wrap needs overflow-x:auto for
+           horizontal scroll, which per a CSS spec quirk forces overflow-y
+           to stop being visible too on that same element, which blocks
+           position:sticky no matter which ancestor it's set on. A
+           floating clone of the real header (#mem-sticky-hdr, further
+           down) shows once it scrolls out of view instead — same
+           mechanism as system/setting.html's Member tab and B-Quest's own
+           b-quest-members.html. */
+        .mem-matrix thead th { background: #fff; z-index: 2; text-align: center; font-size: 0.62rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 8px; height: 34px; border-bottom: 1px solid var(--c-border); white-space: nowrap; box-sizing: border-box; }
+        .mem-sticky-hdr { position: fixed; top: var(--header-height, 64px); z-index: 900; overflow: hidden; pointer-events: none; background: #fff; border-bottom: 1px solid var(--c-border); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+        .mem-sticky-hdr table { border-collapse: collapse; table-layout: fixed; }
+        .mem-matrix th.mem-col-trash, .mem-matrix td.mem-col-trash { position: sticky; left: 0; z-index: 1; background: #fff; width: 40px; }
+        .mem-matrix th.mem-col-trash { z-index: 3; }
+        .mem-matrix th.mem-col-name, .mem-matrix td.mem-col-name { position: sticky; left: 40px; z-index: 1; background: #fff; text-align: left; width: 228px; }
+        .mem-matrix th.mem-col-name { z-index: 3; }
+        .mem-name-cell { display: flex; align-items: center; gap: 10px; }
+        .mem-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--c-accent-light); color: var(--c-accent-dark); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 0.8rem; font-weight: 800; }
+        .mem-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .mem-name-fields { min-width: 0; flex: 1; }
+        .mem-matrix td { padding: 11px 16px; text-align: center; border-bottom: 1px solid var(--c-bg); vertical-align: middle; }
+        .mem-matrix td.mem-col-name { white-space: nowrap; padding: 10px 16px; }
+        .mem-nick, .mem-fullname, .mem-matrix td.mem-col-code, .mem-matrix td.mem-col-dept { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .mem-nick { font-size: 0.82rem; font-weight: 700; color: var(--c-dark); }
+        .mem-fullname { font-size: 0.68rem; font-weight: 600; color: var(--c-muted); margin-top: 1px; }
+        .mem-matrix th.mem-col-code, .mem-matrix td.mem-col-code { width: 80px; text-align: center; }
+        .mem-matrix th.mem-col-dept, .mem-matrix td.mem-col-dept { width: 190px; }
+        /* min-width not width — the 4 toggle columns are the ones allowed
+           to flex and absorb whatever space is left after Member/ID/
+           Department's fixed widths (which must stay pixel-identical to
+           B-Quest's own), so the table fills 100% without an empty gap on
+           the right, and without stretching the identity columns instead
+           (which was the previous, wrong, "balance"). */
+        .mem-matrix th.mem-col-action, .mem-matrix td.mem-col-action { min-width: 90px; }
+        .mem-matrix .mem-zone-divider { border-left: 1px solid var(--c-border); }
+        .mem-matrix .mem-header-filterable { cursor: pointer; user-select: none; transition: color 0.15s; }
+        .mem-matrix .mem-header-filterable:hover { color: var(--c-dark); }
+        .mem-sort-icon { font-size: 0.7rem; margin-left: 2px; opacity: 0.35; }
+        .mem-sort-icon.active { opacity: 1; color: var(--c-accent-dark); }
+        .mem-filter-icon { font-size: 0.62rem; margin-left: 3px; opacity: 0.35; }
+        .mem-filter-icon.active { opacity: 1; color: var(--c-accent-dark); }
+        .mem-bulk-col-icon { font-size: 0.6rem; margin-left: 3px; color: #f59e0b; opacity: 0.7; }
+        .mem-col-adv:hover .mem-bulk-col-icon { opacity: 1; }
+        .mem-matrix tbody tr:last-child td { border-bottom: none; }
+        .mem-matrix tbody tr.is-new td { background: #f0fdf4; }
+        .mem-matrix tbody tr.is-deleted td { opacity: 0.75; background: #fef2f2; text-decoration: line-through; text-decoration-color: var(--c-danger); text-decoration-thickness: 1.5px; pointer-events: none; }
+        .mem-matrix tbody tr.is-deleted td:first-child { pointer-events: auto; text-decoration: none; }
+        .btn-remove { background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 6px; border-radius: 7px; transition: 0.2s; display: flex; align-items: center; font-size: 0.95rem; }
+        .btn-remove:hover { color: var(--c-danger); }
+
+        .mem-empty-row { padding: 32px !important; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
+        .mem-empty-row i { margin-right: 6px; opacity: 0.5; }
+
+        .skeleton-row { display: flex; align-items: center; gap: 14px; padding: 12px 4px; border-bottom: 1px solid var(--c-bg); }
+        .skeleton-block { background: #f1f5f9; border-radius: 8px; animation: shimmer 1.4s infinite; }
+        @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+        /* ── Toggle switch ── */
+        .bq-toggle { position: relative; display: inline-block; width: 34px; height: 19px; flex-shrink: 0; }
+        .bq-toggle input { opacity: 0; width: 0; height: 0; }
+        .bq-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--c-border); transition: .3s; border-radius: 34px; }
+        .bq-toggle:hover .bq-slider { box-shadow: 0 0 0 4px rgba(0,0,0,0.06); }
+        .bq-toggle:hover input:checked + .bq-slider { box-shadow: 0 0 0 4px rgba(var(--c-accent-rgb), 0.25); }
+        .bq-slider:before { position: absolute; content: ""; height: 13px; width: 13px; left: 3px; bottom: 3px; background: #fff; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+        .bq-toggle input:checked + .bq-slider { background: var(--c-accent); }
+        .bq-toggle input:checked + .bq-slider:before { transform: translateX(15px); }
+        .bq-toggle.small { width: 28px; height: 16px; }
+        .bq-toggle.small .bq-slider:before { height: 10px; width: 10px; left: 3px; bottom: 3px; }
+        .bq-toggle.small input:checked + .bq-slider:before { transform: translateX(12px); }
+
+        /* ── Excel-style column header filter (Member/ID/Department) ── */
+        .mem-filter-modal { width: 420px; }
+        .mem-filter-modal-header { padding: 22px 26px 18px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .mem-filter-modal-title { font-size: 1rem; font-weight: 800; color: var(--c-dark); display: flex; align-items: center; gap: 8px; }
+        .mem-filter-header-actions { display: flex; align-items: center; gap: 8px; }
+        .mem-filter-reset-link { background: none; border: 1px solid transparent; color: var(--c-muted); font-size: 0.7rem; font-weight: 700; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 7px; transition: 0.15s; opacity: 0.5; }
+        .mem-filter-reset-link:hover { background: var(--c-bg); color: var(--c-dark); opacity: 1; }
+        .mem-filter-reset-link.active { opacity: 1; background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
+        .mem-filter-reset-link.active:hover { background: var(--c-accent); color: var(--c-on-accent); }
+        .mem-filter-modal-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--c-muted); transition: 0.2s; }
+        .mem-filter-modal-close:hover { background: var(--c-border); color: var(--c-dark); }
+        .mem-filter-modal-body { padding: 20px 26px 24px; overflow-y: auto; }
+        .mem-filter-search-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .mem-filter-search-row .mem-filter-search-wrap { flex: 1; margin-bottom: 0; }
+        .mem-filter-search-row .cfg-btn-sort { margin-left: 0; }
+        .mem-filter-search-wrap { position: relative; }
+        .mem-filter-search-input { width: 100%; border: 1px solid var(--c-border); border-radius: 12px; padding: 9px 34px 9px 36px; font-size: 0.85rem; outline: none; font-family: inherit; transition: 0.2s; background: var(--c-bg); box-sizing: border-box; }
+        .mem-filter-search-input:focus { border-color: var(--c-accent); background: #fff; }
+        .mem-filter-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.85rem; pointer-events: none; }
+        .mem-filter-search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--c-muted); font-size: 1rem; cursor: pointer; padding: 3px; display: flex; align-items: center; transition: 0.15s; }
+        .mem-filter-search-clear:hover { color: var(--c-dark); }
+        .mem-filter-count { font-size: 0.72rem; font-weight: 700; color: var(--c-muted); margin-left: 2px; }
+        .mem-filter-list { max-height: 260px; overflow-y: auto; border-top: 1px solid var(--c-border); padding-top: 4px; }
+        .mem-filter-select-all { font-weight: 800; border-bottom: 1px solid var(--c-border); margin-bottom: 4px; padding-bottom: 12px; }
+        .mem-filter-item { display: flex; align-items: center; gap: 12px; padding: 9px 10px; font-size: 0.82rem; font-weight: 600; color: var(--c-dark); cursor: pointer; border-radius: 12px; transition: background 0.15s, opacity 0.15s; }
+        .mem-filter-item:hover { background: var(--c-accent-light); }
+        .mem-filter-item:has(.modern-checkbox:not(:checked)) { opacity: 0.5; }
+        .mem-filter-item.mem-filter-select-all { opacity: 1; }
+
+        /* ── Popover shells (Excel-filter/Add overlays share this) ── */
+        .modal-overlay-base { position: fixed; inset: 0; background: rgba(15,23,42,0.4); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+        .modal-overlay-base.show { opacity: 1; pointer-events: all; }
+        .modal-shell-base { background: #fff; border-radius: 24px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.15); transform: translateY(16px); transition: transform 0.25s; overflow: hidden; }
+        .modal-overlay-base.show .modal-shell-base { transform: translateY(0); }
+
+        /* ── Add Member Overlay ── */
+        .am-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.4); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+        .am-overlay.show { opacity: 1; pointer-events: all; }
+        .am-modal { background: #fff; border-radius: 24px; width: 480px; max-height: 75vh; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.15); transform: translateY(16px); transition: transform 0.25s; overflow: hidden; }
+        .am-overlay.show .am-modal { transform: translateY(0); }
+        .am-header { padding: 22px 24px 16px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .am-title { font-size: 0.95rem; font-weight: 800; color: var(--c-dark); }
+        .am-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--c-muted); transition: 0.2s; }
+        .am-close:hover { background: #e2e8f0; color: var(--c-dark); }
+        .am-search-wrap { padding: 12px 20px; border-bottom: 1px solid var(--c-border); flex-shrink: 0; position: relative; }
+        .am-search { width: 100%; border: 1px solid var(--c-border); border-radius: 10px; padding: 8px 12px 8px 36px; font-size: 0.85rem; outline: none; font-family: inherit; background: var(--c-bg); transition: 0.2s; }
+        .am-search:focus { border-color: var(--c-accent); background: #fff; }
+        .am-search-icon { position: absolute; left: 32px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.85rem; pointer-events: none; }
+        .am-list { overflow-y: auto; flex: 1; padding: 8px 12px; }
+        .am-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: 0.15s; }
+        .am-item:hover { background: var(--c-bg); }
+        .am-item.selected { background: var(--c-accent-light); }
+        .am-check { width: 18px; height: 18px; border: 2px solid var(--c-border); border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: 0.15s; font-size: 0.7rem; color: transparent; }
+        .am-item.selected .am-check { background: var(--c-accent); border-color: var(--c-accent); color: var(--c-dark); }
+        .am-avatar { width: 34px; height: 34px; background: var(--c-accent-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; color: var(--c-accent-dark); flex-shrink: 0; }
+        .am-item.selected .am-avatar { background: var(--c-accent); }
+        .am-codename { font-size: 0.85rem; font-weight: 700; color: var(--c-dark); }
+        .am-sub { font-size: 0.72rem; color: var(--c-muted); }
+        .am-empty { padding: 36px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
+        .am-footer { padding: 14px 20px; border-top: 1px solid var(--c-border); display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-shrink: 0; background: #fff; }
+        .btn-am-cancel  { border: 1px solid var(--c-border); background: #fff; color: var(--c-slate); border-radius: 10px; padding: 9px 22px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: 0.15s; }
+        .btn-am-cancel:hover { background: var(--c-bg); }
+        .btn-am-confirm { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 9px 22px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: 0.15s; }
+        .btn-am-confirm:hover:not(:disabled) { background: #0f172a; }
+        .btn-am-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="settings-wrapper">
+    <div class="page-header">
+        <h1><i class="bi bi-people-fill me-2" style="color:var(--c-accent)"></i>B-ACCOUNT Member</h1>
+    </div>
+
+    <div class="settings-tabnav">
+        <a href="b-account-settings.html" class="settings-tab"><i class="bi bi-gear-fill"></i> Setting</a>
+        <a href="b-account-members.html" class="settings-tab active"><i class="bi bi-people-fill"></i> Member</a>
+    </div>
+
+    <!-- Member Access -->
+    <div class="section" id="section-members">
+        <div class="section-header mem-header-grid">
+            <div class="section-title">
+                <i class="bi bi-people-fill"></i> Member Access
+                <span class="cfg-count-badge" id="table-count"></span>
+                <span class="dirty-dot"></span>
+            </div>
+            <div class="table-search-wrap">
+                <i class="bi bi-search table-search-icon"></i>
+                <input type="text" id="table-search" class="table-search-input" placeholder="Search...">
+            </div>
+            <div class="mem-header-right-group">
+                <div class="mem-advmode-toggle" title="Bulk-toggle whole columns/rows at once — off by default, meant for initial project setup">
+                    <span><i class="bi bi-lightning-charge-fill" style="color:#f59e0b"></i> Bulk</span>
+                    <label class="bq-toggle small">
+                        <input type="checkbox" onchange="toggleAdvancedMode(this.checked)">
+                        <span class="bq-slider"></span>
+                    </label>
+                </div>
+                <button class="cfg-btn-add" onclick="openAddMember()">
+                    <i class="bi bi-person-plus-fill"></i> Add
+                </button>
+            </div>
+        </div>
+        <div class="section-body">
+            <div class="mem-sticky-hdr" id="mem-sticky-hdr" style="display:none;"></div>
+            <div class="mem-matrix-wrap" id="mem-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Filter Modal (Member/ID/Department headers) -->
+<div class="mem-filter-overlay modal-overlay-base" id="mem-filter-overlay" onclick="closeColumnFilterPopup(event)">
+    <div class="mem-filter-modal modal-shell-base" onclick="event.stopPropagation()">
+        <div class="mem-filter-modal-header">
+            <div class="mem-filter-modal-title">
+                <i class="bi bi-funnel-fill" style="color:var(--c-accent)"></i>
+                <span id="mem-filter-title"></span>
+                <span class="mem-filter-count" id="mem-filter-count"></span>
+            </div>
+            <div class="mem-filter-header-actions">
+                <button class="mem-filter-reset-link" id="mem-filter-reset-btn" onclick="resetColumnFilter()"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+                <button class="mem-filter-modal-close" onclick="closeColumnFilterPopup()"><i class="bi bi-x"></i></button>
+            </div>
+        </div>
+        <div class="mem-filter-modal-body">
+            <div class="mem-filter-search-row">
+                <div class="mem-filter-search-wrap">
+                    <i class="bi bi-search mem-filter-search-icon"></i>
+                    <input type="text" id="mem-filter-search" class="mem-filter-search-input" placeholder="Search..." autocomplete="off" oninput="renderColumnFilterList(this.value); toggleSearchClearBtn(this.value);">
+                    <button class="mem-filter-search-clear" id="mem-filter-search-clear" onclick="clearColumnFilterSearch()" title="Clear search" style="display:none;"><i class="bi bi-x-circle-fill"></i></button>
+                </div>
+                <button class="cfg-btn-sort" onclick="setMemberSortDirect(filterPopupField, 'asc')" title="Sort A → Z"><i class="bi bi-sort-alpha-down"></i></button>
+                <button class="cfg-btn-sort" onclick="setMemberSortDirect(filterPopupField, 'desc')" title="Sort Z → A"><i class="bi bi-sort-alpha-up"></i></button>
+            </div>
+            <div class="mem-filter-list" id="mem-filter-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Member Overlay -->
+<div class="am-overlay" id="amOverlay">
+    <div class="am-modal">
+        <div class="am-header">
+            <div class="am-title"><i class="bi bi-person-plus-fill me-2" style="color:var(--c-accent)"></i>Add Member</div>
+            <button class="am-close" onclick="closeAddMember()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="am-search-wrap">
+            <i class="bi bi-search am-search-icon"></i>
+            <input type="text" class="am-search" id="amSearch" placeholder="Search..." oninput="filterAmList(this.value)">
+        </div>
+        <div class="am-list" id="amList"></div>
+        <div class="am-footer">
+            <button class="btn-am-cancel" onclick="closeAddMember()">Cancel</button>
+            <button class="btn-am-confirm" id="amConfirmBtn" onclick="confirmAddMembers()" disabled>Add</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const PERM_COLS = ['new', 'edit', 'delete', 'setting'];
+
+    // ── Members State ─────────────────────────────────────────────
+    let _members = [];   // { codename, ae, new, edit, delete, setting, _state: 'existing'|'new'|'deleted' }
+    let _allProfiles = [];
+    let _amSelected = new Set();
+    let _memberSearch = '';
+    let memberSort = { field: 'nick_name', dir: 'asc' }; // field: 'nick_name' | 'employee_id' | 'department'
+    let memberColumnFilters = { nick_name: null, employee_id: null, department: null };
+    let filterPopupField = null; // which column's popup is currently open
+    let advancedMode = false; // bulk column/row toggles for initial project setup — off by default
+
+    let saveBar = null;
+
+    function recomputeSaveBarCount() {
+        if (!saveBar) return;
+        const total = _members.filter(m => m._state === 'new' || m._state === 'deleted' || (m._state === 'existing' && m._changed)).length;
+        saveBar.setCount(total);
+    }
+
+    function profileFor(codename) {
+        return _allProfiles.find(p => p.codename === codename);
+    }
+
+    function toggle(codename, perm) {
+        const m = _members.find(m => m.codename === codename);
+        if (!m) return;
+        m[perm] = !m[perm];
+        if (m._state === 'existing') m._changed = true;
+        markDirty();
+        renderPermTable();
+        recomputeSaveBarCount();
+    }
+
+    function markDirty() {
+        document.getElementById('section-members').classList.add('is-dirty');
+    }
+
+    function removeMember(codename) {
+        const m = _members.find(m => m.codename === codename);
+        if (!m) return;
+        if (m._state === 'new') { _members = _members.filter(x => x.codename !== codename); }
+        else { m._state = 'deleted'; }
+        markDirty();
+        renderPermTable();
+        recomputeSaveBarCount();
+    }
+
+    function undoRemoveMember(codename) {
+        const m = _members.find(m => m.codename === codename);
+        if (!m) return;
+        m._state = 'existing';
+        renderPermTable();
+        recomputeSaveBarCount();
+    }
+
+    // ── Excel-style column header filter (Member/ID/Department): sort
+    // A-Z/Z-A + a searchable checklist of that column's distinct values.
+    function columnValues(field) {
+        return [...new Set(_members.filter(m => m._state !== 'deleted').map(m => profileFor(m.codename)?.[field]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    }
+
+    function filterIcon(field) {
+        const active = !!memberColumnFilters[field];
+        return `<i class="bi ${active ? 'bi-funnel-fill' : 'bi-funnel'} mem-filter-icon ${active ? 'active' : ''}"></i>`;
+    }
+
+    function sortIcon(field) {
+        if (memberSort.field !== field) return '<i class="bi bi-chevron-expand mem-sort-icon"></i>';
+        return memberSort.dir === 'asc'
+            ? '<i class="bi bi-chevron-down mem-sort-icon active"></i>'
+            : '<i class="bi bi-chevron-up mem-sort-icon active"></i>';
+    }
+
+    function bulkColIcon() {
+        return '<i class="bi bi-lightning-charge-fill mem-bulk-col-icon"></i>';
+    }
+
+    function openColumnFilterPopup(field, label) {
+        filterPopupField = field;
+        document.getElementById('mem-filter-title').textContent = label;
+        document.getElementById('mem-filter-search').value = '';
+        toggleSearchClearBtn('');
+        renderColumnFilterList('');
+        document.getElementById('mem-filter-overlay').classList.add('show');
+        lockBodyScroll();
+        setTimeout(() => document.getElementById('mem-filter-search').focus(), 100);
+    }
+
+    function closeColumnFilterPopup(e) {
+        if (e && e.target !== document.getElementById('mem-filter-overlay')) return;
+        document.getElementById('mem-filter-overlay').classList.remove('show');
+        unlockBodyScroll();
+    }
+
+    function toggleSearchClearBtn(val) {
+        const btn = document.getElementById('mem-filter-search-clear');
+        if (btn) btn.style.display = val ? 'flex' : 'none';
+    }
+
+    function clearColumnFilterSearch() {
+        const input = document.getElementById('mem-filter-search');
+        input.value = '';
+        input.focus();
+        toggleSearchClearBtn('');
+        renderColumnFilterList('');
+    }
+
+    function renderColumnFilterList(searchQ) {
+        const field = filterPopupField;
+        const all = columnValues(field);
+        const ql = searchQ.trim().toLowerCase();
+        const visible = ql ? all.filter(v => v.toLowerCase().includes(ql)) : all;
+        const selected = memberColumnFilters[field];
+        const list = document.getElementById('mem-filter-list');
+
+        const selectedTotal = selected ? selected.size : all.length;
+        document.getElementById('mem-filter-count').textContent = selectedTotal === all.length ? '' : `${selectedTotal}/${all.length} selected`;
+        document.getElementById('mem-filter-reset-btn')?.classList.toggle('active', !!selected);
+
+        if (!visible.length) { list.innerHTML = '<div class="cfg-empty">No matches</div>'; return; }
+        const checkedCount = visible.filter(v => !selected || selected.has(v)).length;
+        list.innerHTML = `
+            <label class="mem-filter-item mem-filter-select-all">
+                <input type="checkbox" class="modern-checkbox" id="mem-filter-select-all-cb" ${checkedCount === visible.length ? 'checked' : ''} onchange="toggleAllVisible(this.checked)">
+                <span>Select All${ql ? ` (${visible.length} matching)` : ''}</span>
+            </label>
+            ${visible.map(v => `
+            <label class="mem-filter-item">
+                <input type="checkbox" class="modern-checkbox" ${!selected || selected.has(v) ? 'checked' : ''} onchange="toggleColumnValue('${esc(v)}', this.checked)">
+                <span>${esc(v)}</span>
+            </label>`).join('')}
+        `;
+        const selectAllCb = document.getElementById('mem-filter-select-all-cb');
+        if (selectAllCb) selectAllCb.indeterminate = checkedCount > 0 && checkedCount < visible.length;
+    }
+
+    function toggleColumnValue(value, checked) {
+        const field = filterPopupField;
+        if (memberColumnFilters[field] === null) memberColumnFilters[field] = new Set(columnValues(field));
+        checked ? memberColumnFilters[field].add(value) : memberColumnFilters[field].delete(value);
+        if (memberColumnFilters[field].size === columnValues(field).length) memberColumnFilters[field] = null;
+        renderPermTable();
+        renderColumnFilterList(document.getElementById('mem-filter-search')?.value || '');
+    }
+
+    function toggleAllVisible(checked) {
+        const field = filterPopupField;
+        const ql = (document.getElementById('mem-filter-search')?.value || '').trim().toLowerCase();
+        const all = columnValues(field);
+        const visible = ql ? all.filter(v => v.toLowerCase().includes(ql)) : all;
+        if (memberColumnFilters[field] === null) memberColumnFilters[field] = new Set(all);
+        visible.forEach(v => checked ? memberColumnFilters[field].add(v) : memberColumnFilters[field].delete(v));
+        if (memberColumnFilters[field].size === all.length) memberColumnFilters[field] = null;
+        renderPermTable();
+        renderColumnFilterList(document.getElementById('mem-filter-search')?.value || '');
+    }
+
+    function resetColumnFilter() {
+        memberColumnFilters[filterPopupField] = null;
+        document.getElementById('mem-filter-search').value = '';
+        toggleSearchClearBtn('');
+        renderPermTable();
+        renderColumnFilterList('');
+    }
+
+    function setMemberSortDirect(field, dir) {
+        memberSort = { field, dir };
+        closeColumnFilterPopup();
+        renderPermTable();
+    }
+
+    function visibleMemberRows() {
+        let rows = _members; // deleted rows stay in the list (struck through), same as B-Quest
+        const fl = _memberSearch.toLowerCase();
+        if (fl) {
+            rows = rows.filter(m => {
+                const p = profileFor(m.codename);
+                return m.codename.toLowerCase().includes(fl)
+                    || (p?.nick_name || '').toLowerCase().includes(fl)
+                    || (p?.full_name || '').toLowerCase().includes(fl)
+                    || (p?.employee_id || '').toLowerCase().includes(fl)
+                    || (p?.department || '').toLowerCase().includes(fl);
+            });
+        }
+        for (const field of Object.keys(memberColumnFilters)) {
+            const allowed = memberColumnFilters[field];
+            if (allowed) rows = rows.filter(m => allowed.has(profileFor(m.codename)?.[field]));
+        }
+        return rows;
+    }
+
+    function renderPermTable() {
+        const container = document.getElementById('mem-list');
+        let rows = visibleMemberRows();
+
+        updateTableCount(rows.filter(m => m._state !== 'deleted').length, _members.filter(m => m._state !== 'deleted').length);
+
+        rows = [...rows].sort((a, b) => {
+            const va = (profileFor(a.codename)?.[memberSort.field] || '').toLowerCase();
+            const vb = (profileFor(b.codename)?.[memberSort.field] || '').toLowerCase();
+            const cmp = va.localeCompare(vb);
+            return memberSort.dir === 'asc' ? cmp : -cmp;
+        });
+
+        container.innerHTML = `
+        <table class="mem-matrix">
+            <colgroup>
+                <col style="width:40px">
+                <col style="width:200px">
+                <col style="width:80px">
+                <col style="width:190px">
+                ${advancedMode ? '<col style="width:44px">' : ''}
+                ${PERM_COLS.map(() => '<col>').join('')}
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="mem-col-trash"></th>
+                    <th class="mem-col-name mem-header-filterable" onclick="openColumnFilterPopup('nick_name', 'Member')">Member ${sortIcon('nick_name')} ${filterIcon('nick_name')}</th>
+                    <th class="mem-col-code mem-header-filterable" onclick="openColumnFilterPopup('employee_id', 'ID')">ID ${sortIcon('employee_id')} ${filterIcon('employee_id')}</th>
+                    <th class="mem-col-dept mem-header-filterable" onclick="openColumnFilterPopup('department', 'Department')">Department ${sortIcon('department')} ${filterIcon('department')}</th>
+                    ${advancedMode ? `<th class="mem-col-bulk-row" title="Bulk toggle: click a row's icon to enable/disable everything for that member"><i class="bi bi-lightning-charge-fill" style="color:#f59e0b"></i></th>` : ''}
+                    ${PERM_COLS.map((col, i) => {
+                        const label = col.charAt(0).toUpperCase() + col.slice(1);
+                        const cls = `mem-col-action ${i === 0 ? 'mem-zone-divider' : ''} ${advancedMode ? 'mem-col-adv' : ''}`;
+                        const attrs = advancedMode ? ` onclick="bulkToggleFlag('${col}')" title="Click to toggle ${label} for everyone shown"` : ` title="${label}"`;
+                        return `<th class="${cls}"${attrs}>${label}${advancedMode ? bulkColIcon() : ''}</th>`;
+                    }).join('')}
+                </tr>
+            </thead>
+            <tbody>
+                ${!rows.length ? `
+                <tr>
+                    <td colspan="${4 + (advancedMode ? 1 : 0) + PERM_COLS.length}" class="mem-empty-row">
+                        <i class="bi bi-people"></i> No Member
+                    </td>
+                </tr>` : rows.map(m => {
+                    const cls = m._state === 'new' ? 'is-new' : m._state === 'deleted' ? 'is-deleted' : '';
+                    const p = profileFor(m.codename);
+                    return `
+                    <tr class="${cls}" data-codename="${esc(m.codename)}">
+                        <td class="mem-col-trash">
+                            ${m._state === 'deleted'
+                                ? `<button class="cfg-btn-undo" onclick="undoRemoveMember('${esc(m.codename)}')" title="Undo delete"><i class="bi bi-arrow-counterclockwise"></i></button>`
+                                : `<button class="btn-remove" onclick="removeMember('${esc(m.codename)}')" title="Remove"><i class="bi bi-trash3"></i></button>`}
+                        </td>
+                        <td class="mem-col-name">
+                            <div class="mem-name-cell">
+                                <div class="mem-avatar">${p?.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="">` : `<span>${esc(getInitials(p?.nick_name || p?.full_name || m.codename.replace(/\s*\(.*$/, '')))}</span>`}</div>
+                                <div class="mem-name-fields">
+                                    <div class="mem-nick">${esc(p?.nick_name || m.codename)}</div>
+                                    ${p?.full_name ? `<div class="mem-fullname">${esc(p.full_name)}</div>` : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="mem-col-code">${esc(p?.employee_id || '-')}</td>
+                        <td class="mem-col-dept">${esc(p?.department || '-')}</td>
+                        ${advancedMode ? `
+                        <td class="mem-col-bulk-row">
+                            <button class="mem-bulk-row-btn" onclick="bulkToggleRow('${esc(m.codename)}')" title="Toggle everything for ${esc(p?.nick_name || m.codename)}"><i class="bi bi-lightning-charge-fill"></i></button>
+                        </td>` : ''}
+                        ${PERM_COLS.map((col, i) => `
+                        <td class="mem-col-action ${i === 0 ? 'mem-zone-divider' : ''}">
+                            <label class="bq-toggle small">
+                                <input type="checkbox" ${m[col] ? 'checked' : ''} onchange="toggle('${esc(m.codename)}','${col}')">
+                                <span class="bq-slider"></span>
+                            </label>
+                        </td>`).join('')}
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+        rebuildMemStickyHdrClone();
+    }
+
+    // Floating header clone (see .mem-sticky-hdr's CSS comment). This
+    // renders the WHOLE table (colgroup+thead+tbody) as one innerHTML
+    // string on every edit, so the <thead> node is destroyed and
+    // recreated each time — the IntersectionObserver must be re-pointed
+    // at the fresh node every render, not just set up once, or it'd
+    // silently stop firing on a detached element after the first toggle.
+    function rebuildMemStickyHdrClone() {
+        const bar = document.getElementById('mem-sticky-hdr');
+        const table = document.querySelector('#mem-list table.mem-matrix');
+        if (!bar || !table) return;
+        const colgroup = table.querySelector('colgroup');
+        const thead = table.querySelector('thead');
+        if (!colgroup || !thead) return;
+        const stripped = thead.innerHTML.replace(/\sid="[^"]*"/g, '').replace(/\sonclick="[^"]*"/g, '');
+        bar.innerHTML = `<table class="mem-matrix"><colgroup>${colgroup.innerHTML}</colgroup><thead>${stripped}</thead></table>`;
+        setupMemHeaderHintObserver(thead);
+    }
+
+    function syncMemStickyHdrPosition() {
+        const bar = document.getElementById('mem-sticky-hdr');
+        const wrap = document.getElementById('mem-list');
+        if (!bar || !wrap || bar.style.display === 'none') return;
+        const rect = wrap.getBoundingClientRect();
+        bar.style.left = rect.left + 'px';
+        bar.style.width = rect.width + 'px';
+        const table = bar.querySelector('table');
+        if (table) table.style.transform = `translateX(${-wrap.scrollLeft}px)`;
+    }
+
+    let memHeaderHintObserver = null;
+    let memHeaderHintListenersBound = false;
+    function setupMemHeaderHintObserver(realThead) {
+        const bar = document.getElementById('mem-sticky-hdr');
+        const wrap = document.getElementById('mem-list');
+        if (!bar || !wrap || !realThead) return;
+        if (!memHeaderHintObserver) {
+            const navHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 64;
+            memHeaderHintObserver = new IntersectionObserver((entries) => {
+                const show = !entries[0].isIntersecting;
+                bar.style.display = show ? 'block' : 'none';
+                if (show) syncMemStickyHdrPosition();
+            }, { rootMargin: `-${navHeight}px 0px 0px 0px`, threshold: 0 });
+        } else {
+            memHeaderHintObserver.disconnect();
+        }
+        memHeaderHintObserver.observe(realThead);
+        if (!memHeaderHintListenersBound) {
+            wrap.addEventListener('scroll', syncMemStickyHdrPosition);
+            window.addEventListener('resize', syncMemStickyHdrPosition);
+            memHeaderHintListenersBound = true;
+        }
+    }
+
+    function updateTableCount(shown, total) {
+        document.getElementById('table-count').textContent = shown === total
+            ? `${total}` : `${shown} / ${total}`;
+    }
+
+    function filterMembers(val) {
+        _memberSearch = val;
+        renderPermTable();
+    }
+
+    // ── Advanced Mode — bulk column/row toggles for initial project setup.
+    function toggleAdvancedMode(checked) {
+        advancedMode = checked;
+        document.getElementById('section-members').classList.toggle('adv-mode-active', advancedMode);
+        renderPermTable();
+    }
+
+    function bulkToggleFlag(flag) {
+        const rows = visibleMemberRows().filter(m => m._state !== 'deleted');
+        const allOn = rows.every(m => m[flag]);
+        rows.forEach(m => {
+            m[flag] = !allOn;
+            if (m._state === 'existing') m._changed = true;
+        });
+        markDirty();
+        renderPermTable();
+        recomputeSaveBarCount();
+    }
+
+    function bulkToggleRow(codename) {
+        const m = _members.find(m => m.codename === codename);
+        if (!m) return;
+        const allOn = PERM_COLS.every(col => m[col]);
+        PERM_COLS.forEach(col => { m[col] = !allOn; });
+        if (m._state === 'existing') m._changed = true;
+        markDirty();
+        renderPermTable();
+        recomputeSaveBarCount();
+    }
+
+    function showSkeleton() {
+        const row = () => `<div class="skeleton-row"><div class="skeleton-block" style="height:30px;width:130px;"></div><div class="skeleton-block" style="height:24px;width:200px;"></div></div>`;
+        document.getElementById('mem-list').innerHTML = row() + row() + row();
+    }
+
+    async function loadMembers() {
+        showSkeleton();
+        const { data } = await supabaseClient.from('b_account_setting').select('*').order('codename');
+        _members = (data || []).map(m => ({ ...m, _state: 'existing', _changed: false }));
+    }
+
+    // ── Add Member Overlay ────────────────────────────────────────
+    function openAddMember() {
+        _amSelected.clear();
+        document.getElementById('amSearch').value = '';
+        renderAmList('');
+        document.getElementById('amOverlay').classList.add('show');
+        document.getElementById('amSearch').focus();
+    }
+
+    function closeAddMember() {
+        document.getElementById('amOverlay').classList.remove('show');
+    }
+
+    function renderAmList(search) {
+        const existingCodes = new Set(_members.filter(m => m._state !== 'deleted').map(m => m.codename));
+        const list = _allProfiles.filter(p =>
+            !existingCodes.has(p.codename) &&
+            (!search || p.codename.toLowerCase().includes(search.toLowerCase()) || (p.nick_name || '').toLowerCase().includes(search.toLowerCase()))
+        );
+        const el = document.getElementById('amList');
+        if (!list.length) {
+            el.innerHTML = '<div class="am-empty">No members to add</div>';
+            return;
+        }
+        el.innerHTML = list.map(p => {
+            const sel = _amSelected.has(p.codename);
+            const initials = (p.codename || '').substring(0, 2).toUpperCase();
+            return `<div class="am-item${sel ? ' selected' : ''}" onclick="toggleAmItem('${esc(p.codename)}')">
+                <div class="am-check">${sel ? '<i class="bi bi-check-lg"></i>' : ''}</div>
+                <div class="am-avatar">${initials}</div>
+                <div>
+                    <div class="am-codename">${esc(p.codename)}</div>
+                    <div class="am-sub">${esc(p.nick_name || '')}${p.employee_id ? ` · ${esc(p.employee_id)}` : ''}</div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function toggleAmItem(codename) {
+        if (_amSelected.has(codename)) _amSelected.delete(codename);
+        else _amSelected.add(codename);
+        document.getElementById('amConfirmBtn').disabled = _amSelected.size === 0;
+        const search = document.getElementById('amSearch').value;
+        renderAmList(search);
+    }
+
+    function filterAmList(val) { renderAmList(val); }
+
+    function confirmAddMembers() {
+        _amSelected.forEach(codename => {
+            if (!_members.find(m => m.codename === codename)) {
+                _members.push({ codename, ae: false, new: false, edit: false, delete: false, setting: false, _state: 'new', _changed: false });
+            }
+        });
+        closeAddMember();
+        markDirty();
+        renderPermTable();
+        recomputeSaveBarCount();
+    }
+
+    // onSave for the shared save bar — button disable/spinner is handled
+    // by the module itself, this just does the writes + local commit.
+    async function saveAll() {
+        const toUpsert = _members.filter(m => m._state === 'new' || (m._state === 'existing' && m._changed))
+            .map(({ codename, ae, new: n, edit, delete: d, setting }) => ({ codename, ae, new: n, edit, delete: d, setting }));
+        const toDelete = _members.filter(m => m._state === 'deleted').map(m => m.codename);
+        const ops = [];
+        if (toUpsert.length) ops.push(supabaseClient.from('b_account_setting').upsert(toUpsert, { onConflict: 'codename' }));
+        if (toDelete.length) ops.push(supabaseClient.from('b_account_setting').delete().in('codename', toDelete));
+
+        const results = await Promise.all(ops);
+
+        const hasError = results.some(r => r.error);
+        if (hasError) { notify('', 'Save failed', 'error'); return; }
+
+        _members = _members.filter(m => m._state !== 'deleted').map(m => ({ ...m, _state: 'existing', _changed: false }));
+        document.getElementById('section-members').classList.remove('is-dirty');
+        renderPermTable();
+        saveBar.clear();
+        notify('success', 'Members saved');
+    }
+
+    // Cancel button on the shared save bar — Members re-fetches from DB
+    // since toggled permissions are mutated in place with no separate
+    // "original" copy to roll back to.
+    async function cancelAllChanges() {
+        document.getElementById('section-members').classList.remove('is-dirty');
+        await loadMembers();
+        renderPermTable();
+        recomputeSaveBarCount();
+    }
+
+    async function loadProfiles() {
+        const { data } = await supabaseClient.from('profiles').select('codename, nick_name, full_name, employee_id, department, avatar_url').neq('level', 'god').order('codename');
+        _allProfiles = data || [];
+    }
+
+    function setupTableSearch() {
+        document.getElementById('table-search').addEventListener('input', e => filterMembers(e.target.value.trim()));
+    }
+
+    async function initPage() {
+        sessionStorage.removeItem('bx_perms_baccount');
+        await initLayout(B_ACCOUNT_CONFIG);
+        if (!canBaccount('setting')) window.location.replace('b-opportunity-list.html');
+        saveBar = createSaveBar({ label: 'B-Account Members', onSave: saveAll, onCancel: cancelAllChanges });
+        await Promise.all([loadMembers(), loadProfiles()]);
+        renderPermTable();
+        setupTableSearch();
+    }
+
+    initPage();
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 ## Stack
 - Static HTML + Vanilla JS (no framework)
 - Supabase (auth + database)
-- Vercel (`cleanUrls: true`)
+- Vercel (`cleanUrls: true`) — a `.html`-suffixed request 308-redirects to its clean equivalent, and that redirect **drops the query string entirely** (confirmed via `curl -i`: `.../page.html?id=1` redirects to `Location: /page`, no `?id`). Bit once already as a menu-active-underline mismatch (no query string involved, so silent); bit again building b-quest-view.html (`window.open('page.html?id=...')` — the id vanished after the redirect). Any link/navigation that needs to carry a query string on first load must target the CLEAN url directly (no `.html`), not rely on the redirect to strip it. Internal `window.location.replace('page.html')` calls without a query string are fine as-is (matches the existing convention throughout the codebase) — only query-string-carrying links need this fix.
 - Domain: `bx.brandboxplatform.com` (Google Cloud)
 
 ## Project Structure
@@ -13,7 +13,15 @@ system/
   config.js         — Supabase credentials, SITE_URL, LOGO_URL
   system.js         — Auth guard, layout init, header inject, shared utils
   header.html       — Fixed header template (injected via JS)
-  setting.html      — System Settings (Users & Access + Departments)
+  setting.html      — System Settings (Setting tab: Branding/Projects/Departments; Holiday tab; Member tab: Users & Access)
+  color-picker.js   — Shared color-picker popover (Presets grid + wheel/hex), self-injecting
+                      CSS/markup convention like select-picker.js/people-picker.js. Loaded by
+                      setting.html and b-quest-settings.html.
+  icon-picker.js    — Shared icon-picker popover (searchable Bootstrap Icons grid), same
+                      self-injecting convention/API shape as color-picker.js
+                      ({getValue, onSelect}). Loaded by setting.html only so far —
+                      b-quest-settings.html still has its own separate, page-local icon
+                      picker (ICON_PALETTE/openIconPicker there), not migrated to this file.
 auth/
   auth.js           — Login / Signup / Forgot / Reset password functions
   *.html            — Auth pages (signup.html loads departments from DB)
@@ -41,17 +49,19 @@ All table names are `snake_case` (no hyphens) — standardized 2026-08-27, see [
 | Table | Key Columns |
 |---|---|
 | `profiles` | id (uuid), codename, employee_id, nick_name, full_name, email, department, level, created_at |
-| `departments` | name (text, PK) — list of departments, RLS: SELECT open to authenticated |
+| `system_department` | name (text, PK) — list of departments, RLS: SELECT open to authenticated |
 | `b_quest_list` | id, account_name, opportunity_name, task_name, detail, link, publish_date, owner, create_date, last_update — per-role fields (deadline/assign/weight/status/etc.) live on `b_quest_task_role` instead, not flat columns here |
 | `b_quest_task_role` | id, quest_id (FK → `b_quest_list.id`), role_id (FK → `b_quest_role.id`), role (denormalized name), status_id (FK → `b_quest_status.id`), status (denormalized name), work, type, deadline, weight, day, max_per_day, assign — one row per role a task has open |
 | `b_quest_role` | id, name, color, icon, active, sort_order, max_capacity — dynamic role list (Designer/Creative/IT/...), `max_capacity` is the per-role daily cap Dashboard/Modal both read |
 | `b_quest_status` | id, name, color, active, sort_order — dynamic status list |
 | `b_quest_type` | id, name, active, sort_order |
 | `b_quest_work` | role, work, day, weight |
-| `b_quest_config` | rule, value — misc B-Quest-wide settings (e.g. Data Visibility mode) |
+| `b_quest_setting` | rule, value — misc B-Quest-wide settings (e.g. Data Visibility mode) |
 | `b_quest_member` | codename (PK), creative, designer, setting, permissions |
 | `b_quest_member_role` | id, codename, role_id, new, edit, delete, assign, accept, edit_scope, delete_scope — per-role permission grants (replaces the old flat `b-quest-setting` table) |
-| `setting_project` | codename (PK), bquest, bdashboard, baccount, bcommission, bfinance, system_setting |
+| `system_access` | codename (PK), bquest, bdashboard, baccount, bcommission, bfinance, system_setting, system_holiday, system_member — `bdashboard` is dead (Dashboard project was cut from `PROJECTS`/`PROJECT_LIST` 2026-09-25), column kept as-is, not read anywhere. `system_setting`/`system_holiday`/`system_member` are per-tab access to `/system/setting.html` (Setting⊇Member forced superset, Holiday independent — see Auth & Permission System section) |
+| `system_setting` | key (PK), value, updated_at — platform-wide key-value settings (same shape as `b_quest_setting`), first used by System Settings' Branding section (`logo_header_url`, `logo_icon_url`, `theme_accent`, `theme_accent_light`, `theme_accent_dark`) |
+| `system_project` | key (PK, matches a `PROJECTS` entry's key), status (text: `active`/`disabled`/`hidden`, default `active`, check-constrained), sort_order (integer, nullable), label (text, nullable), icon (text, nullable) — admin-managed 3-state switch + display order + cosmetic overrides per project, separate from `system_access` which is per-user permission. Absent row = `active` / array order; absent/null label or icon = fall back to that project's hardcoded entry in `PROJECTS`/`PROJECT_LIST` (label/icon are the ONLY overridable fields — `key`/`href`/`live` always stay fixed in code, since those tie to real routing). `disabled` grays the card out but still shows it to anyone with permission; `hidden` removes it entirely for a regular user (same as no permission) — except GOD, who always sees every project and gets `hidden` downgraded to the same grayed `disabled` look, never a true hide. Enforced at two layers, not just the index.html card: `system.js`'s `guardProjectAccess()` also checks it (cached as `bx_sys_access_status_<key>`, swept on every index visit like the other `bx_sys_access_*` keys) so a regular user who bookmarks a project's direct URL gets bounced to `/index.html` the moment an admin sets it to anything but `active` — GOD is exempt from this guard too |
 
 `b_quest_capacity` (role, max_capacity) and 14 legacy flat designer_*/creative_* columns on `b_quest_list` were dropped 2026-08-27 — dead since the task-role cutover, nothing in the codebase read them anymore.
 
@@ -59,7 +69,7 @@ All table names are `snake_case` (no hyphens) — standardized 2026-08-27, see [
 
 `profiles.codename` is used as a soft join key (plain string match, no FK) across several tables. An `AFTER UPDATE` trigger on `profiles` (`trg_profiles_cascade_codename` → `fn_cascade_codename_rename()`, current version in `supabase/migrations/20260910000001_cascade_codename_opportunity.sql`) auto-propagates a codename rename into every table below — this is automatic, no manual step needed when a codename actually changes.
 
-Tables currently covered: `setting_project.codename`, `b_account_setting.codename`, `b_finance_setting.codename`, `b_quest_member_role.codename`, `b_quest_member.codename`, `b_quest_task_role.assign`, `b_quest_list.owner`, `b_account_list.create_by`/`update_by`, `b_opportunity_list.owner`/`am`/`sub_am`/`create_by`/`update_by`.
+Tables currently covered: `system_access.codename`, `b_account_setting.codename`, `b_finance_setting.codename`, `b_quest_member_role.codename`, `b_quest_member.codename`, `b_quest_task_role.assign`, `b_quest_list.owner`, `b_account_list.create_by`/`update_by`, `b_opportunity_list.owner`/`am`/`sub_am`/`create_by`/`update_by`.
 
 **Standing rule:** any new table/column that stores a person's codename as free text (not a `profiles.id` FK) MUST be added to `fn_cascade_codename_rename()` in the same migration that creates it — otherwise a future codename rename will silently leave that column stale (this already happened once, after the 2026-08-27 snake_case table rename). When adding schema, check new column names like `codename`/`owner`/`assign`/`create_by` against this list, not just when a bug is reported.
 
@@ -78,9 +88,14 @@ Tables currently covered: `setting_project.codename`, `b_account_setting.codenam
 - TASK: `new`, `edit`, `delete`
 - ADMIN: `assign`, `setting`
 
-**System-level access (`setting_project`):**
-- Per-project toggles: `bquest`, `bdashboard`, `baccount`, `bcommission`, `bfinance`
-- `system_setting` — access to `/system/setting.html`
+**System-level access (`system_access`):**
+- Per-project toggles: `bquest`, `bdashboard` (dead, see DB schema table), `baccount`, `bcommission`, `bfinance`
+- `system_setting`/`system_holiday`/`system_member` — per-tab access to `/system/setting.html`'s 3 tabs (Setting/Holiday/Member respectively). Same principle as B-Quest's own Setting/Member split (`b-quest-members.html`'s `onMemberSettingToggle`/`onMemberMemberToggle`), adapted from 2 flags to 3:
+  - **Setting is a forced superset of Member** (bidirectional, enforced in JS on toggle, not a DB constraint): turning Setting on auto-forces Member on; turning Member off auto-forces Setting off. "Setting but not Member" can never exist as a state — the permission-toggle table itself lives on the Member tab, so a Setting-only user with Member off could never reach it to manage anyone's access.
+  - **Holiday is fully independent** of both — its tab holds no permission UI, so there's no dependency to enforce.
+  - **Visibility gate**: the Setting/Holiday/Member toggle columns in the Member tab's Users & Access table are only present in the DOM (not just CSS-hidden) for a viewer who has `system_setting` themselves — `system/setting.html`'s `canSeeSystemAccess()`, mirrors B-Quest's `canSeeAccess = canBquest('setting')` exactly. A Member-only or Holiday-only user can't see who else has admin-level access.
+  - **Self-lockout guard**: toggling any of the 3 off for the CURRENTLY LOGGED-IN user shows a SweetAlert2 confirm first (`confirmSelfToggleOff()`) — editing someone else's is a normal Save/Cancel/Undo-covered edit, no confirm.
+  - GOD bypasses all 3 flags always, same as every other permission check.
 
 ## JS Architecture Rules
 
@@ -126,6 +141,7 @@ initPage().then(() => observer.observe(triggerEl));
 - สีความหมายอื่น (แดง danger, สี role แต่ละแบบ) ยังอยู่ใน `<project>.css` ของตัวเองเหมือนเดิม ไม่ย้ายเข้ามาที่นี่
 - Text วางทับพื้น `--c-accent` เต็มค่าโดยตรง (ไม่ใช่ `--c-accent-light`) ต้องใช้ `--c-on-accent` เสมอ ห้ามใช้ `--c-dark`/hardcode hex ตรงๆ — ตอนสร้างหน้าเลือกสีธีมในอนาคต จุดที่ต้องคำนวณสี (เทียบ contrast ดำ/ขาว) คือ token นี้ตัวเดียว
 - ออกแบบไว้ให้ future Setting เปลี่ยน theme สีหลักได้ — เปลี่ยน 3 ค่านี้พร้อมกันเป็นชุดเดียวเท่านั้น (ห้ามเปลี่ยนแค่ตัวเดียว จะพังคอนทราสต์)
+- Hover ของ item ใน dropdown/filter/checkbox list ทั่วระบบ (`select-picker.js`, `multi-select.js`, column-filter popover ของ `setting.html`/`b-quest-members.html`) ใช้ `--c-accent-light` ตรงๆ เหมือนกันหมด (เคยแยกเป็น token ชื่อ `--c-hover-bg` ต่างหาก แต่รวมกลับมาใช้ตัวเดียวกับสีเขียวแล้วตามที่ user ตัดสินใจ 2026-09-13)
 
 ## Performance Rules
 
@@ -150,21 +166,31 @@ Users are always shown as **codename** (nickname). Format reference: `codename :
 ## index.html — Portal Home
 
 - Top-right: gear icon (⚙️ → `/system/setting.html`) shown only to god/system_setting users; logout icon shown to all
-- Project cards rendered from `setting_project` access data
+- Project cards rendered from `system_access`/member-table permission data AND `system_project`'s status — a regular user needs permission first, then status decides how the card looks AND whether it's clickable: `active` = clickable, `disabled` = grayed (`.app-card.disabled`, "UNAVAILABLE") and NOT clickable, `hidden` = not rendered at all, same as lacking permission. God bypasses the per-user permission check (sees every project) and never gets a true `hidden` — `renderGrid(access, sysProj, isGod)`'s `isGod` flag downgrades `hidden` to the same grayed `disabled` look — but for GOD specifically, grayed is cosmetic only: a `disabled`/downgraded-`hidden` card still renders as a real `<a href>` and God can click straight in, since God is the one who'd need to get in to flip the switch back anyway. Only a regular user's grayed card is actually non-clickable. Icon/label shown are `system_project.icon`/`.label` when set (edited from Settings → Projects), falling back to `PROJECTS`' own hardcoded values — both are DB-sourced now, so both go through `esc()` before the `innerHTML` render (added alongside this feature; this page had never needed `esc()` before, since everything on it used to be a hardcoded literal).
+- A project with no code behind it yet (`href === null`, e.g. Commission) always shows "COMING SOON" regardless of status — the "UNAVAILABLE" label is reserved for a built project an admin actually disabled/hid
 - God user sees all projects + gear icon automatically
 
 ## System Settings (`/system/setting.html`)
 
-Two sections:
-1. **Departments** — CRUD list, 2-column grid, add inline in grid, sort a-z after save. Data from `departments` table (name PK). Staging pattern same as b-quest-settings.
-2. **Users & Access** — manage profiles + per-project toggles + system_setting flag. Department cell is dropdown from `departments` DB.
+Three tabs (`top-tabs`/`switchTopTab()`, a JS-driven single-page tab switch, not separate files — unlike the other projects' Setting/Member split): **Setting**, **Holiday**, **Member** (`#tab-settings`/`#tab-holiday`/`#tab-access`). Holiday used to be a stacked section inside Setting; split out into its own tab 2026-09-25 since Setting keeps growing a new section every so often and Holiday is a full add/import/edit workflow of its own, not just a short config list — same reasoning applies to any future section that outgrows being "just a list."
+
+Access is now per-tab, not one page-wide gate: each tab's button is shown/hidden per the viewer's own `system_setting`/`system_holiday`/`system_member` flag (`applyTabAccessVisibility()`), and lands on the first tab they actually have if Setting itself is off. The page as a whole admits anyone with at least one of the 3 flags (`guardAfterLoad()`); only someone with none of them gets bounced to `/index.html`. See the Auth & Permission System section above for the Setting⊇Member superset rule and the visibility-gated toggle columns.
+
+**Setting tab** — three sections, stacked in this order (Branding/Projects first — the two an admin reaches for most day-to-day; Departments is lower-traffic reference data):
+1. **Branding** — logo upload (2 slots: header wordmark + icon mark, staged as `File` objects, uploaded to the `Brandbox` Storage bucket on Save) + theme color pickers (Accent/Accent Light/Accent Dark, via the shared `/system/color-picker.js` popover) backed by the `system_setting` key-value table. Applied site-wide at runtime by `system.js`'s `applyCachedBranding()`/`refreshBranding()` (header logo, theme colors, and `auth/login.html`'s logo since it calls `initLayout()`) — `auth/signup.html`/`forgot-password.html`/`reset-password.html` don't call `initLayout()`, so they still show the hardcoded default logo.
+2. **Projects** — fixed list, one row per entry in `index.html`'s own `PROJECTS` array (`PROJECT_LIST` here is kept in sync by hand — no add/remove UI, a project only exists once real code backs it; `key`/`href`/`live` are NOT editable from here, only cosmetics + status are). Each row: a clickable icon swatch (`.proj-toggle-icon`, opens `/system/icon-picker.js`) + an editable name field (`.proj-toggle-name-input`, borderless until hover/focus like `.dept-name-input`) + a 3-state segmented control (Active/Disable/Hide, `.proj-status-seg`/`.proj-status-btn`, styled like the Holiday form's Full/Half Day pill, light-tint+border fill per state matching every other sliding-pill in the app) + drag-handle reorder (`sort_order`, staged/dropped same pattern as Departments). Icon/name changes stage into `projectChanges[key].icon`/`.label` same as status; a name cleared to empty saves as `null` (falls back to the hardcoded default) rather than an empty string. Backed by `system_project`. Status/reorder are only meaningful for projects that already have a real page (toggling `bcommission` does nothing — `href` is still `null` until someone builds it) — icon/label work regardless, including for not-yet-built projects.
+3. **Departments** — row list (drag-handle reorder, Active toggle, trash), 2-column layout filled top-to-bottom (not left-right interleaved). Data from `system_department` table (`name` PK + `active`/`sort_order`), ordered by `sort_order`; A-Z sort button available as an explicit action, not automatic-on-save anymore. Staging pattern same as b-quest-settings.
+
+**Holiday tab** — per-year list, staging pattern same as Departments. Lives in `#tab-holiday`, but its staging state (`holidayChanges`) and save/undo/cancel wiring aren't tab-scoped — `document.querySelectorAll('.section')` (used by the global dirty-clear/undo logic) runs document-wide regardless of which top-level tab a `.section` sits under, so moving a section between tabs needs no changes there.
+
+**Member tab** — Users & Access: manage profiles + read-only project-membership badges (`PROJECT_COLS`, driven by each project's own member table via `USR_PROJECT_MEMBER_TABLE`) for everyone; the Setting/Holiday/Member toggle columns themselves only render for a viewer with `system_setting` (see Auth & Permission System section). Table header/colgroup are JS-rendered (`renderUsrTableHead()`), not static HTML, specifically so that admin zone can be genuinely absent from the DOM rather than just hidden — `PROJECT_COLS` also drives the project-access header now instead of a second hand-written copy (that copy had drifted: it still listed a "Dashboard" column and 5 project slots after `PROJECT_COLS` was cut to 4, until this fix). Department cell is dropdown from `system_department` DB.
 
 ## Departments Table
 
-- Table: `departments` — columns: `name` (text, PK only — no id, no sort_order)
+- Table: `system_department` (named `departments` until 2026-09-22, see `20260922000008_rename_departments_table.sql`) — columns: `name` (text, PK), `active` (boolean, default true), `sort_order` (integer) — `active`/`sort_order` added 2026-09-22 (`20260922000004_departments_active_sort_order.sql`) to back the drag-reorder + Active toggle on `system/setting.html`'s Department list
 - RLS: `SELECT` open to authenticated (`USING (true)`)
 - Write policy: authenticated users (or manage via SQL Editor)
-- Sorted a-z by `name` on query
+- Ordered by `sort_order` on query (was a-z by `name` before the migration above)
 - Used in: `system/setting.html` (manage), `auth/signup.html` (dropdown), Users & Access dept dropdown
 
 ## Adding a New Project
@@ -175,8 +201,9 @@ Two sections:
 4. Create `<project-name>.css` — `:root` variables + shared styles (follow `b-quest.css`)
 5. Create HTML pages, each loading: supabase → sweetalert2 → config.js → system.js → `<project-name>.js` → `<project-name>.css`
 6. Create a settings table in Supabase: `<project>-setting` with columns: codename (PK), role columns, task columns (new/edit/delete), admin columns (assign/setting)
-7. Add column to `setting_project` table for the new project key
+7. Add column to `system_access` table for the new project key
 8. sessionStorage key: `bx_perms_<project>` — system.js clears all `bx_perms_*` keys on index automatically
+9. Add the same entry to `system/setting.html`'s `PROJECT_LIST` array (Projects section) — kept in sync with `index.html`'s `PROJECTS` by hand, no shared source
 
 ## Security Patterns
 
@@ -201,10 +228,9 @@ Advanced filter zone (`flt-advanced-row`) contains:
 | Project | Status |
 |---|---|
 | B-QUEST | Live |
-| DASHBOARD | Coming Soon |
-| B-ACCOUNT | Coming Soon |
-| COMMISSION | Coming Soon |
-| FINANCE | Coming Soon |
+| B-ACCOUNT | Live |
+| B-COMMISSION | Coming Soon |
+| B-FINANCE | Live |
 
 ## Planned Features (Future)
 

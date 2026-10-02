@@ -10,7 +10,7 @@ const B_ACCOUNT_CONFIG = {
         { name: "Account",     link: "b-account-list.html" },
         { name: "Opportunity", link: "b-opportunity-list.html" },
         { name: "Dashboard",   link: "b-account-dashboard.html" },
-        { name: "Settings",    link: "b-account-settings.html", perm: "setting" },
+        { name: "Settings",    link: "b-account-settings.html", perm: "setting", activeAlso: ["b-account-members.html"] },
     ]
 };
 

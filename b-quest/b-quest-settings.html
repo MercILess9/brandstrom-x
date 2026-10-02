@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <title>B-QUEST | Settings</title>
+    <title>B-QUEST | Setting</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -11,11 +11,22 @@
     <script src="/system/system.js"></script>
     <script src="/system/save-bar.js"></script>
     <script src="/system/multi-select.js"></script>
+    <script src="/system/people-picker.js"></script>
+    <script src="/system/color-picker.js"></script>
     <script src="b-quest.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-quest.css">
 
     <style>
+        /* Cross-document View Transitions — clicking the Setting/Member tab
+           (a real <a href> navigation between two separate pages, not a JS
+           tab switch) crossfades the old/new page instead of a hard flash.
+           Needs the same declaration on both pages of the pair to engage;
+           no-ops silently in browsers that don't support it yet. */
+        @view-transition {
+            navigation: auto;
+        }
+
         .settings-wrapper { max-width: 1300px; margin: 0 auto; padding: 36px 20px 140px; }
 
         .page-header { margin-bottom: 28px; }
@@ -29,56 +40,6 @@
         .settings-tab:hover { border-color: var(--c-accent); color: var(--c-dark); }
         .settings-tab.active { background: var(--c-dark); color: var(--c-accent); border-color: var(--c-dark); }
 
-        /* Admin Access row — avatar+name left, Setting/Member toggles right,
-           trash last (not first — this row is destructive, shouldn't sit
-           where the eye lands first). */
-        .aa-list { display: flex; flex-direction: column; }
-        .aa-row { display: flex; align-items: center; gap: 14px; padding: 10px 4px; border-bottom: 1px solid #f1f5f9; }
-        .aa-row:last-child { border-bottom: none; }
-        .aa-name { flex: 1; min-width: 0; }
-        .aa-nick { font-size: 0.85rem; font-weight: 700; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .aa-toggle-item { display: flex; align-items: center; gap: 8px; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); flex-shrink: 0; }
-        .btn-remove { background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 6px; border-radius: 7px; transition: 0.2s; display: flex; align-items: center; font-size: 0.95rem; flex-shrink: 0; }
-        .btn-remove:hover { color: var(--c-danger); }
-
-        /* ── Add Admin Access Modal — same recipe as Members' own Add Member
-           Modal (.am-* class names reused verbatim, this is a separate file
-           now so there's no collision risk). ── */
-        .am-modal { width: 640px; }
-        .am-header { padding: 24px 28px 18px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-        .am-title { font-size: 1rem; font-weight: 800; color: var(--c-dark); display: flex; align-items: center; gap: 8px; }
-        .am-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--c-muted); transition: 0.2s; }
-        .am-close:hover { background: var(--c-border); color: var(--c-dark); }
-        .am-search-wrap { padding: 14px 24px; border-bottom: 1px solid var(--c-border); flex-shrink: 0; position: relative; }
-        .am-search { width: 100%; border: 1px solid var(--c-border); border-radius: 12px; padding: 9px 14px 9px 38px; font-size: 0.85rem; outline: none; font-family: inherit; transition: 0.2s; background: var(--c-bg); }
-        .am-search:focus { border-color: var(--c-accent); background: #fff; }
-        .am-search-icon { position: absolute; left: 36px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.85rem; pointer-events: none; }
-        .am-list { overflow-y: auto; flex: 1; padding: 8px 14px; }
-        .am-item { display: flex; align-items: center; gap: 14px; padding: 11px 12px; border-radius: 14px; cursor: pointer; transition: background 0.15s; }
-        .am-item:hover { background: var(--c-bg); }
-        .am-item:has(.modern-checkbox:checked) { background: var(--c-accent-light); }
-        .am-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--c-accent-light); border: 1px solid transparent; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; color: var(--c-accent-dark); flex-shrink: 0; }
-        .am-item:has(.modern-checkbox:checked) .am-avatar { background: var(--c-accent); }
-        .am-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-        .am-nick { font-size: 0.88rem; font-weight: 700; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .am-line2 { font-size: 0.76rem; color: var(--c-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .am-dept-side { flex-shrink: 0; width: 220px; font-size: 0.76rem; font-weight: 600; color: var(--c-slate); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 16px; border-left: 1px solid var(--c-border); }
-        .am-select-all { border-bottom: 1px solid var(--c-border); margin-bottom: 6px; padding-bottom: 15px; }
-        .am-info-flat { display: flex; flex-direction: row; align-items: baseline; gap: 10px; }
-        .am-select-all .am-nick { font-weight: 800; }
-        .am-select-count { font-size: 0.76rem; color: var(--c-muted); font-weight: 600; }
-        .am-empty { padding: 40px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
-        .am-footer { padding: 16px 24px; border-top: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: #fff; }
-        .am-footer-info { font-size: 0.78rem; color: var(--c-muted); font-weight: 600; }
-        .am-footer-actions { display: flex; gap: 8px; }
-        .btn-am-cancel, .btn-am-confirm { width: 120px; border: none; border-radius: 10px; padding: 10px 0; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; }
-        .btn-am-cancel { background: #f1f5f9; color: var(--c-slate); }
-        .btn-am-cancel:hover { background: var(--c-border); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.08); }
-        .btn-am-cancel:active { transform: translateY(0); box-shadow: none; }
-        .btn-am-confirm { background: var(--c-dark); color: var(--c-accent); }
-        .btn-am-confirm:hover:not(:disabled) { background: #0f172a; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        .btn-am-confirm:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
-        .btn-am-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
 
         .section { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; margin-bottom: 20px; overflow: hidden; }
         .section-header { display: flex; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--c-border); }
@@ -175,7 +136,11 @@
         .cfg-btn-undo:hover { color: var(--c-danger-dark); }
         .cfg-btn-add { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 7px 14px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: 0.15s; }
         .cfg-btn-sort { background: none; border: 1px solid var(--c-border); color: var(--c-slate); border-radius: 9px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; margin-left: auto; flex-shrink: 0; transition: 0.15s; }
-        .cfg-btn-sort:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
+        /* Neutral hover (no accent color), matching .work-col-sort's own
+           hover just below — brighten + let .hover-scale's scale(1.06)
+           (already on this button in the markup) provide the lift, instead
+           of a color change tied to the system accent. */
+        .cfg-btn-sort:hover { background: #f1f5f9; border-color: #cbd5e1; color: var(--c-dark); }
         .cfg-btn-info { background: none; border: none; color: var(--c-muted); cursor: pointer; padding: 2px; font-size: 1rem; display: flex; align-items: center; transition: 0.15s; }
         .cfg-btn-info:hover { color: var(--c-accent); transform: scale(1.15); }
         .cfg-info-item { margin-bottom: 10px; }
@@ -210,21 +175,16 @@
         .cfg-picker-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 2px 2px 6px; }
         .cfg-picker-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
         .cfg-picker-grid.icons { grid-template-columns: repeat(12, 1fr); max-height: 260px; overflow-y: auto; padding-right: 2px; margin-top: 8px; }
-        .cfg-picker-grid.colors { grid-template-columns: repeat(9, 1fr); row-gap: 8px; }
         .cfg-icon-search { width: 100%; border: 1px solid var(--c-border); border-radius: 8px; padding: 7px 10px; font-size: 0.8rem; outline: none; font-family: inherit; }
         .cfg-icon-search:focus { border-color: var(--c-accent); }
         .cfg-picker-icon { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--c-border); background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--c-slate); font-size: 0.85rem; }
         .cfg-picker-icon:hover { background: var(--c-bg); }
         .cfg-picker-icon.sel { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
-        .cfg-picker-color { width: 25px; height: 25px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
-        .cfg-picker-color.sel { border-color: var(--c-dark); }
-        .cfg-color-wheel { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; border: none; border-radius: 10px; cursor: pointer; background: none; padding: 0; }
-        .cfg-color-wheel::-webkit-color-swatch-wrapper { padding: 0; }
-        .cfg-color-wheel::-webkit-color-swatch { border: 1.5px solid var(--c-border); border-radius: 10px; }
-        .cfg-color-wheel::-moz-color-swatch { border: 1.5px solid var(--c-border); border-radius: 10px; }
-        .cfg-hex-input { width: 100%; border: 1px solid var(--c-border); border-radius: 8px; padding: 7px 10px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; outline: none; font-family: inherit; margin-top: 8px; text-align: center; letter-spacing: 0.5px; }
-        .cfg-hex-input:focus { border-color: var(--c-accent); }
-        .cfg-hex-input.invalid { border-color: var(--c-danger); color: var(--c-danger); }
+        /* Color-specific picker CSS (.cfg-picker-color/.cfg-color-wheel/
+           .cfg-hex-input) now lives in /system/color-picker.js's own
+           self-injected styles — the swatch grid this page shows for
+           Role/Status colors comes from that shared module, not a local
+           copy. */
 
         /* ── Status: active toggle ── */
         .cfg-mini-toggle-wrap { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -302,8 +262,11 @@
         .vis-seg { position: relative; display: inline-flex; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 999px; padding: 3px; width: 132px; height: 32px; flex-shrink: 0; }
         .vis-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 999px; transition: transform 0.22s cubic-bezier(.4,0,.2,1); z-index: 0; }
         .vis-seg.state-own .vis-seg-slider { transform: translateX(100%); }
-        .vis-seg button { position: relative; z-index: 1; flex: 1; border: none; background: transparent; font-family: inherit; font-size: 0.72rem; font-weight: 800; color: var(--c-muted); cursor: pointer; border-radius: 999px; }
+        .vis-seg button { position: relative; z-index: 1; flex: 1; border: none; background: transparent; font-family: inherit; font-size: 0.72rem; font-weight: 800; color: var(--c-muted); cursor: pointer; border-radius: 999px; transition: color 0.2s; }
         .vis-seg button.on { color: var(--c-accent-dark); }
+        /* Was missing entirely — matches .fd-role-seg-btn's own established
+           hover convention for this same sliding-pill pattern. */
+        .vis-seg button:not(.on):hover { color: var(--c-accent); }
 
         /* ── Filter Defaults ── */
         .fd-group { padding: 12px 0; border-bottom: 1px solid var(--c-border); }
@@ -349,8 +312,11 @@
            .fd-role-seg-slider (generalizes to any button count/width). */
         .fd-mode-seg { position: relative; display: inline-flex; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 999px; padding: 3px; height: 30px; }
         .fd-mode-seg-slider { position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; background: var(--c-accent-light); border: 1px solid var(--c-accent); border-radius: 999px; transition: left 0.2s cubic-bezier(.4,0,.2,1), width 0.2s cubic-bezier(.4,0,.2,1); z-index: 0; }
-        .fd-mode-seg button { position: relative; z-index: 1; border: none; background: transparent; font-family: inherit; font-size: 0.7rem; font-weight: 800; color: var(--c-muted); cursor: pointer; padding: 0 10px; border-radius: 999px; white-space: nowrap; }
+        .fd-mode-seg button { position: relative; z-index: 1; border: none; background: transparent; font-family: inherit; font-size: 0.7rem; font-weight: 800; color: var(--c-muted); cursor: pointer; padding: 0 10px; border-radius: 999px; white-space: nowrap; transition: color 0.2s; }
         .fd-mode-seg button.on { color: var(--c-accent-dark); }
+        /* Was missing entirely — matches .fd-role-seg-btn's own established
+           hover convention for this same sliding-pill pattern. */
+        .fd-mode-seg button:not(.on):hover { color: var(--c-accent); }
         .fd-preview-row { margin-top: 6px; display: flex; align-items: center; gap: 10px; }
         .fd-preview { width: fit-content; flex-shrink: 0; display: flex; align-items: center; gap: 8px; font-size: 0.65rem; color: var(--c-muted); background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 999px; padding: 8px 14px; }
         .fd-preview .bi-calendar-range { color: var(--c-accent); font-size: 0.82rem; }
@@ -365,10 +331,16 @@
         .wc-day-row.low .wc-day-label { color: #b45309; }
         .wc-day-row.zero { opacity: 0.5; }
         .wc-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 4px; border-radius: 4px; background: var(--c-border); outline: none; cursor: pointer; }
-        .wc-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--c-accent); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); cursor: pointer; }
-        .wc-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--c-accent); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); cursor: pointer; }
+        .wc-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--c-accent); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+        .wc-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--c-accent); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+        /* Was missing entirely — the draggable dot gave no feedback at all
+           on hover before this, just a static circle. */
+        .wc-slider:hover::-webkit-slider-thumb { transform: scale(1.15); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.5); }
+        .wc-slider:hover::-moz-range-thumb { transform: scale(1.15); box-shadow: 0 2px 8px rgba(var(--c-accent-rgb), 0.5); }
         .wc-day-row.zero .wc-slider::-webkit-slider-thumb { background: var(--c-muted); }
         .wc-day-row.zero .wc-slider::-moz-range-thumb { background: var(--c-muted); }
+        .wc-day-row.zero .wc-slider:hover::-webkit-slider-thumb { box-shadow: 0 2px 8px rgba(100, 116, 139, 0.35); }
+        .wc-day-row.zero .wc-slider:hover::-moz-range-thumb { box-shadow: 0 2px 8px rgba(100, 116, 139, 0.35); }
         .wc-pct-wrap { flex-shrink: 0; display: flex; align-items: center; gap: 2px; width: 54px; }
         .wc-pct-input { width: 40px; border: 1px solid var(--c-border); border-radius: 7px; padding: 4px; font-size: 0.8rem; font-weight: 700; text-align: center; outline: none; font-family: inherit; -moz-appearance: textfield; transition: 0.15s; }
         .wc-pct-input::-webkit-outer-spin-button, .wc-pct-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -428,12 +400,12 @@
 <div class="settings-wrapper">
 
     <div class="page-header">
-        <h1><i class="bi bi-gear-fill me-2" style="color:var(--c-accent)"></i>B-QUEST Settings</h1>
+        <h1><i class="bi bi-gear-fill me-2" style="color:var(--c-accent)"></i>B-QUEST Setting</h1>
     </div>
 
     <div class="settings-tabnav">
         <a href="b-quest-settings.html" class="settings-tab active"><i class="bi bi-gear-fill"></i> Setting</a>
-        <a href="b-quest-members.html" class="settings-tab"><i class="bi bi-people-fill"></i> Members</a>
+        <a href="b-quest-members.html" class="settings-tab"><i class="bi bi-people-fill"></i> Member</a>
     </div>
 
     <!-- Section 1: Roles / Statuses / Types — 3 separate boxes, side by side -->
@@ -641,23 +613,10 @@
         </div>
     </div>
 
-    <!-- Section: Admin Access — who can reach Setting/Member, not the
-         per-project role/task permissions (those live on the Members page). -->
-    <div class="section" id="section-adminaccess">
-        <div class="section-header">
-            <div class="section-title">
-                <i class="bi bi-shield-lock-fill"></i> Admin Access
-                <button class="cfg-btn-info" onclick="openAdminAccessInfoPopup(event)" title="What do Setting / Member mean?"><i class="bi bi-info-circle"></i></button>
-                <span class="dirty-dot"></span>
-            </div>
-            <button class="cfg-btn-add hover-scale" onclick="openAdminAddModal()">
-                <i class="bi bi-person-plus-fill"></i> Add
-            </button>
-        </div>
-        <div class="section-body">
-            <div class="aa-list" id="aa-list"></div>
-        </div>
-    </div>
+    <!-- Admin Access removed 2026-09-13 — merged into b-quest-members.html's
+         Role Permission matrix as an "Access" column instead (a person's
+         Setting/Member tier now lives alongside their other permissions in
+         one place, not split across two pages). -->
 
 </div>
 
@@ -666,50 +625,12 @@
     <div class="cfg-picker" id="picker-panel" onclick="event.stopPropagation()"></div>
 </div>
 
-<!-- Add Admin Access Modal -->
-<div class="am-overlay modal-overlay-base" id="aa-add-overlay" onclick="closeAdminAddModal(event)">
-    <div class="am-modal modal-shell-base" onclick="event.stopPropagation()">
-        <div class="am-header">
-            <div class="am-title">
-                <i class="bi bi-shield-lock-fill" style="color:var(--c-accent)"></i>
-                Add Admin Access
-            </div>
-            <button class="am-close" onclick="closeAdminAddModal()"><i class="bi bi-x"></i></button>
-        </div>
-        <div class="am-search-wrap">
-            <i class="bi bi-search am-search-icon"></i>
-            <input type="text" class="am-search" id="aa-add-search" placeholder="Search..." autocomplete="off">
-        </div>
-        <div class="am-list" id="aa-add-list"></div>
-        <div class="am-footer">
-            <span class="am-footer-info" id="aa-add-footer-info">0 selected</span>
-            <div class="am-footer-actions">
-                <button class="btn-am-cancel" onclick="closeAdminAddModal()">Cancel</button>
-                <button class="btn-am-confirm" id="btn-aa-add-confirm" onclick="confirmAddAdminAccess()" disabled>
-                    <i class="bi bi-check-lg me-1"></i> Add
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
     const PERM_COLS = ['new', 'edit', 'delete', 'accept', 'assign'];
-    // One array per hue family, light → dark (Tailwind shade scale). Flattened
-    // shade-major below so a 9-column grid (one column per hue) shows each
-    // hue's gradient running top-to-bottom — wide layout, no scroll needed.
-    const COLOR_HUES = [
-        ['#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'], // gray
-        ['#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b'], // red
-        ['#fdba74', '#fb923c', '#f97316', '#ea580c', '#c2410c', '#9a3412'], // orange
-        ['#fcd34d', '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#92400e'], // amber
-        ['#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534'], // green
-        ['#5eead4', '#2dd4bf', '#14b8a6', '#0d9488', '#0f766e', '#115e59'], // teal
-        ['#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af'], // blue
-        ['#c4b5fd', '#a78bfa', '#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6'], // violet
-        ['#f9a8d4', '#f472b6', '#ec4899', '#db2777', '#be185d', '#9d174d']  // pink
-    ];
-    const COLOR_PALETTE = COLOR_HUES[0].map((_, shadeIdx) => COLOR_HUES.map(hue => hue[shadeIdx])).flat();
+    // COLOR_PALETTE comes from /system/color-picker.js (window.COLOR_PALETTE)
+    // — the same shared module that draws this page's own color-picker
+    // popover, so the auto-assign pool below can never drift out of sync
+    // with what the picker actually shows.
     // Auto-assign sequence for new Roles/Statuses. Leads with green (brand-
     // aligned) then cool tones (teal/blue/violet/pink) before warm ones —
     // red/orange read as loud/alarm-like for a role badge. Uses the "600"
@@ -764,18 +685,18 @@
     // Own staging bucket (not configChanges) so Work Calendar gets its own
     // dirty-dot/section id without double-counting the same pending rule
     // against both section-worklist and section-calendar in the save-bar
-    // total — both buckets still land in the same b-quest-config table.
+    // total — both buckets still land in the same b-quest-setting table.
     let calendarChanges = {};
     const calendarDeletes = new Set(); // same story as configDeletes — never populated
     // Which Status a new task starts with (default_status_id) — same
-    // flat-bucket b-quest-config shape as configChanges, but kept in its
+    // flat-bucket b-quest-setting shape as configChanges, but kept in its
     // own bucket so it lights up the Status section's dirty-dot instead of
     // Work List's (same reasoning as calendarChanges above).
     let statusConfigChanges = {};
     const statusConfigDeletes = new Set(); // never populated, same story as configDeletes
     // List page Data Visibility (Role/Owner Own-vs-All) and Filter Defaults
     // (Status/Type/Role pre-selected + Deadline range) — two more flat
-    // b-quest-config buckets, own dirty-dots per the same reasoning as
+    // b-quest-setting buckets, own dirty-dots per the same reasoning as
     // calendarChanges/statusConfigChanges above.
     let visibilityChanges = {};
     const visibilityDeletes = new Set(); // never populated, same story as configDeletes
@@ -786,22 +707,13 @@
     // sending anything (resolving rules into a deduped recipient list,
     // fetching emails, handling the same person matching multiple rules)
     // is separate future work once this is wired to real trigger events.
-    let originalDepartments = []; // [name, ...], loaded once from departments table
+    let originalDepartments = []; // [name, ...], loaded once from system_department table
     let notifyChannel = 'notify'; // 'notify' | 'email' — which tab is showing
     let notifyChanges = {}; // rule -> staged value, same flat-bucket shape as configChanges
     const notifyDeletes = new Set(); // never populated, same story as configDeletes
     let roleIdSeq = -1; // negative temp ids for unsaved new rows
     let saveBar = null;
-    let allProfiles = []; // used by Notify's recipient pickers and the Admin Access add-picker
-
-    // Admin Access — who can reach the Setting/Member pages. Reads/writes the
-    // same b-quest-member.permissions array Members' own dashboard/duplicate/
-    // share toggles use, just a different pair of flags ('setting'/'member')
-    // — see [[bquest-settings-roadmap]] for why these two moved off the
-    // per-project Members matrix and onto this page instead.
-    let originalAdminMembers = []; // [{codename, permissions}], as loaded from b-quest-member
-    let adminAccessChanges = {};   // codename -> {permissions:[...]}
-    const adminAccessDeletes = new Set(); // never populated — "removing" someone here just clears both flags, doesn't delete their b-quest-member row (they may still hold dashboard/duplicate/share/role grants)
+    let allProfiles = []; // used by Notify's recipient pickers
 
     // ── Init ──
     async function loadPage() {
@@ -810,9 +722,8 @@
         guardPermission();
         saveBar = createSaveBar({ label: 'B-Quest Settings', onSave: saveAll, onCancel: cancelAllChanges, onUndo: undoLastChange });
         setupFilterDefaultMultiSelects();
-        setupAdminAddSearch();
         document.getElementById('fdRoleSegWrap')?.addEventListener('scroll', () => fdRoleSeg.updateFade());
-        await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadAllProfiles(), loadConfig(), loadDepartments(), loadAdminAccess()]);
+        await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadAllProfiles(), loadConfig(), loadDepartments()]);
         renderFilterDefaultsSection(); // needs originalRoles/Statuses/Types + originalConfig, all settled by the Promise.all above
         await loadWork();
         setupCarouselFade('cfgCarousel', 'cfgCarouselWrap');
@@ -865,7 +776,6 @@
         fn('section-visibility', visibilityChanges, visibilityDeletes);
         fn('section-filterdefaults', filterDefaultsChanges, filterDefaultsDeletes);
         fn('section-notify', notifyChanges, notifyDeletes);
-        fn('section-adminaccess', adminAccessChanges, adminAccessDeletes);
     }
 
     function markDirty(sectionId) {
@@ -909,7 +819,6 @@
             visibilityChanges: JSON.parse(JSON.stringify(visibilityChanges)),
             filterDefaultsChanges: JSON.parse(JSON.stringify(filterDefaultsChanges)),
             notifyChanges: JSON.parse(JSON.stringify(notifyChanges)),
-            adminAccessChanges: JSON.parse(JSON.stringify(adminAccessChanges)),
             roleDeletes: [...roleDeletes],
             statusDeletes: [...statusDeletes],
             typeDeletes: [...typeDeletes],
@@ -928,7 +837,6 @@
         visibilityChanges = snap.visibilityChanges;
         filterDefaultsChanges = snap.filterDefaultsChanges;
         notifyChanges = snap.notifyChanges;
-        adminAccessChanges = snap.adminAccessChanges;
         roleDeletes = new Set(snap.roleDeletes);
         statusDeletes = new Set(snap.statusDeletes);
         typeDeletes = new Set(snap.typeDeletes);
@@ -962,20 +870,20 @@
             if (countPending(changes, deletes) > 0) document.getElementById(id).classList.add('is-dirty');
         });
 
-        renderRoles(); renderStatuses(); renderTypes(); renderWork(); renderWorkConfigToggles(); renderWorkCalendar(); renderVisibilitySection(); renderFilterDefaultsSection(); renderNotifySection(); renderAdminAccess();
+        renderRoles(); renderStatuses(); renderTypes(); renderWork(); renderWorkConfigToggles(); renderWorkCalendar(); renderVisibilitySection(); renderFilterDefaultsSection(); renderNotifySection();
         recomputeSaveBarCount();
         saveBar.setUndoAvailable(undoStack.length > 0);
     }
 
     function snapshotOfEmptyState() {
         return {
-            roleChanges: {}, statusChanges: {}, typeChanges: {}, workChanges: {}, configChanges: {}, statusConfigChanges: {}, calendarChanges: {}, visibilityChanges: {}, filterDefaultsChanges: {}, notifyChanges: {}, adminAccessChanges: {},
+            roleChanges: {}, statusChanges: {}, typeChanges: {}, workChanges: {}, configChanges: {}, statusConfigChanges: {}, calendarChanges: {}, visibilityChanges: {}, filterDefaultsChanges: {}, notifyChanges: {},
             roleDeletes: [], statusDeletes: [], typeDeletes: [], workDeletes: []
         };
     }
 
     function resetSectionState() {
-        roleChanges = {}; statusChanges = {}; typeChanges = {}; workChanges = {}; configChanges = {}; statusConfigChanges = {}; calendarChanges = {}; visibilityChanges = {}; filterDefaultsChanges = {}; notifyChanges = {}; adminAccessChanges = {};
+        roleChanges = {}; statusChanges = {}; typeChanges = {}; workChanges = {}; configChanges = {}; statusConfigChanges = {}; calendarChanges = {}; visibilityChanges = {}; filterDefaultsChanges = {}; notifyChanges = {};
         roleDeletes = new Set(); statusDeletes = new Set(); typeDeletes = new Set(); workDeletes = new Set();
         undoStack = [];
         saveBar?.setUndoAvailable(false);
@@ -1000,7 +908,6 @@
         renderVisibilitySection();
         renderFilterDefaultsSection();
         renderNotifySection();
-        renderAdminAccess();
     }
 
     // Newly-added rows are blank and need a name typed in right away —
@@ -1044,7 +951,7 @@
                  ondragover="event.preventDefault()" ondragenter="dragEnterRow(event, 'role', '${r.id}')" ondragleave="dragLeaveRow(event)"
                  ondrop="dropOnRow(event, 'role', '${r.id}')">
                 <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i></div>
-                <div class="cfg-col-color"><div class="cfg-swatch" style="background:${r.color || '#94a3b8'}" onclick="openColorPicker(event, 'role', '${r.id}')"></div></div>
+                <div class="cfg-col-color"><div class="cfg-swatch" style="background:${r.color || '#94a3b8'}" onclick="openColorPicker(this, { getValue: () => roleBuffer().find(x => x.id === '${r.id}')?.color || '#94a3b8', onSelect: (c) => onRoleField('${r.id}', 'color', c) })"></div></div>
                 <div class="cfg-col-icon"><div class="cfg-icon-swatch" onclick="openIconPicker(event, 'role', '${r.id}')"><i class="bi ${r.icon || 'bi-person-workspace'}"></i></div></div>
                 <input class="cfg-name-input cfg-col-name" value="${esc(r.name)}" oninput="onRoleField('${r.id}', 'name', this.value)">
                 <div class="cfg-cap-wrap cfg-col-cap">
@@ -1157,7 +1064,7 @@
                  ondragover="event.preventDefault()" ondragenter="dragEnterRow(event, 'status', '${s.id}')" ondragleave="dragLeaveRow(event)"
                  ondrop="dropOnRow(event, 'status', '${s.id}')">
                 <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i></div>
-                <div class="cfg-col-color"><div class="cfg-swatch" style="background:${s.color || '#94a3b8'}" onclick="openColorPicker(event, 'status', '${s.id}')"></div></div>
+                <div class="cfg-col-color"><div class="cfg-swatch" style="background:${s.color || '#94a3b8'}" onclick="openColorPicker(this, { getValue: () => statusBuffer().find(x => x.id === '${s.id}')?.color || '#94a3b8', onSelect: (c) => onStatusField('${s.id}', 'color', c) })"></div></div>
                 <input class="cfg-name-input cfg-col-name" value="${esc(s.name)}" oninput="onStatusField('${s.id}', 'name', this.value)">
                 <div class="cfg-col-star">
                     <button type="button" class="cfg-star-btn ${s.id === defaultId ? 'is-default' : ''}"
@@ -1496,32 +1403,6 @@
         positionPicker(evt);
     }
 
-    function openColorPicker(evt, kind, id) {
-        pickerTarget = { kind, id };
-        const buf = kind === 'role' ? roleBuffer() : statusBuffer();
-        const item = buf.find(x => x.id === id);
-        const color = item.color || '#94a3b8';
-
-        const panel = document.getElementById('picker-panel');
-        panel.classList.remove('wide');
-        panel.classList.add('medium');
-        panel.innerHTML = `
-            <div class="cfg-picker-label">Quick pick</div>
-            <div class="cfg-picker-grid colors" style="margin-bottom:10px;">
-                ${COLOR_PALETTE.map(c => `<div class="cfg-picker-color ${color.toLowerCase() === c ? 'sel' : ''}" style="background:${c}" onclick="pickQuickColor('${c}')"></div>`).join('')}
-            </div>
-            <div class="cfg-picker-label">Custom</div>
-            <input type="color" class="cfg-color-wheel" id="picker-color-wheel" value="${color}" oninput="onColorWheelChange(this.value)">
-            <input type="text" class="cfg-hex-input" id="picker-hex-input" value="${color.toUpperCase()}" maxlength="7" oninput="onHexInputChange(this.value)">
-        `;
-        positionPicker(evt);
-    }
-
-    function pickQuickColor(c) {
-        applyColor(c);
-        closePicker();
-    }
-
     function openIconPicker(evt, kind, id) {
         pickerTarget = { kind, id };
         const item = roleBuffer().find(x => x.id === id);
@@ -1558,26 +1439,6 @@
         unlockBodyScroll();
     }
 
-    function applyColor(c) {
-        if (!pickerTarget) return;
-        const { kind, id } = pickerTarget;
-        if (kind === 'role') onRoleField(id, 'color', c); else onStatusField(id, 'color', c);
-    }
-
-    function onColorWheelChange(value) {
-        document.getElementById('picker-hex-input').value = value.toUpperCase();
-        applyColor(value);
-    }
-
-    function onHexInputChange(value) {
-        const hexInput = document.getElementById('picker-hex-input');
-        const valid = /^#[0-9a-fA-F]{6}$/.test(value);
-        hexInput.classList.toggle('invalid', !valid && value.length > 0);
-        if (!valid) return;
-        document.getElementById('picker-color-wheel').value = value;
-        applyColor(value);
-    }
-
     function pickIcon(ic) {
         if (!pickerTarget) return;
         onRoleField(pickerTarget.id, 'icon', ic);
@@ -1597,7 +1458,7 @@
     // Config (flat rule -> value bucket, global toggles)
     // ═══════════════════════════════════════════
     async function loadConfig() {
-        const { data } = await supabaseClient.from('b_quest_config').select('rule, value');
+        const { data } = await supabaseClient.from('b_quest_setting').select('rule, value');
         originalConfig = {};
         (data || []).forEach(row => { originalConfig[row.rule] = row.value; });
         renderWorkConfigToggles();
@@ -1612,7 +1473,7 @@
     }
 
     async function loadDepartments() {
-        const { data } = await supabaseClient.from('departments').select('name').order('name');
+        const { data } = await supabaseClient.from('system_department').select('name').order('name');
         originalDepartments = (data || []).map(d => d.name);
     }
 
@@ -1645,7 +1506,7 @@
 
     // ═══════════════════════════════════════════
     // List page — Filter Defaults (Role/Status/Type pre-selected + Deadline
-    // range). Two separate b-quest-config rules (list_filter_defaults,
+    // range). Two separate b-quest-setting rules (list_filter_defaults,
     // list_deadline_default) staged in the same filterDefaultsChanges
     // bucket, so both share one dirty-dot/section.
     // ═══════════════════════════════════════════
@@ -1855,7 +1716,7 @@
 
     // ═══════════════════════════════════════════
     // Work Calendar — how much of a day's capacity actually counts, per
-    // weekday (0-100%). Feeds the same b-quest-config table as the Day/Max
+    // weekday (0-100%). Feeds the same b-quest-setting table as the Day/Max
     // toggles above but through its own staging bucket (calendarChanges),
     // so this box's dirty-dot and the Work List box's don't get confused
     // with each other's pending state.
@@ -2260,20 +2121,8 @@
             }
 
             for (const [rule, value] of Object.entries({ ...configChanges, ...statusConfigChanges, ...calendarChanges, ...visibilityChanges, ...filterDefaultsChanges, ...notifyChanges })) {
-                const { error } = await supabaseClient.from('b_quest_config').upsert({ rule, value });
+                const { error } = await supabaseClient.from('b_quest_setting').upsert({ rule, value });
                 if (error) errors.push('Settings update: ' + error.message);
-            }
-
-            // Admin Access — same b-quest-member table Members' own page
-            // writes to (permissions is a flat array covering dashboard/
-            // duplicate/share there and setting/member here), so this is the
-            // same insert-if-new-else-update convention as that page uses.
-            for (const [codename, ch] of Object.entries(adminAccessChanges)) {
-                const isNew = !originalAdminMembers.some(m => m.codename === codename);
-                const { error } = isNew
-                    ? await supabaseClient.from('b_quest_member').insert([{ codename, permissions: ch.permissions || [] }])
-                    : await supabaseClient.from('b_quest_member').update(ch).eq('codename', codename);
-                if (error) errors.push(`Admin Access "${codename}": ` + error.message);
             }
 
             if (errors.length) {
@@ -2285,7 +2134,7 @@
                 const title = allCannotDelete ? 'Cannot Delete' : 'Some errors occurred';
                 const body = allCannotDelete ? errors.map(e => e.replace('Cannot Delete: ', '')).join('\n') : errors.join('\n');
                 Swal.fire(title, body, 'error');
-                await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadConfig(), loadAdminAccess()]);
+                await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadConfig()]);
                 renderFilterDefaultsSection();
                 await loadWork();
                 return;
@@ -2293,7 +2142,7 @@
 
             Swal.fire({ icon: 'success', title: 'Saved!', showConfirmButton: false, timer: 1200 });
             clearDirty();
-            await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadConfig(), loadAdminAccess()]);
+            await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadConfig()]);
             renderFilterDefaultsSection();
             await loadWork(); // roles feed this
 
@@ -2309,208 +2158,6 @@
 
     function profileFor(codename) {
         return allProfiles.find(p => p.codename === codename);
-    }
-
-    // ═══════════════════════════════════════════
-    // Admin Access — who can reach the Setting/Member pages (see the state
-    // comment near originalAdminMembers for why this reads/writes the same
-    // b-quest-member.permissions array Members' own page does).
-    // ═══════════════════════════════════════════
-    async function loadAdminAccess() {
-        const { data } = await supabaseClient.from('b_quest_member').select('codename, permissions');
-        originalAdminMembers = data || [];
-        renderAdminAccess();
-    }
-
-    function adminAccessBuffer() {
-        return originalAdminMembers.map(m => ({ ...m, ...(adminAccessChanges[m.codename] || {}) }))
-            .concat(Object.entries(adminAccessChanges)
-                .filter(([codename]) => !originalAdminMembers.some(m => m.codename === codename))
-                .map(([codename, c]) => ({ codename, permissions: [], ...c })));
-    }
-
-    // Only shows people who currently (post-staging) hold Setting or Member
-    // — the underlying b-quest-member table has everyone (task-working
-    // members too), but this panel is specifically about admin-page access,
-    // not the whole roster.
-    function visibleAdminRows() {
-        return adminAccessBuffer().filter(m => (m.permissions || []).includes('setting') || (m.permissions || []).includes('member'));
-    }
-
-    function renderAdminAccess() {
-        const rows = visibleAdminRows();
-        const list = document.getElementById('aa-list');
-        if (!list) return;
-        if (!rows.length) { list.innerHTML = '<div class="cfg-empty">No one has Setting or Member access yet</div>'; return; }
-        list.innerHTML = rows.map(m => {
-            const p = profileFor(m.codename);
-            const hasSetting = (m.permissions || []).includes('setting');
-            const hasMember = (m.permissions || []).includes('member');
-            return `
-            <div class="aa-row">
-                <div class="am-avatar"><i class="bi bi-person-fill"></i></div>
-                <div class="aa-name"><div class="aa-nick">${esc(p?.nick_name || m.codename)}</div></div>
-                <label class="aa-toggle-item">
-                    <span>Setting</span>
-                    <label class="bq-toggle small">
-                        <input type="checkbox" ${hasSetting ? 'checked' : ''} onchange="setAdminFlag('${esc(m.codename)}','setting',this.checked)">
-                        <span class="bq-slider"></span>
-                    </label>
-                </label>
-                <label class="aa-toggle-item">
-                    <span>Member</span>
-                    <label class="bq-toggle small">
-                        <input type="checkbox" ${hasMember ? 'checked' : ''} onchange="setAdminFlag('${esc(m.codename)}','member',this.checked)">
-                        <span class="bq-slider"></span>
-                    </label>
-                </label>
-                <button class="btn-remove" onclick="removeAdminAccess('${esc(m.codename)}')" title="Revoke all admin access"><i class="bi bi-trash3"></i></button>
-            </div>`;
-        }).join('');
-    }
-
-    function setAdminFlag(codename, flag, checked) {
-        const m = adminAccessBuffer().find(x => x.codename === codename);
-        const permissions = new Set(m?.permissions || []);
-        checked ? permissions.add(flag) : permissions.delete(flag);
-        if (!adminAccessChanges[codename]) adminAccessChanges[codename] = {};
-        adminAccessChanges[codename].permissions = [...permissions];
-        markDirty('section-adminaccess');
-        renderAdminAccess();
-    }
-
-    // Doesn't delete the b-quest-member row — just clears both admin flags,
-    // since this person may still hold dashboard/duplicate/share/role
-    // grants managed entirely from the Members page.
-    function removeAdminAccess(codename) {
-        setAdminFlag(codename, 'setting', false);
-        setAdminFlag(codename, 'member', false);
-    }
-
-    // ── Add Admin Access Modal — same recipe as Members' own Add Member
-    // Modal (avatar rows, search, Select All, footer count), just scoped to
-    // profiles not already holding Setting/Member.
-    let aaModalSelected = new Set();
-
-    function openAdminAddModal() {
-        aaModalSelected.clear();
-        document.getElementById('aa-add-search').value = '';
-        renderAdminAddModalList('');
-        updateAdminModalFooter();
-        document.getElementById('aa-add-overlay').classList.add('show');
-        lockBodyScroll();
-        setTimeout(() => document.getElementById('aa-add-search').focus(), 100);
-    }
-
-    function closeAdminAddModal(e) {
-        if (e && e.target !== document.getElementById('aa-add-overlay')) return;
-        document.getElementById('aa-add-overlay').classList.remove('show');
-        unlockBodyScroll();
-    }
-
-    function availableAdminProfiles(q = '') {
-        const ql = q.toLowerCase();
-        const existing = new Set(visibleAdminRows().map(m => m.codename));
-        return allProfiles.filter(p =>
-            !existing.has(p.codename) &&
-            (p.codename.toLowerCase().includes(ql) ||
-             (p.nick_name || '').toLowerCase().includes(ql) ||
-             (p.full_name || '').toLowerCase().includes(ql) ||
-             (p.employee_id || '').toLowerCase().includes(ql) ||
-             (p.department || '').toLowerCase().includes(ql))
-        );
-    }
-
-    function renderAdminAddModalList(q = '') {
-        const available = availableAdminProfiles(q);
-        const list = document.getElementById('aa-add-list');
-        if (!available.length) {
-            list.innerHTML = `<div class="am-empty">No one available</div>`;
-            return;
-        }
-        const selectedCount = available.filter(p => aaModalSelected.has(p.codename)).length;
-        list.innerHTML = `
-            <label class="am-item am-select-all">
-                <input type="checkbox" class="modern-checkbox" id="aa-select-all-cb" ${selectedCount === available.length ? 'checked' : ''} onchange="toggleAllAdminModalItems(this.checked)">
-                <div class="am-avatar"><i class="bi bi-people-fill"></i></div>
-                <div class="am-info am-info-flat">
-                    <span class="am-nick">Select All</span>
-                    <span class="am-select-count">${available.length} available</span>
-                </div>
-            </label>
-            ${available.map(p => `
-                <label class="am-item">
-                    <input type="checkbox" class="modern-checkbox" ${aaModalSelected.has(p.codename) ? 'checked' : ''} onchange="toggleAdminModalItem('${esc(p.codename)}', this.checked)">
-                    <div class="am-avatar"><i class="bi bi-person-fill"></i></div>
-                    <div class="am-info">
-                        <span class="am-nick">${esc(p.nick_name || p.codename)}</span>
-                        ${p.full_name ? `<span class="am-line2">${esc(p.full_name)}</span>` : ''}
-                    </div>
-                    ${p.department ? `<span class="am-dept-side">${esc(p.department)}</span>` : ''}
-                </label>`).join('')}
-        `;
-        const selectAllCb = document.getElementById('aa-select-all-cb');
-        if (selectAllCb) selectAllCb.indeterminate = selectedCount > 0 && selectedCount < available.length;
-    }
-
-    function toggleAdminModalItem(codename, checked) {
-        checked ? aaModalSelected.add(codename) : aaModalSelected.delete(codename);
-        renderAdminAddModalList(document.getElementById('aa-add-search').value.trim());
-        updateAdminModalFooter();
-    }
-
-    function toggleAllAdminModalItems(checked) {
-        const q = document.getElementById('aa-add-search').value.trim();
-        availableAdminProfiles(q).forEach(p => checked ? aaModalSelected.add(p.codename) : aaModalSelected.delete(p.codename));
-        renderAdminAddModalList(q);
-        updateAdminModalFooter();
-    }
-
-    function updateAdminModalFooter() {
-        const n = aaModalSelected.size;
-        const info = document.getElementById('aa-add-footer-info');
-        const btn = document.getElementById('btn-aa-add-confirm');
-        info.textContent = n === 0 ? 'No one selected' : `${n} selected`;
-        btn.disabled = n === 0;
-    }
-
-    function confirmAddAdminAccess() {
-        // Merge onto whatever permissions this codename already has (e.g. a
-        // working member's dashboard/duplicate/share) — this modal only
-        // excludes people already Setting/Member, not people who don't
-        // exist as a b-quest-member row yet at all.
-        [...aaModalSelected].forEach(codename => {
-            const existing = adminAccessBuffer().find(m => m.codename === codename);
-            const permissions = new Set(existing?.permissions || []);
-            permissions.add('setting');
-            adminAccessChanges[codename] = { permissions: [...permissions] };
-        });
-        document.getElementById('aa-add-overlay').classList.remove('show');
-        unlockBodyScroll();
-        markDirty('section-adminaccess');
-        renderAdminAccess();
-    }
-
-    function setupAdminAddSearch() {
-        document.getElementById('aa-add-search').addEventListener('input', e => renderAdminAddModalList(e.target.value.trim()));
-    }
-
-    function openAdminAccessInfoPopup(evt) {
-        const panel = document.getElementById('picker-panel');
-        panel.classList.remove('wide');
-        panel.classList.add('medium');
-        panel.innerHTML = `
-            <div class="cfg-info-item divided">
-                <div class="cfg-info-title"><i class="bi bi-gear-fill"></i> Setting</div>
-                <p>Can open this Setting page — Role/Status/Type/Work List/Daily Capacity/Visibility/Default Filters/Notifications, and this Admin Access panel itself.</p>
-            </div>
-            <div class="cfg-info-item">
-                <div class="cfg-info-title"><i class="bi bi-people-fill"></i> Member</div>
-                <p>Can open the Members page and grant/revoke everyone's permissions.</p>
-            </div>
-            <div class="cfg-info-warning"><i class="bi bi-exclamation-triangle-fill"></i> Setting always implies the power to grant Member too — anyone with Setting can turn their own Member toggle on right here.</div>
-        `;
-        positionPicker(evt);
     }
 
     // This page has no <form> anywhere, so pressing Enter in a text/number

@@ -647,8 +647,8 @@
     async function loadDashboardCapacityConfig() {
         if (dashWorkdayWeight) return;
         const [{ data: wd }, { data: mergeCfg }] = await Promise.all([
-            supabaseClient.from('b_quest_config').select('value').eq('rule', 'workday_weight').maybeSingle(),
-            supabaseClient.from('b_quest_config').select('value').eq('rule', 'merge_company_holidays').maybeSingle(),
+            supabaseClient.from('b_quest_setting').select('value').eq('rule', 'workday_weight').maybeSingle(),
+            supabaseClient.from('b_quest_setting').select('value').eq('rule', 'merge_company_holidays').maybeSingle(),
         ]);
         dashWorkdayWeight = { mon: 100, tue: 100, wed: 100, thu: 100, fri: 100, sat: 100, sun: 100, ...(wd?.value || {}) };
         if (mergeCfg?.value === true) {

@@ -5,6 +5,96 @@ function esc(s) { return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 function safeLink(url) { if (!url) return '#'; const u = url.trim(); return (u.startsWith('http://') || u.startsWith('https://')) ? u : '#'; }
 
+// ── Branding (Phase 2 of system/setting.html's Branding section) ──
+// Reads logo_header_url/logo_icon_url/theme_accent(_light/_dark) from
+// system_setting and applies them platform-wide: CSS custom property
+// overrides on :root for the theme colors, and swapping the header/auth
+// page <img> src for the logos. Runs on every page via initLayout().
+//
+// This is a static site with no server-side render, so applying anything
+// fetched from the DB always happens after the page's own default CSS/
+// markup has already painted once — there's an unavoidable brief flash
+// from default → custom on a visitor's very first load. localStorage
+// caches the last-applied values so every load AFTER the first can apply
+// them synchronously, before the network fetch even starts, shrinking
+// (not eliminating) that flash to just whenever the config actually
+// changes rather than every single page view.
+const BX_BRANDING_CACHE_KEY = 'bx_branding_cache';
+
+function bxHexToRgbString(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+}
+
+// Picks readable text (dark vs white) for content sitting directly on top
+// of a full-strength accent color — same purpose as theme.css's own
+// --c-on-accent token, just computed instead of hand-picked, since the
+// accent itself is now user-configurable. Perceptual luminance weights
+// (ITU-R BT.601), not a straight average — matches how bright a color
+// actually reads to the eye.
+function bxContrastTextColor(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+    if (!m) return '#1e293b';
+    const n = parseInt(m[1], 16);
+    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.6 ? '#1e293b' : '#ffffff';
+}
+
+function applyBrandingValues(cfg) {
+    if (!cfg) return;
+    const root = document.documentElement.style;
+    if (cfg.theme_accent) {
+        root.setProperty('--c-accent', cfg.theme_accent);
+        const rgb = bxHexToRgbString(cfg.theme_accent);
+        if (rgb) root.setProperty('--c-accent-rgb', rgb);
+        root.setProperty('--c-on-accent', bxContrastTextColor(cfg.theme_accent));
+    }
+    if (cfg.theme_accent_light) root.setProperty('--c-accent-light', cfg.theme_accent_light);
+    if (cfg.theme_accent_dark) root.setProperty('--c-accent-dark', cfg.theme_accent_dark);
+
+    if (cfg.logo_header_url) {
+        const headerLogo = document.querySelector('.sys-logo-img');
+        if (headerLogo) headerLogo.src = cfg.logo_header_url;
+    }
+    if (cfg.logo_icon_url) {
+        const authLogo = document.getElementById('brandbox-logo');
+        if (authLogo) authLogo.src = cfg.logo_icon_url;
+    }
+}
+
+// Sync half — call as early as possible (before header injection, before
+// the async DB fetch even starts) so a repeat visitor's theme colors are
+// right on first paint. Logo swapping still waits for the relevant <img>
+// to exist (header injection for .sys-logo-img; auth pages already have
+// #brandbox-logo in their static markup), so applyBrandingValues is
+// deliberately called again after header injection too.
+function applyCachedBranding() {
+    try {
+        const cached = JSON.parse(localStorage.getItem(BX_BRANDING_CACHE_KEY) || 'null');
+        applyBrandingValues(cached);
+    } catch {}
+}
+
+// Async half — fire-and-forget from initLayout(), never awaited: a
+// project page's own init shouldn't wait on a branding fetch that isn't
+// on its critical path. Refreshes the cache + re-applies once resolved,
+// so a change made in system/setting.html shows up (after one extra
+// reload to repopulate the cache) without needing a hard refresh loop.
+async function refreshBranding() {
+    if (!supabaseClient) return;
+    try {
+        const { data, error } = await supabaseClient.from('system_setting').select('key, value');
+        if (error || !data) return;
+        const cfg = {};
+        data.forEach(row => { cfg[row.key] = row.value; });
+        applyBrandingValues(cfg);
+        localStorage.setItem(BX_BRANDING_CACHE_KEY, JSON.stringify(cfg));
+    } catch {}
+}
+
 // Body scroll lock for the many custom fixed-overlay popups across the
 // app (Settings, Members, assign-picker, ...) — Bootstrap's own modals
 // already lock scroll via their .modal-open class, so this is only for
@@ -184,6 +274,19 @@ if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') 
 
 // ── BX Loader HTML (branded loading spinner — use for popups or inline placeholders) ──
 function bxLoader(label) {
+    // Was hardcoded to /favicon.ico, which was never an actual file at the
+    // site root — every loader showed a broken-image icon (404) instead of
+    // a logo. Pull the real icon mark from the same branding cache
+    // applyCachedBranding()/refreshBranding() already maintain (see
+    // BX_BRANDING_CACHE_KEY above) — same DB-driven logo as the header/auth
+    // pages, not a separate static asset. onerror hides the <img> entirely
+    // (just the spinner ring + label) rather than showing a broken icon,
+    // for the case this runs before the cache is populated at all.
+    let logoSrc = '';
+    try {
+        const cached = JSON.parse(localStorage.getItem(BX_BRANDING_CACHE_KEY) || 'null');
+        logoSrc = cached?.logo_icon_url || '';
+    } catch {}
     return `
         <svg width="0" height="0" style="position:absolute">
             <defs>
@@ -205,19 +308,19 @@ function bxLoader(label) {
             <svg class="bx-loader__arc" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="46"/>
             </svg>
-            <img class="bx-loader__logo" src="/favicon.ico" alt=""/>
+            ${logoSrc ? `<img class="bx-loader__logo" src="${logoSrc}" alt="" onerror="this.style.display='none'"/>` : ''}
         </div>
         <div class="bx-label">${label}</div>
     `;
 }
 
-function notify(title, text, icon = 'success') {
+function notify(title, text, icon = 'success', timer = 2000) {
     if (typeof Swal !== 'undefined') {
         Swal.fire({
             title: title,
             text: text,
             icon: icon,
-            timer: 2000,
+            timer: timer,
             showConfirmButton: false,
             confirmButtonColor: 'rgb(45, 71, 57)'
         });
@@ -239,6 +342,8 @@ function formatDate(dateStr) {
 
 async function initLayout(config = {}) {
     injectAssets();
+    applyCachedBranding(); // sync, runs before header injection — shrinks the default→custom flash on repeat visits
+    refreshBranding();     // async, not awaited — refreshes the cache + re-applies once it resolves
 
     if (!supabaseClient) {
         console.error("❌ Supabase Client not initialized");
@@ -260,7 +365,7 @@ async function initLayout(config = {}) {
     if (isAuthPage || isIndex) {
         // ล้าง permission cache ทุกครั้งที่กลับมาหน้า Index เพื่อให้ตอนเข้า project ใหม่จะ fetch ใหม่เสมอ
         if (isIndex) {
-            Object.keys(sessionStorage).filter(k => k.startsWith('bx_perms_') || k === 'bx_sys_access').forEach(k => sessionStorage.removeItem(k));
+            Object.keys(sessionStorage).filter(k => k.startsWith('bx_perms_') || k.startsWith('bx_sys_access')).forEach(k => sessionStorage.removeItem(k));
         }
         document.body.classList.add('auth-ready');
         return;
@@ -284,6 +389,22 @@ async function loadUserProfile(userId) {
         sessionStorage.setItem('bx_user', JSON.stringify(data));
     }
     return data;
+}
+
+// Shared fallback avatar initials — for anywhere a person is shown
+// (header, assign pickers, member tables, the profile modal) before/
+// unless they've uploaded a real photo. Background/text color is NOT
+// per-person here (was hash-based in an earlier version) — deliberately
+// just the platform's own --c-accent-light/--c-accent-dark badge
+// convention, same as .ov-id-badge etc., since this is expected to be a
+// short-lived placeholder (people are expected to upload their own photo
+// eventually) rather than a permanent per-person identity marker worth
+// its own color.
+function getInitials(name) {
+    if (!name) return '?';
+    const parts = String(name).trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 async function initAuthGuard() {
@@ -313,25 +434,57 @@ async function initAuthGuard() {
     }
 }
 
+// Which table actually holds "is this codename in this project" for each
+// live project — access is granted the moment a project's own admin adds
+// someone there (Add Member), full stop. There's no separate per-person
+// platform-level pre-approval step anymore (that used to be
+// system_access.<key>, toggled by a different admin on a different page,
+// which could drift out of sync with the project's own member list).
+// system_access itself still exists for system_setting (no project/
+// member-table equivalent for that one) and for bdashboard/bcommission
+// (not live projects yet, no member table to point at).
+const PROJECT_MEMBER_TABLE = { bquest: 'b_quest_member', baccount: 'b_account_setting', bfinance: 'b_finance_setting' };
+
 async function guardProjectAccess(accessKey) {
     const user = getBxUser();
     if (!user || user.level === 'god') return true;
 
-    let access = null;
-    const cached = sessionStorage.getItem('bx_sys_access');
-    if (cached) {
-        access = JSON.parse(cached);
-    } else {
-        const { data } = await supabaseClient
-            .from('setting_project')
-            .select('*')
-            .eq('codename', user.codename)
-            .single();
-        access = data || {};
-        sessionStorage.setItem('bx_sys_access', JSON.stringify(access));
+    const table = PROJECT_MEMBER_TABLE[accessKey];
+    if (!table) { window.location.replace('/index.html'); return false; }
+
+    // Admin on/off switch (system_project.status) — checked here too, not
+    // just on index.html's card grid, so a regular user who bookmarked a
+    // project's direct URL while it was Active gets bounced back out once
+    // an admin sets it to Disabled/Hidden, same as if they'd lost
+    // membership. GOD already returned true above and is exempt, same as
+    // the card grid (GOD can always click/type straight in).
+    const statusCacheKey = `bx_sys_access_status_${accessKey}`;
+    let status = sessionStorage.getItem(statusCacheKey);
+    if (status === null) {
+        const { data } = await supabaseClient.from('system_project').select('status').eq('key', accessKey).maybeSingle();
+        status = data?.status || 'active';
+        sessionStorage.setItem(statusCacheKey, status);
+    }
+    if (status !== 'active') {
+        window.location.replace('/index.html');
+        return false;
     }
 
-    if (access[accessKey] !== true) {
+    // Cached per accessKey (not one combined blob) — each project page only
+    // ever needs its own single key, so there's no reason to fetch or
+    // invalidate the others together.
+    const cacheKey = `bx_sys_access_${accessKey}`;
+    let allowed;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached !== null) {
+        allowed = cached === '1';
+    } else {
+        const { data } = await supabaseClient.from(table).select('codename').eq('codename', user.codename).maybeSingle();
+        allowed = !!data;
+        sessionStorage.setItem(cacheKey, allowed ? '1' : '0');
+    }
+
+    if (!allowed) {
         window.location.replace('/index.html');
         return false;
     }
@@ -342,6 +495,7 @@ async function renderSystemUI(config) {
     const response = await fetch('/system/header.html');
     const headerHTML = await response.text();
     document.body.insertAdjacentHTML('afterbegin', headerHTML);
+    applyCachedBranding(); // .sys-logo-img only exists from this point on — re-apply so a cached custom logo actually lands on it
 
     if (config.projectName) {
         document.getElementById('project-title').innerText = config.projectName;
@@ -374,6 +528,27 @@ async function renderSystemUI(config) {
         userDepartment.innerText = user?.department || '';
     }
 
+    // Shows the uploaded photo (profiles.avatar_url) when there is one,
+    // same fallback-initials treatment as system/profile-modal.js's own
+    // avatar preview otherwise. DOM methods (not innerHTML string-building),
+    // matching profile-modal.js's own reasoning.
+    [document.getElementById('profile-avatar-btn'), document.getElementById('profile-avatar-lg')].forEach(el => {
+        if (!el) return;
+        el.innerHTML = '';
+        if (user?.avatar_url) {
+            const img = document.createElement('img');
+            img.src = user.avatar_url;
+            img.alt = '';
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            el.appendChild(img);
+        } else {
+            const span = document.createElement('span');
+            span.className = 'sys-avatar-initials';
+            span.textContent = getInitials(user?.nick_name || user?.full_name);
+            el.appendChild(span);
+        }
+    });
+
     const avatarBtn = document.getElementById('profile-avatar-btn');
     const profileMenu = document.getElementById('profile-menu');
     if (avatarBtn && profileMenu) {
@@ -388,7 +563,8 @@ async function renderSystemUI(config) {
 }
 
 function handleEditProfile() {
-    notify('', 'Edit Profile coming soon', 'info');
+    if (typeof openEditProfileModal === 'function') openEditProfileModal();
+    else notify('', 'Edit Profile coming soon', 'info');
 }
 
 async function renderSystemMenu(config) {
@@ -413,7 +589,12 @@ async function renderSystemMenu(config) {
         if (perms._god) return true;
         return !!perms[menu.perm];
     }).map(menu => {
-        const isActive = (currentPath === menu.link.replace(/\.html$/, '')) ? 'active' : '';
+        // A menu's page can have a same-project "sub-page" that isn't its own
+        // top-nav entry (e.g. Settings' in-page Members tab lives at a
+        // different URL) — activeAlso lists those URLs so the underline
+        // still shows the right top-level item instead of going dark.
+        const isActive = (currentPath === menu.link.replace(/\.html$/, '')
+            || (menu.activeAlso || []).some(p => currentPath === p.replace(/\.html$/, ''))) ? 'active' : '';
         return `<a href="${menu.link}" class="sys-menu-link ${isActive}">${menu.name}</a>`;
     }).join('');
 }
@@ -433,6 +614,22 @@ const links = [
     if (!document.querySelector('script[src*="bootstrap.bundle"]')) {
         const s = document.createElement('script');
         s.src = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js";
+        document.head.appendChild(s);
+    }
+
+    // Edit Profile modal (system/profile-modal.js) is triggered from the
+    // header's own account dropdown, which every initLayout() page shows —
+    // needs to be loaded everywhere that dropdown exists, same reasoning
+    // as Bootstrap above. select-picker.js is its Department field's own
+    // dependency (openSelectPicker), not otherwise loaded on every page.
+    if (!document.querySelector('script[src*="select-picker.js"]')) {
+        const s = document.createElement('script');
+        s.src = "/system/select-picker.js";
+        document.head.appendChild(s);
+    }
+    if (!document.querySelector('script[src*="profile-modal.js"]')) {
+        const s = document.createElement('script');
+        s.src = "/system/profile-modal.js";
         document.head.appendChild(s);
     }
 

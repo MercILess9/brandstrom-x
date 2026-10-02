@@ -7,35 +7,66 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
+    <!-- b-opportunity-modal.js calls attachDatePicker() at its own top
+         level (not inside a function — runs the instant the script
+         executes) to wire up the Signed/Launch date fields, and its
+         BU/Type/Owner/Lead/AM/Sub-AM triggers call openSelectPicker() at
+         runtime. b-opportunity-list.html loads both of these before
+         b-opportunity-modal.js for that reason; this page silently missed
+         them, which threw a ReferenceError partway through
+         b-opportunity-modal.js's own top-level code the instant it ran —
+         so Edit looked like it did nothing at all. Ref b-quest-view.html,
+         which hit and fixed this exact gap first. -->
+    <script src="/system/date-picker.js"></script>
+    <script src="/system/select-picker.js"></script>
     <script src="b-account.js"></script>
+    <!-- This page skips initLayout() (standalone document, no nav header),
+         so system.js's own injectAssets() — the only source of Bootstrap
+         CSS/JS on every other page — never runs here. Needed explicitly
+         now that Edit opens b-opportunity-modal.js's self-injected modal
+         (built on Bootstrap's .modal/.fade/.show classes and the
+         bootstrap.Modal JS API) — without them the modal's own CSS classes
+         carry no styling at all. Same CDN/version injectAssets() itself
+         uses. Ref b-quest-view.html, which hit this exact gap first. -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- defer, matching b-opportunity-list.html's own tag exactly — this
+         file self-injects its modal markup into document.body on load,
+         which needs body to already be parsed. Loaded here so Edit can
+         open the exact same modal as the List page's own card dropdown. -->
+    <script src="b-opportunity-modal.js" defer></script>
+    <!-- Shared html2canvas+jsPDF multi-page-slicing export, also used by
+         b-quest/b-quest-view.html's own Save PDF button. -->
+    <script src="/system/pdf-export.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
+    <!-- Shared toolbar chrome (icon buttons, sticky bar, loading-centering)
+         with b-quest/b-quest-view.html — see the file itself. -->
+    <link rel="stylesheet" href="/system/view-toolbar.css">
     <link rel="stylesheet" href="b-account.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         body { background: #eef1f5; padding-bottom: 60px; }
 
-        /* ── Toolbar (screen only) ── */
-        .ov-toolbar { background: #fff; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 90; display: flex; justify-content: center; }
-        .ov-toolbar-inner { width: 210mm; max-width: 100%; display: flex; justify-content: space-between; align-items: center; }
-        .ov-id { font-size: 0.8rem; font-weight: 700; color: #64748b; }
-        .ov-toolbar-actions { display: flex; gap: 8px; }
-        .ov-tb-btn { display: inline-flex; align-items: center; gap: 7px; border: 1.5px solid #e2e8f0; background: #fff; color: var(--c-slate); border-radius: 10px; padding: 8px 16px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: 0.15s; font-family: inherit; }
-        .ov-tb-btn:hover { border-color: #cbd5e1; background: var(--c-bg); }
-        .ov-tb-btn:disabled { opacity: 0.5; cursor: wait; }
-        .ov-tb-btn.primary { border: none; background: var(--c-dark); color: #fff; }
-        .ov-tb-btn.primary:hover { background: #0f172a; }
-
         /* ── Page ── */
-        .a4-page { width: 210mm; min-height: 297mm; margin: 24px auto; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 14mm 16mm; box-sizing: border-box; border-top: 6px solid var(--c-accent); }
+        /* Softer floating-card feel — thin accent edge, diffuse shadow
+           instead of the old flat "printed form" look (hard boxes/
+           borders + left-stripe accents everywhere). Ref b-quest-view.html,
+           the pattern this redesign follows section for section. */
+        .a4-page { width: 210mm; min-height: 297mm; max-width: calc(100vw - 24px); margin: 24px auto 60px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 20px 48px rgba(0,0,0,0.08); padding: 16mm 18mm; box-sizing: border-box; border-radius: 10px; border-top: 4px solid var(--c-accent); }
 
         /* ── Header ── */
+        /* Full width, not squeezed into a 1.7fr column next to a summary
+           card — a long opportunity name (client project names run long)
+           needs the whole page width to wrap sanely across 2 lines
+           instead of 3+ narrow ones. */
         .ov-logo-row { display: flex; justify-content: flex-end; margin-bottom: 12px; }
         .ov-logo { height: 22px; }
-        .ov-head { display: grid; grid-template-columns: 1.7fr 1fr; gap: 26px; align-items: start; border-bottom: 2px solid #eef2f7; padding-bottom: 22px; margin-bottom: 22px; }
+        .ov-head { padding-bottom: 22px; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; }
         .ov-badge-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
-        .ov-id-text { font-size: 0.76rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.2px; }
+        .ov-id-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 800; color: var(--c-accent-dark); letter-spacing: 0.6px; background: var(--c-accent-light); border-radius: 20px; padding: 4px 12px; }
         .ov-type-badge { font-size: 0.64rem; font-weight: 800; border-radius: 20px; padding: 4px 11px; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
         .ov-type-badge.retention { background: #f5f3ff; color: #6d28d9; }
         .ov-type-badge.new-biz   { background: #eff6ff; color: #1d4ed8; }
@@ -44,81 +75,127 @@
         .ov-status-badge.churn  { background: #fff7ed; color: #c2410c; }
         .ov-status-badge.ended  { background: #f1f5f9; color: #475569; }
 
-        .ov-opp-name { font-size: 1.4rem; font-weight: 700; color: var(--c-text-main); line-height: 1.3; letter-spacing: -0.2px; margin-bottom: 16px; }
-        .ov-client-lbl { font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #94a3b8; margin-bottom: 4px; }
-        .ov-client-val { font-size: 0.86rem; font-weight: 600; color: #475569; }
+        .ov-opp-name { font-size: 1.5rem; font-weight: 800; color: var(--c-dark); line-height: 1.25; letter-spacing: -0.2px; margin-bottom: 14px; }
+        .ov-subtitle { display: flex; align-items: center; gap: 7px; font-size: 0.85rem; font-weight: 600; color: var(--c-slate); }
+        .ov-subtitle i { color: #c7c7cc; font-size: 0.9rem; }
 
-        .ov-pill { display: inline-flex; align-items: center; border: 1px solid #eef2f7; background: #fff; border-radius: 20px; overflow: hidden; font-size: 0.74rem; }
-        .ov-pill-tag { padding: 5px 10px; color: #94a3b8; font-size: 0.56rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid #eef2f7; white-space: nowrap; }
-        .ov-pill-val { padding: 5px 12px; font-weight: 700; color: #334155; white-space: nowrap; }
+        /* ── Summary bar ── */
+        /* Owner + Amount + GP as one wide horizontal zone instead of a
+           side-by-side split (Owner in its own row, Amount/GP in a card
+           beside the title) — these 3 are the "most important at a
+           glance" facts about the opportunity, so they read as one group.
+           flex-wrap so it degrades to stacked rows on a narrow viewport
+           instead of squeezing. */
+        /* Owner and Amount/GP as two separate cards (not one shared box
+           with a divider down the middle) — Owner is a "who" fact, Amount/
+           GP is a "how much" fact, different enough to read as their own
+           zones. Ref .ov-detail-grid's own People/Timeline split just
+           below. Row wraps as whole cards (never mid-card) below 700px,
+           same safety as the rest of this page's grouped layouts. */
+        .ov-summary-row { display: flex; gap: 14px; margin-bottom: 26px; flex-wrap: wrap; }
+        .ov-summary-card { background: #fafbfc; border-radius: 14px; padding: 16px 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.05); display: flex; align-items: center; }
+        .ov-summary-owner { flex: 1 1 220px; gap: 12px; }
+        .ov-summary-amtgp { flex: 2 1 320px; gap: 24px; }
+        .ov-summary-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--c-accent-light); color: var(--c-accent-dark); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+        .ov-summary-text { display: flex; flex-direction: column; gap: 2px; }
+        .ov-summary-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .ov-summary-value { font-size: 1.1rem; font-weight: 800; color: var(--c-dark); letter-spacing: -0.2px; }
+        .ov-summary-value.gp { color: #16a34a; }
+        .ov-summary-divider { width: 1px; align-self: stretch; background: #eef2f7; flex-shrink: 0; }
 
-        /* ── Summary card ── */
-        .ov-sum-card { background: #fafbfc; border: 1px solid #eef2f7; border-left: 3px solid var(--c-accent); border-radius: 12px; padding: 18px 22px; box-shadow: 0 1px 4px rgba(15,23,42,0.04); }
-        .ov-sum-lbl { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; }
-        .ov-sum-val { font-size: 1.4rem; font-weight: 800; color: var(--c-text-main); letter-spacing: -0.3px; margin-top: 5px; }
-        .ov-sum-val.gp { color: #16a34a; margin-bottom: 8px; }
-        .ov-sum-divider { height: 1px; background: #eef2f7; margin: 14px 0; }
-        .ov-sum-gp-row { display: flex; justify-content: space-between; align-items: baseline; }
-        .ov-sum-gp-pct { font-size: 0.76rem; font-weight: 800; color: #16a34a; }
-        .ov-sum-bar-wrap { height: 4px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+        .ov-summary-stat { display: flex; flex-direction: column; gap: 2px; }
+        .ov-sum-gp-pct { font-size: 0.68rem; font-weight: 800; color: #16a34a; margin-left: 4px; }
+        .ov-sum-bar-wrap { width: 90px; height: 4px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-top: 5px; }
         .ov-sum-bar-fill { height: 100%; background: #16a34a; border-radius: 99px; }
 
+        @media (max-width: 700px) {
+            .ov-summary-row { flex-direction: column; }
+        }
+
         /* ── Section title (shared: Detail / Quotations) ── */
-        .ov-section-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #94a3b8; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .ov-section-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--c-slate); margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+        .ov-section-title i { color: #c7c7cc; font-size: 0.85rem; }
 
-        /* ── Info grid ── */
-        .ov-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-        .ov-info-col { display: flex; flex-direction: column; gap: 8px; background: #fafbfc; border: 1px solid #eef2f7; border-left: 3px solid var(--c-accent); border-radius: 12px; padding: 12px 16px; box-shadow: 0 1px 4px rgba(15,23,42,0.04); }
-        .ov-info-row { display: flex; align-items: baseline; gap: 8px; font-size: 0.82rem; }
-        .ov-info-lbl { display: inline-flex; align-items: center; gap: 5px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: #94a3b8; min-width: 84px; flex-shrink: 0; }
-        .ov-info-val { font-weight: 700; color: #334155; }
-        .ov-info-val.nil { color: #cbd5e1; font-weight: 400; }
+        /* Two soft-shadow cards (People / Timeline) instead of one long
+           flowing row of icon chips — a flat wrapping row read as one
+           undifferentiated blob of fields with no sense of which belong
+           together; grouping them ref's the same People/Dates split the
+           create/edit modal (b-opportunity-modal.js) already uses for
+           these exact fields, just in this page's soft-card language
+           instead of the modal's bordered-card-with-left-stripe one. */
+        .ov-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+        .ov-detail-card { background: #fafbfc; border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 14px; }
+        .ov-detail-card-title { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.05); }
 
-        .ov-remark-box { background: #fafbfc; border: 1px solid #eef2f7; border-left: 3px solid var(--c-accent); border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; box-shadow: 0 1px 4px rgba(15,23,42,0.04); }
-        .ov-remark-lbl { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #94a3b8; margin-bottom: 6px; }
-        .ov-remark-val { font-size: 0.82rem; color: #334155; line-height: 1.6; white-space: pre-line; }
 
-        .ov-links-row { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
-        .ov-link-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--c-border); background: #fff; border-radius: 10px; padding: 7px 14px; font-size: 0.78rem; font-weight: 700; color: var(--c-slate); text-decoration: none; }
+        .ov-meta-item { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+        .ov-meta-icon { width: 34px; height: 34px; border-radius: 10px; background: #fff; color: var(--c-slate); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0; }
+        .ov-meta-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 2px; }
+        .ov-meta-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .ov-meta-value { font-size: 0.84rem; font-weight: 700; color: var(--c-dark); overflow-wrap: break-word; }
+        .ov-meta-value.nil { color: #cbd5e1; font-weight: 400; }
+
+        @media (max-width: 700px) {
+            .ov-detail-grid { grid-template-columns: 1fr; }
+        }
+
+        .ov-remark-box { margin-bottom: 24px; padding-left: 14px; border-left: 3px solid var(--c-accent-light); }
+        .ov-remark-lbl { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--c-muted); margin-bottom: 6px; }
+        .ov-remark-val { font-size: 0.86rem; color: var(--c-dark); line-height: 1.7; white-space: pre-line; overflow-wrap: break-word; }
+
+        .ov-links-row { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
+        .ov-link-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--c-border); background: #fff; border-radius: 10px; padding: 7px 14px; font-size: 0.78rem; font-weight: 700; color: var(--c-slate); text-decoration: none; transition: background 0.15s, border-color 0.15s; }
+        .ov-link-btn:hover { background: var(--c-bg); border-color: #cbd5e1; }
         .ov-link-btn.disabled { opacity: 1; pointer-events: none; border: 1px dashed #d1d5db; background: #f8fafc; color: #cbd5e1; }
 
         /* ── QT section ── */
-        .ov-qt-card { border: 1px solid #e2e8f0; border-left: 4px solid var(--c-accent); border-radius: 12px; margin-bottom: 12px; overflow: hidden; break-inside: avoid; page-break-inside: avoid; }
+        /* One card per quotation, stacked — a job may carry more than one
+           QT (and Churn splits into two labeled groups of them), so this
+           list has no fixed length and is expected to run long. Soft
+           shadow + a colored icon "avatar" carries the card's identity now,
+           instead of the old flat-colored header bar / left border stripe.
+           1px border is a print fallback (shadows don't reliably print). */
+        .ov-qt-card { border: 1px solid rgba(0,0,0,0.05); border-radius: 14px; margin-bottom: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.05); break-inside: avoid; page-break-inside: avoid; }
         .ov-qt-card:last-child { margin-bottom: 0; }
-        .ov-qt-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #f0f1f9; border-bottom: 2px solid #e2e8f0; }
-        .ov-qt-num { font-size: 0.82rem; font-weight: 800; color: var(--c-text-main); }
+        .ov-qt-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; }
+        .ov-qt-icon { width: 30px; height: 30px; border-radius: 9px; background: var(--c-accent-light); color: var(--c-accent-dark); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+        .ov-churn-wrap .ov-qt-icon { background: rgba(249,115,22,0.14); color: #c2410c; }
+        .ov-qt-num { font-size: 0.88rem; font-weight: 800; color: var(--c-dark); }
         .ov-qt-totals { margin-left: auto; display: flex; gap: 14px; }
         .ov-qt-stat { display: flex; flex-direction: column; align-items: flex-end; }
-        .ov-qt-stat-val { font-size: 0.82rem; font-weight: 800; color: var(--c-text-main); }
+        .ov-qt-stat-val { font-size: 0.82rem; font-weight: 800; color: var(--c-dark); }
         .ov-qt-stat-val.gp { color: #16a34a; }
-        .ov-qt-stat-lbl { font-size: 0.55rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; }
+        .ov-qt-stat-lbl { font-size: 0.55rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); }
         .ov-qt-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-        .ov-qt-table th { padding: 7px 10px; text-align: left; font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; background: #f8fafc; border-bottom: 1px solid #f1f5f9; }
+        .ov-qt-table th { padding: 8px 10px; text-align: left; font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--c-muted); border-top: 1px solid rgba(0,0,0,0.06); border-bottom: 1px solid rgba(0,0,0,0.06); }
         .ov-qt-table th.r, .ov-qt-table td.r { text-align: right; }
         .ov-qt-table th.c, .ov-qt-table td.c { text-align: center; }
-        .ov-qt-table td { padding: 7px 10px; color: #334155; border-bottom: 1px solid #f8fafc; }
+        .ov-qt-table td { padding: 8px 10px; color: var(--c-dark); border-bottom: 1px solid #f8fafc; }
         .ov-qt-table tr:last-child td { border-bottom: none; }
         .ov-qt-empty { padding: 18px; text-align: center; color: #cbd5e1; font-size: 0.8rem; }
 
         /* ── Churn / Sign groups ── */
         .ov-churn-wrap, .ov-sign-wrap { border-radius: 14px; padding: 20px 16px 8px; position: relative; margin-bottom: 16px; break-inside: avoid; page-break-inside: avoid; }
-        .ov-churn-wrap { border: 1.5px solid rgba(249,115,22,0.5); background: rgba(249,115,22,0.03); }
-        .ov-churn-wrap .ov-qt-card { border-left-color: #f97316; }
-        .ov-sign-wrap { border: 1px solid #e2e8f0; }
+        .ov-churn-wrap { border: 1.5px solid rgba(249,115,22,0.35); background: rgba(249,115,22,0.025); }
+        .ov-sign-wrap { border: 1px solid rgba(0,0,0,0.06); }
         .ov-churn-label, .ov-sign-label, .ov-churn-date-badge { position: absolute; top: -9px; background: #fff; padding: 0 8px; font-size: 0.64rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
         .ov-churn-label { left: 14px; color: #f97316; }
-        .ov-sign-label  { left: 14px; color: #94a3b8; }
+        .ov-sign-label  { left: 14px; color: var(--c-muted); }
         .ov-churn-date-badge { right: 14px; color: #c2410c; font-weight: 700; }
 
-        .ov-footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #f1f5f9; font-size: 0.65rem; color: #cbd5e1; text-align: center; }
-
-        .ov-error { text-align: center; padding: 100px 20px; color: #94a3b8; }
+        .ov-error { text-align: center; padding: 100px 20px; color: var(--c-muted); }
         .ov-error i { font-size: 2.4rem; display: block; margin-bottom: 12px; }
 
         /* ── Print ── */
         @media print {
             @page { size: A4; margin: 12mm 14mm; }
             body { background: #fff; padding-bottom: 0; }
+            /* Chrome/Brave/Edge strip background-color and drop-shadow from
+               print output by default (ink-saving default) — this forces
+               them back on for anyone printing via Ctrl+P directly (the
+               toolbar button itself no longer routes through window.print(),
+               see downloadPDF() above). Ref b-quest-view.html. */
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
             .ov-toolbar { display: none !important; }
             .a4-page { width: auto; min-height: 0; margin: 0; box-shadow: none; padding: 0; }
         }
@@ -128,11 +205,13 @@
 
 <div class="ov-toolbar no-print">
     <div class="ov-toolbar-inner">
-        <span class="ov-id" id="ov-toolbar-id"></span>
+        <a href="b-opportunity-list" id="backBtn" class="ov-back-btn" title="Back to List"><i class="bi bi-arrow-left"></i></a>
         <div class="ov-toolbar-actions">
-            <button class="ov-tb-btn" id="ov-btn-share" onclick="shareLink()"><i class="bi bi-share-fill"></i> Share</button>
-            <button class="ov-tb-btn" id="ov-btn-image" onclick="downloadImage()"><i class="bi bi-file-earmark-image-fill"></i> Save Image</button>
-            <button class="ov-tb-btn primary" onclick="window.print()"><i class="bi bi-printer-fill"></i> Print / PDF</button>
+            <button type="button" class="ov-btn" id="ovBtnEdit" onclick="editOpportunity()" title="Edit" style="display:none;"><i class="bi bi-pencil-fill"></i></button>
+            <button type="button" class="ov-btn ov-btn-danger" id="ovBtnDelete" onclick="deleteOppFromView()" title="Delete" style="display:none;"><i class="bi bi-trash3-fill"></i></button>
+            <div class="ov-divider"></div>
+            <button type="button" class="ov-btn" id="ov-btn-share" onclick="shareLink()" title="Share (Copy Link)"><i class="bi bi-share-fill"></i></button>
+            <button type="button" class="ov-btn" id="ov-btn-pdf" onclick="downloadPDF()" title="Save PDF"><i class="bi bi-download"></i></button>
         </div>
     </div>
 </div>
@@ -142,34 +221,36 @@
 <script>
     let _oppId = null;
 
-    document.getElementById('ov-root').innerHTML = (typeof bxLoader === 'function') ? bxLoader('Loading...') : 'Loading...';
+    document.getElementById('ov-root').innerHTML = `<div class="ov-loading-wrap">${(typeof bxLoader === 'function') ? bxLoader('Loading...') : 'Loading...'}</div>`;
 
     async function shareLink() {
+        const url = window.location.href;
         try {
-            await navigator.clipboard.writeText(window.location.href);
-            notify('', 'Copied link to clipboard', 'success');
+            await navigator.clipboard.writeText(url);
+            notify('Link copied', url, 'success', 3000);
         } catch {
             notify('', 'Could not copy link', 'error');
         }
     }
 
-    async function downloadImage() {
-        const btn = document.getElementById('ov-btn-image');
+    // Downloads a real PDF straight away — no print dialog, so none of
+    // window.print()'s dependency on the browser's own "Background
+    // graphics"/"Headers and footers" settings. Actual screenshot+slice
+    // logic lives in system/pdf-export.js, shared with b-quest-view.html.
+    async function downloadPDF() {
+        const btn = document.getElementById('ov-btn-pdf');
         const target = document.querySelector('.a4-page');
         if (!target) return;
+        const originalIcon = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Rendering...';
+        btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i>';
         try {
-            const canvas = await html2canvas(target, { useCORS: true, scale: 2, backgroundColor: '#ffffff' });
-            const link = document.createElement('a');
-            link.download = `${_oppId || 'opportunity'}.jpg`;
-            link.href = canvas.toDataURL('image/jpeg', 0.95);
-            link.click();
+            await exportElementToPDF(target, `${_oppId || 'opportunity'}.pdf`);
         } catch {
-            notify('', 'Could not generate image', 'error');
+            notify('', 'Could not generate PDF', 'error');
         } finally {
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-file-earmark-image-fill"></i> Save Image';
+            btn.innerHTML = originalIcon;
         }
     }
 
@@ -192,8 +273,14 @@
         return '';
     }
 
-    function row(icon, lbl, val) {
-        return `<div class="ov-info-row"><span class="ov-info-lbl"><i class="bi ${icon}"></i>${lbl}</span><span class="ov-info-val${val ? '' : ' nil'}">${val ? esc(val) : '—'}</span></div>`;
+    function metaItem(icon, lbl, val) {
+        return `<div class="ov-meta-item">
+            <div class="ov-meta-icon"><i class="bi ${icon}"></i></div>
+            <div class="ov-meta-text">
+                <span class="ov-meta-label">${lbl}</span>
+                <span class="ov-meta-value${val ? '' : ' nil'}">${val ? esc(val) : '—'}</span>
+            </div>
+        </div>`;
     }
 
     function linkBtn(icon, label, url) {
@@ -219,6 +306,7 @@
             : `<tr><td colspan="8" class="ov-qt-empty">No items</td></tr>`;
         return `<div class="ov-qt-card">
             <div class="ov-qt-head">
+                <div class="ov-qt-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
                 <span class="ov-qt-num">${esc(qt.qt_number || qt.qt_id)}</span>
                 <div class="ov-qt-totals">
                     <div class="ov-qt-stat"><span class="ov-qt-stat-val">${fmtNum(totAmt)}</span><span class="ov-qt-stat-lbl">Amount</span></div>
@@ -268,55 +356,75 @@
         const pct = gpPct(o.total_gp, o.total_amount);
 
         _oppId = o.opportunity_id;
-        document.getElementById('ov-toolbar-id').textContent = o.opportunity_id;
+        // b-opportunity-list.html reads this and, if the card isn't already
+        // in whatever page of the infinite-scroll list happens to be
+        // loaded, fetches+inserts it on its own then scrolls/expands it —
+        // see openCardFromQuery() there. No .html suffix (see CLAUDE.md's
+        // cleanUrls note — a .html link with a query string loses the
+        // query string on the redirect to the clean URL).
+        document.getElementById('backBtn').href = `b-opportunity-list?open=${encodeURIComponent(o.opportunity_id)}`;
         document.title = `${o.opportunity_id} | ${o.opportunity_name || ''}`;
+
+        // Flat check, no per-role complexity like B-Quest's task-role
+        // model — B-Account's edit/delete permission is a single
+        // account-wide flag each.
+        document.getElementById('ovBtnEdit').style.display = canBaccount('edit') ? 'flex' : 'none';
+        document.getElementById('ovBtnDelete').style.display = canBaccount('delete') ? 'flex' : 'none';
 
         const pctNum = o.total_amount > 0 && o.total_gp > 0 ? Math.min(+o.total_gp / +o.total_amount * 100, 100).toFixed(1) : 0;
 
         document.getElementById('ov-root').innerHTML = `
         <div class="a4-page">
             <div class="ov-logo-row">
-                <img src="${LOGO_URL}" class="ov-logo" onerror="this.style.display='none'">
+                <img src="${LOGO_URL}" class="ov-logo sys-logo-img" onerror="this.style.display='none'">
             </div>
 
             <div class="ov-head">
-                <div>
-                    <div class="ov-badge-row">
-                        ${o.business_type ? `<span class="ov-type-badge ${typeClass(o.business_type)}">${esc(o.business_type)}</span>` : ''}
-                        <span class="ov-id-text">#${esc(o.opportunity_id)}</span>
-                        <span class="ov-status-badge${statusClass(o.status)}">${esc(o.status || '')}</span>
-                    </div>
-                    <div class="ov-opp-name">${esc(o.opportunity_name || '')}</div>
-                    <div class="ov-client-lbl">Client / Company</div>
-                    <div class="ov-client-val">${sub}</div>
+                <div class="ov-badge-row">
+                    <span class="ov-id-badge"><i class="bi bi-hash"></i>${esc(o.opportunity_id)}</span>
+                    ${o.business_type ? `<span class="ov-type-badge ${typeClass(o.business_type)}">${esc(o.business_type)}</span>` : ''}
+                    <span class="ov-status-badge${statusClass(o.status)}">${esc(o.status || '')}</span>
                 </div>
-                <div class="ov-sum-card">
-                    <div class="ov-sum-lbl">Total Quotation Amount</div>
-                    <div class="ov-sum-val">${fmtAmt(o.total_amount)}</div>
-                    <div class="ov-sum-divider"></div>
-                    <div class="ov-sum-gp-row">
-                        <span class="ov-sum-lbl">Project GP</span>
-                        ${pct ? `<span class="ov-sum-gp-pct">${pct}</span>` : ''}
+                <div class="ov-opp-name">${esc(o.opportunity_name || '')}</div>
+                <div class="ov-subtitle"><i class="bi bi-building"></i><span>${sub}</span></div>
+            </div>
+
+            <div class="ov-summary-row">
+                <div class="ov-summary-card ov-summary-owner">
+                    <div class="ov-summary-icon"><i class="bi bi-person-fill"></i></div>
+                    <div class="ov-summary-text">
+                        <span class="ov-summary-label">Owner</span>
+                        <span class="ov-summary-value">${o.owner ? esc(o.owner) : '—'}</span>
                     </div>
-                    <div class="ov-sum-val gp">${fmtGP(o.total_gp)}</div>
-                    <div class="ov-sum-bar-wrap"><div class="ov-sum-bar-fill" style="width:${pctNum}%"></div></div>
+                </div>
+                <div class="ov-summary-card ov-summary-amtgp">
+                    <div class="ov-summary-stat">
+                        <span class="ov-summary-label">Total Quotation Amount</span>
+                        <span class="ov-summary-value">${fmtAmt(o.total_amount)}</span>
+                    </div>
+                    <div class="ov-summary-divider"></div>
+                    <div class="ov-summary-stat">
+                        <span class="ov-summary-label">Project GP${pct ? ` <span class="ov-sum-gp-pct">${pct}</span>` : ''}</span>
+                        <span class="ov-summary-value gp">${fmtGP(o.total_gp)}</span>
+                        <div class="ov-sum-bar-wrap"><div class="ov-sum-bar-fill" style="width:${pctNum}%"></div></div>
+                    </div>
                 </div>
             </div>
 
             <div class="ov-section-title"><i class="bi bi-info-circle"></i> Detail</div>
-            <div class="ov-info-grid">
-                <div class="ov-info-col">
-                    ${row('bi-person-fill', 'Owner', o.owner)}
-                    ${row('bi-person-badge', 'AM', o.am)}
-                    ${row('bi-person', 'Sub AM', o.sub_am)}
-                    ${row('bi-signpost-split', 'Lead', o.lead_source)}
+
+            <div class="ov-detail-grid">
+                <div class="ov-detail-card">
+                    <div class="ov-detail-card-title">People</div>
+                    ${metaItem('bi-person-badge', 'AM', o.am)}
+                    ${metaItem('bi-person', 'Sub AM', o.sub_am)}
+                    ${metaItem('bi-signpost-split', 'Lead', o.lead_source)}
                 </div>
-                <div class="ov-info-col">
-                    ${row('bi-person-plus', 'Create By', o.create_by)}
-                    ${row('bi-calendar-plus', 'Create Date', o.create_date ? fmtDate(o.create_date) : null)}
-                    ${row('bi-calendar-check', 'Signed', o.signed_date ? fmtDate(o.signed_date) : null)}
-                    ${row('bi-rocket-takeoff', 'Launch', o.launch_date ? fmtDate(o.launch_date) : null)}
-                    ${o.churn_date ? row('bi-calendar-x', 'Churn Date', fmtDate(o.churn_date)) : ''}
+                <div class="ov-detail-card">
+                    <div class="ov-detail-card-title">Timeline</div>
+                    ${metaItem('bi-calendar-check', 'Signed', o.signed_date ? fmtDate(o.signed_date) : null)}
+                    ${metaItem('bi-rocket-takeoff', 'Launch', o.launch_date ? fmtDate(o.launch_date) : null)}
+                    ${o.churn_date ? metaItem('bi-calendar-x', 'Churn Date', fmtDate(o.churn_date)) : ''}
                 </div>
             </div>
 
@@ -333,8 +441,6 @@
 
             <div class="ov-section-title"><i class="bi bi-file-earmark-text"></i> Quotations</div>
             ${renderQTSection(o, qts)}
-
-            <div class="ov-footer">Generated from Brandbox X Portal — ${esc(o.opportunity_id)}</div>
         </div>`;
     }
 
@@ -373,6 +479,45 @@
             .order('qt_number');
 
         renderPage(o, qts || []);
+        // .ov-logo only exists from here on — apply branding now so a
+        // cached/custom logo actually lands on it (same reasoning as
+        // system.js's own post-header-injection re-apply).
+        applyCachedBranding();
+        refreshBranding();
+    }
+
+    function editOpportunity() {
+        if (!_oppId) return;
+        BOppApp.openEdit(_oppId);
+    }
+
+    // b-opportunity-modal.js's handleSubmit() calls
+    // `if (typeof loadMasterData === 'function') await loadMasterData();`
+    // on a successful save — that's the exact extension point the List
+    // page plugs its own re-fetch into, so defining it here re-runs this
+    // page's own load instead of leaving stale data on screen after Edit.
+    async function loadMasterData() {
+        await loadOpportunity();
+    }
+
+    async function deleteOppFromView() {
+        if (!_oppId) return;
+        const res = await Swal.fire({
+            title: 'Delete Opportunity',
+            html: `<div style="font-weight:700;">${esc(_oppId)}</div>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Delete',
+            confirmButtonColor: '#ef4444',
+            cancelButtonText: 'Cancel'
+        });
+        if (!res.isConfirmed) return;
+        const { error } = await supabaseClient.from('b_opportunity_list').delete().eq('opportunity_id', _oppId);
+        if (error) { notify('', 'Delete failed', 'error'); return; }
+        // Not location.reload() — the opportunity is gone, reloading this
+        // same page would just land on the "not found" state. Back to the
+        // List makes more sense than staring at that.
+        window.location.href = 'b-opportunity-list';
     }
 
     async function initPage() {

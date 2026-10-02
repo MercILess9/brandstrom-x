@@ -11,11 +11,22 @@ const B_QUEST_MODAL_HTML = `
     .bq-modal-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #94a3b8; transition: 0.2s; flex-shrink: 0; }
     .bq-modal-close:hover { background: #e2e8f0; color: #1e293b; }
 
+    /* Task ID pill — shown only when editing an existing task (a new one
+       has no id yet), sits beside the Owner block. Ref b-quest-view.html's
+       own .bqv-id-badge — same pill so a task's id reads the same way in
+       both places instead of inventing a second convention for it here. */
+    .bq-header-left { display: flex; align-items: center; gap: 10px; }
+    .bq-modal-id-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 800; color: var(--c-accent-dark); letter-spacing: 0.6px; background: var(--c-accent-light); border-radius: 20px; padding: 6px 12px; }
     .bq-owner-wrap { display: flex; align-items: center; gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 7px 14px 7px 8px; }
     /* Circular, matching the person-avatar convention used elsewhere
        (e.g. Add Member modal) — a rounded square here read as a generic
-       icon badge rather than "this represents a person". */
-    .bq-owner-icon { width: 28px; height: 28px; background: var(--c-accent-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: var(--c-accent-dark); flex-shrink: 0; }
+       icon badge rather than "this represents a person". Shows the
+       owner's real photo when they have one (setModalOwnerAvatar()),
+       falls back to initials, or the generic bi-person-fill icon before
+       any owner is known at all. */
+    .bq-owner-icon { width: 28px; height: 28px; background: var(--c-accent-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; color: var(--c-accent-dark); flex-shrink: 0; overflow: hidden; }
+    .bq-owner-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .bq-owner-icon span { font-size: 0.62rem; }
     .bq-owner-label { font-size: 0.52rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; line-height: 1; margin-bottom: 2px; }
     .bq-owner-name { font-size: 0.82rem; font-weight: 700; color: #1e293b; line-height: 1; }
 
@@ -167,6 +178,53 @@ const B_QUEST_MODAL_HTML = `
     .bq-cap-worklimit { display: flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: 700; color: #64748b; margin-top: 5px; }
     .bq-cap-worklimit.over { color: #dc2626; font-weight: 800; }
 
+    /* Deadline-label info button + popover — shows the raw Weight/Day/Max
+       settings behind the selected Work + this role's Max Capacity, so a
+       user filling the modal can see the conditions without leaving to
+       check Settings. Deliberately just the configured numbers, not the
+       computed running-total the capacity bar (.bq-cap-info) above
+       already shows — a plain reference card, not a duplicate of that. */
+    .bq-info-btn { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; margin-left: 3px; border-radius: 50%; color: #c7c7cc; cursor: pointer; font-size: 0.8rem; vertical-align: -2px; transition: color 0.15s, transform 0.15s; }
+    .bq-info-btn:hover { color: var(--c-accent-dark); transform: scale(1.15); }
+    /* Frosted-glass surface + a soft, diffuse (not hard-edged) shadow
+       stack instead of a visible border — the border used to be what
+       separated the panel from the page, now the blur+shadow alone do
+       that, which is what reads as "soft"/Apple-like instead of a flat
+       white card with a hairline around it. Entrance animation is a
+       small scale+fade, same easing feel as a macOS popover/menu. */
+    .bq-info-popover { position: fixed; z-index: 10050; background: rgba(255,255,255,0.88); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border-radius: 20px; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.05), 0 24px 60px rgba(0,0,0,0.14); padding: 16px 16px 10px; width: 400px; max-height: 420px; overflow-y: auto; box-sizing: border-box; animation: bqInfoPopIn 0.16s cubic-bezier(.2,.8,.2,1); }
+    @keyframes bqInfoPopIn { from { opacity: 0; transform: scale(0.97) translateY(-4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .bq-info-popover-title { font-size: 0.62rem; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .bq-info-maxcap { font-size: 0.68rem; font-weight: 700; color: var(--c-accent-dark); background: rgba(var(--c-accent-rgb), 0.16); border-radius: 20px; padding: 3px 10px; text-transform: none; letter-spacing: normal; white-space: nowrap; }
+    .bq-info-table { width: 100%; border-collapse: collapse; }
+    .bq-info-table th { font-size: 0.6rem; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.4px; text-align: left; padding: 0 10px 10px 12px; border-bottom: 1px solid rgba(60,60,67,0.1); }
+    .bq-info-table th.num, .bq-info-table td.num { text-align: right; }
+    .bq-info-table td { font-size: 0.8rem; font-weight: 600; color: #3a3a3c; padding: 10px 10px 10px 12px; border-bottom: 1px solid rgba(60,60,67,0.06); font-variant-numeric: tabular-nums; }
+    /* Work name wraps instead of truncating+native-tooltip — the popover
+       is wide enough now that most names fit on one line, and the ones
+       that don't read fine on two rather than needing a hover to reveal
+       the rest (the browser's default title-attribute tooltip box looked
+       out of place next to everything else here). */
+    .bq-info-table td:first-child { white-space: normal; word-break: break-word; }
+    .bq-info-table tr:last-child td { border-bottom: none; }
+    /* Selected row reads as a soft floating pill (rounded on both ends,
+       not flush to the table's own edges) rather than a full-bleed
+       highlight band or a hard accent stripe — closer to how macOS lists
+       mark a selection. */
+    /* --c-accent-light, not a neutral tint — matches the platform-wide
+       hover convention for dropdown/filter/checkbox list items (see
+       select-picker.js's own .bx-sp-item:hover), so this reads as part
+       of the same app instead of an isolated one-off gray. Rounded the
+       same way as the selected-row pill above, so hover previews that
+       same shape rather than a square patch against a rounded pill. */
+    .bq-info-table tr:not(.is-selected):hover td { background: var(--c-accent-light); }
+    .bq-info-table tr:not(.is-selected):hover td:first-child { border-radius: 10px 0 0 10px; }
+    .bq-info-table tr:not(.is-selected):hover td:last-child { border-radius: 0 10px 10px 0; }
+    .bq-info-table tr.is-selected td { color: var(--c-accent-dark); background: rgba(var(--c-accent-rgb), 0.14); }
+    .bq-info-table tr.is-selected td:first-child { border-radius: 10px 0 0 10px; }
+    .bq-info-table tr.is-selected td:last-child { border-radius: 0 10px 10px 0; }
+    .bq-info-empty { font-size: 0.8rem; font-weight: 600; color: #8e8e93; text-align: center; padding: 18px 0; }
+
     /* Toggle */
     .bq-toggle { position: relative; display: inline-block; width: 34px; height: 18px; margin: 0; vertical-align: middle; }
     .bq-toggle input { opacity: 0; width: 0; height: 0; }
@@ -191,27 +249,17 @@ const B_QUEST_MODAL_HTML = `
     .bq-uni-search:focus { border-color: var(--c-accent); background: #fff; box-shadow: none; }
     .bq-uni-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #cbd5e1; cursor: pointer; font-size: 0.85rem; transition: color 0.15s; }
     .bq-uni-clear:hover { color: #94a3b8; }
-    /* Same row treatment as .bq-am-item below (borderless, subtle hover)
-       instead of the older bordered-box-per-item look — just without the
-       avatar/subtitle, since these rows are plain strings (account/
-       opportunity names) with no person-like metadata to show. */
+    /* Borderless, subtle-hover row style for openSearchOverlay's plain
+       string rows (account/opportunity names) — no avatar/subtitle, since
+       these have no person-like metadata to show. Assign's own rows used
+       to live here too (.bq-am-*) but now go through the shared
+       b-quest-assign-picker.js component instead — see openAssignPicker()
+       below. .bq-am-empty stays: openSearchOverlay's "no results" state
+       still uses it. */
     .uni-item-modern { display: flex; align-items: center; border: none; background: none; border-radius: 12px; margin-bottom: 2px; padding: 10px 12px; font-size: 0.85rem; font-weight: 600; text-align: left; cursor: pointer; transition: background 0.15s; color: #334155; width: 100%; font-family: inherit; }
     .uni-item-modern:hover { background: var(--c-accent-light); color: var(--c-accent-dark); }
     #uni-list-container { min-height: 280px; }
-
-    /* Assign picker — same visual language as Settings' Add Member list
-       (avatar circle, name + subtitle, hover highlight) instead of the
-       plain text-only rows this used to be. Icon-only avatar for now,
-       already shaped to drop in a real profile photo later. */
-    .bq-am-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: background 0.15s; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
-    .bq-am-item:hover { background: var(--c-accent-light); }
-    .bq-am-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--c-accent-light); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: var(--c-accent-dark); flex-shrink: 0; }
-    .bq-am-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-    .bq-am-nick { font-size: 0.85rem; font-weight: 700; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .bq-am-line2 { font-size: 0.72rem; color: var(--c-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .bq-am-dept { flex-shrink: 0; font-size: 0.65rem; font-weight: 700; color: var(--c-slate); background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
     .bq-am-empty { padding: 30px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
-    .bq-am-clear .bq-am-avatar { background: #f1f5f9; color: #94a3b8; }
 
     /* ── Footer ── */
     .bq-footer-actions { padding: 14px 28px; display: flex; justify-content: flex-end; gap: 10px; background: #fff; border-top: 1px solid #f1f5f9; }
@@ -246,12 +294,15 @@ const B_QUEST_MODAL_HTML = `
             </div>
 
             <div class="bq-modern-header">
-                <div class="bq-owner-wrap">
-                    <div class="bq-owner-icon"><i class="bi bi-person-fill"></i></div>
-                    <div>
-                        <div class="bq-owner-label">Owner</div>
-                        <div class="bq-owner-name" id="modal-owner-display">—</div>
+                <div class="bq-header-left">
+                    <div class="bq-owner-wrap">
+                        <div class="bq-owner-icon" id="modal-owner-icon"><i class="bi bi-person-fill"></i></div>
+                        <div>
+                            <div class="bq-owner-label">Owner</div>
+                            <div class="bq-owner-name" id="modal-owner-display">—</div>
+                        </div>
                     </div>
+                    <span class="bq-modal-id-badge" id="modal-id-badge" style="display:none;"><i class="bi bi-hash"></i><span id="modal-id-badge-text"></span></span>
                 </div>
                 <div id="b-quest-modal-label-text" style="display:none;"></div>
                 <button type="button" class="bq-modal-close" data-bs-dismiss="modal"><i class="bi bi-x"></i></button>
@@ -331,6 +382,35 @@ const BQuestApp = (() => {
         deadlinePickers: {} }; // roleId -> attachDatePicker() handle, rebuilt every renderRoleCards()+setupDropdowns() cycle since role cards are fully re-rendered per modal open
     const el = id => document.getElementById(id);
     const show = (id, condition, display = 'block') => { const e = el(id); if(e) e.style.display = condition ? display : 'none'; };
+    // Owner avatar (#modal-owner-icon) — the current user's own avatar_url
+    // is already in getBxUser() (new task / duplicate, both owned by
+    // whoever's creating them), so only an edit of someone ELSE's task
+    // needs a network lookup. Fire-and-forget async: called right after
+    // the synchronous modal-owner-display text update at each of its 3
+    // call sites, never awaited there — a brief icon fallback→photo swap
+    // is fine, same reasoning as applyCachedBranding()/refreshBranding().
+    async function setModalOwnerAvatar(codename) {
+        const iconEl = el('modal-owner-icon');
+        if (!iconEl) return;
+        if (!codename) { iconEl.innerHTML = '<i class="bi bi-person-fill"></i>'; return; }
+        const cleanName = n => (n || '').replace(/\s*\(.*$/, '');
+        const bxUser = getBxUser();
+        if (bxUser?.codename === codename) {
+            iconEl.innerHTML = bxUser.avatar_url
+                ? `<img src="${esc(bxUser.avatar_url)}" alt="">`
+                : `<span>${esc(getInitials(cleanName(bxUser.nick_name || bxUser.full_name || codename)))}</span>`;
+            return;
+        }
+        const { data } = await supabaseClient.from('profiles').select('avatar_url, nick_name, full_name').eq('codename', codename).maybeSingle();
+        iconEl.innerHTML = data?.avatar_url
+            ? `<img src="${esc(data.avatar_url)}" alt="">`
+            : `<span>${esc(getInitials(cleanName(data?.nick_name || data?.full_name || codename)))}</span>`;
+    }
+    // Work names reach the Capacity Settings popover (openCapSettingsInfo)
+    // as raw DB text rendered via innerHTML — everywhere else in this file
+    // that inserts a Work/role name uses new Option()/.textContent, which
+    // the browser escapes on its own, so this wasn't needed until now.
+    const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
     const BQuestService = {
         async getQuestById(id) {
@@ -350,7 +430,7 @@ const BQuestApp = (() => {
             const { data: memberRoles } = await supabaseClient.from('b_quest_member_role').select('codename, role_id').eq('accept', true);
             const codenames = [...new Set((memberRoles || []).map(r => r.codename))];
             const { data: profiles } = codenames.length
-                ? await supabaseClient.from('profiles').select('codename, full_name, department').in('codename', codenames)
+                ? await supabaseClient.from('profiles').select('codename, nick_name, full_name, department, avatar_url').in('codename', codenames)
                 : { data: [] };
             const profileByCodename = Object.fromEntries((profiles || []).map(p => [p.codename, p]));
             (memberRoles || []).forEach(r => {
@@ -421,47 +501,10 @@ const BQuestApp = (() => {
     }
 
 
-    // hexToRgba() is now the shared helper in b-quest.js (loaded before this
-    // file wherever it's used) — was an identical local copy here.
-
-    function hexToRgbParts(hex) {
-        const h = (hex || '#94a3b8').replace('#', '');
-        const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
-        const n = parseInt(full, 16);
-        return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-    }
-
-    function yiqLuma(r, g, b) {
-        return (r * 299 + g * 587 + b * 114) / 1000;
-    }
-
-    // Admin-picked color used directly as text — or a same-hue-darkened
-    // variant of it — reads fine for dark/saturated hues but goes muddy or
-    // nearly invisible for light-reading ones (lime, yellow, pale cyan),
-    // because same-hue color pairs have a low perceived-contrast ceiling no
-    // matter how the lightness is tuned. Both pickers below sidestep that by
-    // ignoring hue entirely and picking pure near-black or pure white via a
-    // plain YIQ luminance check — the only thing that reliably tracks
-    // perceived contrast regardless of what hue an admin picks.
-
-    // For a SOLID fill (the color used at full strength, e.g. the Status
-    // pill's background) — check the color itself.
-    function pickBadgeTextColor(hex) {
-        const [r, g, b] = hexToRgbParts(hex);
-        return yiqLuma(r, g, b) >= 150 ? '#1e293b' : '#ffffff';
-    }
-
-    // For a TRANSLUCENT TINT of the color over a white-ish surface (e.g. the
-    // Assign badge, which sits on a 10%/18%-alpha wash of the role color,
-    // not the color itself) — check the composite over white at the
-    // darkest alpha actually used (0.18, the hover state), since that's the
-    // hardest case for dark text to still clear. At these low alphas the
-    // composite stays close to white for nearly any hue, so this is mostly
-    // a safety net for an unusually dark admin-picked role color.
-    function pickTintTextColor(hex, alpha = 0.18) {
-        const [r, g, b] = hexToRgbParts(hex).map(v => v * alpha + 255 * (1 - alpha));
-        return yiqLuma(r, g, b) >= 150 ? '#1e293b' : '#ffffff';
-    }
+    // hexToRgba()/hexToRgbParts()/yiqLuma()/pickBadgeTextColor()/
+    // pickTintTextColor() are now shared helpers in b-quest.js (loaded
+    // before this file wherever it's used) — were identical local copies
+    // here.
 
     function roleCardHtml(role) {
         const c = role.color || '#64748b';
@@ -499,7 +542,7 @@ const BQuestApp = (() => {
                     </div>
                     <div class="col-6">
                         <div class="timeline-zone">
-                            <label class="bq-label-modern"><i class="bi bi-calendar3 me-1" style="opacity:0.5"></i>Deadline</label>
+                            <label class="bq-label-modern"><i class="bi bi-calendar3 me-1" style="opacity:0.5"></i>Deadline<i class="bi bi-info-circle bq-info-btn" onclick="BQuestApp.openCapSettingsInfo(event, '${role.id}')" title="Weight / Day / Max settings"></i></label>
                             <input type="date" class="bq-input-modern m-0" id="b-quest-modal-${role.id}-deadline">
                             <div id="${role.id}-capacity-info" class="bq-cap-info"></div>
                         </div>
@@ -589,7 +632,7 @@ const BQuestApp = (() => {
             if (element) element.value = data[key] || '';
         }
         publishDatePicker.setValue(data.publish_date || null);
-        if (data.owner !== undefined) el('modal-owner-display').innerText = data.owner || '—';
+        if (data.owner !== undefined) { el('modal-owner-display').innerText = data.owner || '—'; setModalOwnerAvatar(data.owner); }
     }
 
     function fillRoleCardData(roleId, row) {
@@ -780,6 +823,80 @@ const BQuestApp = (() => {
         return (State.maxCap[roleId] ?? 10) * (pct / 100);
     }
 
+    // Info popover next to the Deadline label — the raw Weight/Day/Max
+    // settings behind the currently-selected Work, plus this role's flat
+    // Max Capacity, read straight off the hidden inputs setupDropdowns()
+    // already keeps in sync on every Work change (no extra query). Shown
+    // as-configured, not date-scaled — that computed version is what the
+    // capacity bar (checkCapacity()) already shows once a Deadline is set.
+    let capInfoPopoverEl = null;
+    function closeCapSettingsInfo() {
+        if (!capInfoPopoverEl) return;
+        capInfoPopoverEl.remove();
+        capInfoPopoverEl = null;
+        document.removeEventListener('click', onCapInfoDocClick, true);
+        document.removeEventListener('scroll', onCapInfoDocScroll, true);
+    }
+    function onCapInfoDocClick(e) {
+        if (capInfoPopoverEl && !capInfoPopoverEl.contains(e.target) && !e.target.closest('.bq-info-btn')) closeCapSettingsInfo();
+    }
+    function onCapInfoDocScroll(e) {
+        if (capInfoPopoverEl && !capInfoPopoverEl.contains(e.target)) closeCapSettingsInfo();
+    }
+    function openCapSettingsInfo(event, roleId) {
+        event.stopPropagation();
+        closeCapSettingsInfo();
+
+        // Always available, not gated on a Work being selected — reads
+        // every <option> already sitting on the Work <select> (populated
+        // once by setupDropdowns(), dataset.weight/day/maxPerDay attached
+        // per option) rather than just the current selection, so this is
+        // the full reference table for the role, not a single-row echo.
+        const workSelect = el(`b-quest-modal-${roleId}-work`);
+        const currentWork = workSelect.value;
+        const items = Array.from(workSelect.options).filter(opt => opt.value);
+        const maxCap = State.maxCap[roleId] ?? 10;
+        const roleName = State.roleNameById[roleId] || '';
+
+        const popover = document.createElement('div');
+        popover.className = 'bq-info-popover';
+        popover.innerHTML = `
+            <div class="bq-info-popover-title">
+                <span>Capacity${roleName ? ' ' + esc(roleName) : ''}</span>
+                <span class="bq-info-maxcap">Max ${maxCap}</span>
+            </div>
+            ${!items.length ? `<div class="bq-info-empty">No work items configured for this role</div>` : `
+            <table class="bq-info-table">
+                <thead><tr><th>Work</th><th class="num">Weight</th><th class="num">Day</th><th class="num">Max/day</th></tr></thead>
+                <tbody>
+                    ${items.map(opt => `
+                    <tr class="${opt.value === currentWork ? 'is-selected' : ''}">
+                        <td>${esc(opt.value)}</td>
+                        <td class="num">${esc(opt.dataset.weight || '0')}</td>
+                        <td class="num">${esc(opt.dataset.day || '1')}</td>
+                        <td class="num">${opt.dataset.maxPerDay ? esc(opt.dataset.maxPerDay) : '—'}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>`}
+        `;
+        document.body.appendChild(popover);
+        capInfoPopoverEl = popover;
+
+        const r = event.currentTarget.getBoundingClientRect();
+        const width = 400;
+        popover.style.left = Math.min(r.left, window.innerWidth - width - 12) + 'px';
+        popover.style.top = (r.bottom + 8) + 'px';
+        const popRect = popover.getBoundingClientRect();
+        if (popRect.bottom > window.innerHeight - 12) {
+            popover.style.top = Math.max(12, r.top - popRect.height - 8) + 'px';
+        }
+
+        setTimeout(() => {
+            document.addEventListener('click', onCapInfoDocClick, true);
+            document.addEventListener('scroll', onCapInfoDocScroll, true);
+        }, 0);
+    }
+
     async function checkCapacity(roleId) {
         const info = el(`${roleId}-capacity-info`);
         const hideInfo = () => { if (info) { info.className = 'bq-cap-info'; info.innerHTML = ''; } };
@@ -926,68 +1043,30 @@ const BQuestApp = (() => {
         } catch (e) { console.error(e); }
     }
 
-    // NOT switched over to the shared b-quest-assign-picker.js component
-    // (unlike b-quest-assignment.html's own openAssignPicker, which was).
-    // This version reuses the SAME #bq-search-overlay/#uni-search-input/
-    // #uni-list-container elements as openSearchOverlay above (the generic
-    // account/opportunity-name search), including the searchOverlayToken
-    // race-guard that keeps a slow openSearchOverlay fetch from clobbering
-    // this one if the user opens Assign while it's still in flight. Giving
-    // this its own self-injected overlay (the shared component's whole
-    // convention) would mean a second, separate overlay element instead of
-    // one shared one — a real behavior/DOM change, not just deduplication —
-    // so it was deliberately left as its own local copy.
+    // Switched over to the shared b-quest-assign-picker.js component
+    // (same one b-quest-assignment.html already used) instead of a local
+    // copy reusing the modal's own #bq-search-overlay — that local copy
+    // needed the searchOverlayToken race-guard specifically BECAUSE it
+    // shared one overlay element with openSearchOverlay's generic account/
+    // opportunity-name search; the shared component self-injects its own
+    // separate overlay, so that race can't happen here at all and the
+    // guard isn't needed for this path. Keeps avatar/red-"Unassigned"
+    // styling in exactly one place instead of two copies drifting apart
+    // (confirmed drift: this file's own .bq-am-* rows didn't get the
+    // avatar-photo/red-Unassigned treatment the shared component did,
+    // until this switch). Page(s) that load this file must also load
+    // b-quest-assign-picker.js — see b-quest-list.html/b-quest-view.html.
     function openAssignPicker(roleId) {
         const role = State.visibleRoles.find(r => r.id === roleId);
         const canAssign = typeof canBquest === 'function' ? canBquest('assign') : false;
         const canEditRole = role && typeof canBquestEditRole === 'function' ? canBquestEditRole(role.name) : true;
         if (!canAssign || !canEditRole) return;
-        searchOverlayToken++; // invalidate any in-flight openSearchOverlay fetch — see comment at its declaration
-        const profiles = State.assignProfiles[roleId] || [];
-        const container = el('uni-list-container');
-        const searchInput = el('uni-search-input');
-
-        el('uni-search-icon').className = 'bi bi-person-check-fill';
-        el('uni-search-title').textContent = 'Assign';
-        show('bq-search-overlay', true, 'flex');
-        searchInput.value = '';
-        el('uni-search-clear').style.display = 'none';
-
-        const render = (filter = '') => {
-            container.innerHTML = '';
-            const clearBtn = document.createElement('button');
-            clearBtn.className = 'bq-am-item bq-am-clear w-100';
-            clearBtn.innerHTML = `
-                <div class="bq-am-avatar"><i class="bi bi-x-circle"></i></div>
-                <div class="bq-am-info"><span class="bq-am-nick">Unassigned</span></div>`;
-            clearBtn.onclick = () => { setAssign(roleId, ''); show('bq-search-overlay', false); };
-            container.appendChild(clearBtn);
-
-            const fl = filter.toLowerCase();
-            const matches = profiles.filter(p =>
-                p.codename.toLowerCase().includes(fl) ||
-                (p.full_name || '').toLowerCase().includes(fl) ||
-                (p.department || '').toLowerCase().includes(fl)
-            );
-            if (!matches.length) {
-                container.insertAdjacentHTML('beforeend', `<div class="bq-am-empty">${filter ? 'No matches' : 'No candidates for this role'}</div>`);
-            }
-            matches.forEach(p => {
-                const btn = document.createElement('button');
-                btn.className = 'bq-am-item w-100';
-                btn.innerHTML = `
-                    <div class="bq-am-avatar"><i class="bi bi-person-fill"></i></div>
-                    <div class="bq-am-info">
-                        <span class="bq-am-nick">${esc(p.codename)}</span>
-                        ${p.full_name ? `<span class="bq-am-line2">${esc(p.full_name)}</span>` : ''}
-                    </div>
-                    ${p.department ? `<span class="bq-am-dept">${esc(p.department)}</span>` : ''}`;
-                btn.onclick = () => { setAssign(roleId, p.codename); show('bq-search-overlay', false); };
-                container.appendChild(btn);
-            });
-        };
-        render();
-        wireSearchClear(searchInput, render);
+        window.openAssignPicker({
+            candidates: State.assignProfiles[roleId] || [],
+            title: 'Assign',
+            emptyText: 'No candidates for this role',
+            onSelect: (codename) => setAssign(roleId, codename)
+        });
     }
 
     el('role-cards-container')?.addEventListener('scroll', updateRoleColFade);
@@ -1031,6 +1110,8 @@ const BQuestApp = (() => {
             if (taskId) {
                 el('btn-submit-icon').className  = 'bi bi-floppy2-fill';
                 el('btn-submit-label').textContent = 'Save Changes';
+                el('modal-id-badge-text').textContent = taskId;
+                show('modal-id-badge', true, 'inline-flex');
 
                 const [data, roleRows] = await Promise.all([BQuestService.getQuestById(taskId), BQuestService.getTaskRoles(taskId)]);
                 if (data) {
@@ -1082,6 +1163,8 @@ const BQuestApp = (() => {
                 el('btn-submit-icon').className  = 'bi bi-plus-circle-fill';
                 el('btn-submit-label').textContent = 'Create Task';
                 el('modal-owner-display').innerText = getBxUser()?.codename || '—';
+                setModalOwnerAvatar(getBxUser()?.codename);
+                show('modal-id-badge', false);
                 show('btn-delete-task', false);
                 State.visibleRoles.forEach(role => {
                     el(`check-${role.id}`).checked = false;
@@ -1243,7 +1326,7 @@ const BQuestApp = (() => {
             }
         },
 
-        updateRoleUI, updateStatusUI, openSearchOverlay, openAssignPicker, openBqPicker,
+        updateRoleUI, updateStatusUI, openSearchOverlay, openAssignPicker, openBqPicker, openCapSettingsInfo,
         async openDuplicateModal(taskId, workData = []) {
             const form = el('b-quest-modal-form');
             form.reset(); form.classList.remove('was-validated');
@@ -1306,6 +1389,7 @@ const BQuestApp = (() => {
             setTimeout(() => {
                 fillFormData(dupData);
                 el('modal-owner-display').innerText = ownerName;
+                setModalOwnerAvatar(getBxUser()?.codename);
                 el('b-quest-modal-taskname').value = dupData.task_name;
             }, 50);
         },

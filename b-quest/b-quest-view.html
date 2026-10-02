@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>B-QUEST | View</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="/system/config.js"></script>
+    <script src="/system/system.js"></script>
+    <!-- b-quest-modal.js calls attachDatePicker() at its own top level
+         (not inside a function — runs the instant the script executes) to
+         wire up the Publish Date field, and openBqPicker() calls
+         openSelectPicker() at runtime for every Status/Type/Work trigger.
+         b-quest-list.html loads both of these before b-quest-modal.js for
+         that reason; this page silently missed them, which threw a
+         ReferenceError partway through b-quest-modal.js's own top-level
+         code the instant it ran (before it ever reached
+         `window.openTaskModal = BQuestApp.openModal`) — so Edit looked
+         like it did nothing at all, no modal, no visible error, since the
+         click handler's own openTaskModal(...) call was itself unhandled
+         (see editTask() below). -->
+    <script src="/system/date-picker.js"></script>
+    <script src="/system/select-picker.js"></script>
+    <script src="b-quest.js"></script>
+    <script src="b-quest-assign-picker.js"></script>
+    <!-- This page skips initLayout() (see the standalone-document-page
+         comment on the main <style> block below), so system.js's own
+         injectAssets() — which is what every other page's Bootstrap
+         CSS/JS actually comes from — never runs here. That was fine while
+         nothing on this page used Bootstrap components; now that Edit
+         opens b-quest-modal.js's self-injected modal (built on Bootstrap's
+         .modal/.fade/.show classes and the bootstrap.Modal JS API), both
+         need to be loaded explicitly — without them the modal's own CSS
+         classes carry no styling at all, so it just renders as plain
+         inline content instead of a hidden-until-shown overlay. Same
+         CDN/version injectAssets() itself uses. -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- defer, matching b-quest-list.html's own tag exactly — this file
+         self-injects its modal markup into document.body on load
+         (document.body.insertAdjacentHTML('beforeend', ...) at its top
+         level), which needs body to already be parsed. Loaded here too
+         so Edit can open the exact same modal as the List page's own
+         card dropdown — no separate modal built for this page. -->
+    <script src="b-quest-modal.js?v=10" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <!-- Shared html2canvas+jsPDF multi-page-slicing export, also used by
+         b-account/b-opportunity-view.html's own Save PDF button — see
+         system/pdf-export.js for why this one function is a plain <script>
+         and not a self-injecting module like color-picker.js. -->
+    <script src="/system/pdf-export.js"></script>
+    <link rel="stylesheet" href="/system/theme.css">
+    <!-- Shared toolbar chrome (icon buttons, sticky bar, loading-centering)
+         with b-account/b-opportunity-view.html — see the file itself. -->
+    <link rel="stylesheet" href="/system/view-toolbar.css">
+    <link rel="stylesheet" href="b-quest.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- Standalone document page, same pattern as b-account/b-opportunity-view.html:
+         no initLayout()/header nav — initAuthGuard() only (still requires a
+         logged-in session; a copied link is a deep link into the app, not a
+         public/unauthenticated URL) plus its own toolbar. Portrait A4, not
+         landscape — content grows vertically (one card per role, unbounded
+         count), and @page/print below expects A4 paper directly with no
+         orientation mismatch to fight. -->
+    <style>
+        body { background: #eef1f5; margin: 0; font-family: 'Inter', 'Sarabun', sans-serif; }
+
+
+        /* Softer floating-card feel — thin accent edge, diffuse shadow
+           instead of the old flat "printed form" look (hard boxes/
+           borders everywhere, tiny uppercase labels with divider lines).
+           Screen-only; @media print strips it back to plain paper. */
+        .a4-page { width: 210mm; min-height: 297mm; max-width: calc(100vw - 24px); margin: 24px auto 60px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 20px 48px rgba(0,0,0,0.08); padding: 16mm 18mm; box-sizing: border-box; border-radius: 10px; border-top: 4px solid var(--c-accent); }
+
+        .ov-state { text-align: center; color: var(--c-muted); font-size: 0.9rem; font-weight: 700; padding: 80px 0; }
+        /* Toolbar stays visible while loading (Back still works, Edit/
+           Delete/PDF are all no-ops until currentQuest is set) — only the
+           content area shows the branded spinner, centered via
+           .ov-loading-wrap (system/view-toolbar.css) rather than pinned to
+           .a4-page's own top (which would otherwise put it near the very
+           top of a min-height:297mm block). This ID rule just cancels
+           .ov-state's own padding: 80px 0 (same specificity, ID beats
+           class regardless of source order). */
+        #loadingState { padding: 0; }
+
+        /* Ref b-opportunity-view.html's .ov-logo-row/.ov-logo — same
+           top-right placement + height, .sys-logo-img is what
+           applyBrandingValues() (system.js) swaps to an admin-uploaded
+           logo if one's set. */
+        .bqv-logo-row { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+        .bqv-logo { height: 22px; }
+
+        .bqv-head { display: flex; flex-direction: column; gap: 10px; padding-bottom: 22px; margin-bottom: 26px; border-bottom: 1px solid #f1f5f9; }
+        .bqv-id-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 800; color: var(--c-accent-dark); letter-spacing: 0.6px; background: var(--c-accent-light); border-radius: 20px; padding: 4px 12px; width: fit-content; }
+        .bqv-title { font-size: 1.65rem; font-weight: 800; color: var(--c-dark); margin: 2px 0 0; line-height: 1.2; }
+        .bqv-subtitle { display: flex; align-items: center; gap: 7px; font-size: 0.85rem; font-weight: 600; color: var(--c-slate); }
+        .bqv-subtitle i { color: #c7c7cc; font-size: 0.9rem; }
+
+        /* Icon-led meta row instead of a bordered label/value grid — each
+           field reads as a small chip (icon + label + value) rather than
+           a form cell, and wraps naturally instead of locking to 2 columns. */
+        .bqv-meta-row { display: flex; flex-wrap: wrap; gap: 20px 28px; margin-bottom: 28px; }
+        .bqv-meta-item { display: flex; align-items: flex-start; gap: 10px; flex: 1 1 190px; min-width: 0; }
+        .bqv-meta-icon { width: 34px; height: 34px; border-radius: 10px; background: var(--c-bg); color: var(--c-slate); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0; }
+        .bqv-meta-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 2px; }
+        .bqv-meta-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .bqv-meta-value { font-size: 0.84rem; font-weight: 700; color: var(--c-dark); overflow-wrap: break-word; }
+        .bqv-meta-value a { color: var(--c-accent-dark); text-decoration: none; }
+        .bqv-meta-value a:hover { text-decoration: underline; }
+
+        .bqv-detail-box { font-size: 0.86rem; color: var(--c-dark); line-height: 1.7; white-space: pre-wrap; overflow-wrap: break-word; margin-bottom: 30px; padding-left: 14px; border-left: 3px solid var(--c-accent-light); }
+
+        .bqv-section-title { display: flex; align-items: center; gap: 7px; font-size: 0.72rem; font-weight: 800; color: var(--c-slate); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 14px; }
+        .bqv-section-title i { color: #c7c7cc; font-size: 0.85rem; }
+
+        /* One card per role, stacked — count is never fixed, a task can
+           have 1 today and however many the Settings page's Role list
+           grows to later; nothing here assumes a specific count or a
+           fixed set of role names. Soft shadow + a colored icon "avatar"
+           carries the role's color now, instead of a hard 4px border
+           stripe — the 1px border is a print fallback (shadows don't
+           reliably print), barely visible on screen. break-inside:avoid
+           keeps a card from splitting across a printed page. */
+        .bqv-role-card { border: 1px solid rgba(0,0,0,0.05); border-radius: 14px; padding: 16px 18px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.05); break-inside: avoid; page-break-inside: avoid; }
+        .bqv-role-card:last-child { margin-bottom: 0; }
+        .bqv-role-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+        .bqv-role-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+        .bqv-role-name { font-size: 0.95rem; font-weight: 800; }
+        /* Work + Deadline are what someone actually needs at a glance —
+           promoted into their own larger-type row above the rest, instead
+           of sitting as equal-weight grid cells next to Status/Type/Assign. */
+        .bqv-role-highlight { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid rgba(0,0,0,0.06); }
+        .bqv-role-hl-item { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+        .bqv-role-hl-icon { width: 30px; height: 30px; border-radius: 9px; background: rgba(0,0,0,0.04); color: var(--c-slate); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+        .bqv-role-hl-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .bqv-role-hl-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+        .bqv-role-hl-value { font-size: 0.98rem; font-weight: 800; color: var(--c-dark); overflow-wrap: break-word; }
+
+        .bqv-role-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 18px; }
+        .bqv-role-field { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+        .bqv-role-field-icon { color: #c7c7cc; font-size: 0.82rem; margin-top: 3px; flex-shrink: 0; }
+        .bqv-role-field-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .bqv-role-field-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+        .bqv-role-field-value { font-size: 0.82rem; font-weight: 700; color: var(--c-dark); overflow-wrap: break-word; }
+        .bqv-status-badge { display: inline-flex; align-items: center; width: fit-content; font-size: 0.7rem; font-weight: 800; padding: 3px 10px; border-radius: 20px; }
+        .bqv-empty { text-align: center; color: var(--c-muted); font-size: 0.85rem; font-weight: 600; padding: 24px 0; border: 1px dashed var(--c-border); border-radius: 12px; }
+
+        @media print {
+            @page { size: A4; margin: 12mm 14mm; }
+            body { background: #fff; }
+            /* Chrome/Brave/Edge strip background-color and drop-shadow
+               from print output by default (ink-saving default) — this is
+               what forces them back on. Doesn't remove the browser's OWN
+               print header/footer (date, page title, URL, page number) —
+               that's a print-dialog setting ("More settings" →
+               "Headers and footers"), no CSS property can touch it. */
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+            .ov-toolbar { display: none !important; }
+            .a4-page { width: auto; max-width: none; min-height: 0; margin: 0; box-shadow: none; padding: 0; border-radius: 0; }
+            .bqv-role-card { box-shadow: none; }
+        }
+
+        @media (max-width: 700px) {
+            .bqv-role-highlight, .bqv-role-fields { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ov-toolbar">
+        <div class="ov-toolbar-inner">
+            <a href="b-quest-list" id="backBtn" class="ov-back-btn" title="Back to List"><i class="bi bi-arrow-left"></i></a>
+            <div class="ov-toolbar-actions">
+                <button type="button" class="ov-btn" id="ovBtnEdit" onclick="editTask()" title="Edit" style="display:none;"><i class="bi bi-pencil-fill"></i></button>
+                <button type="button" class="ov-btn ov-btn-danger" id="ovBtnDelete" onclick="deleteTaskFromView()" title="Delete" style="display:none;"><i class="bi bi-trash3-fill"></i></button>
+                <div class="ov-divider"></div>
+                <button type="button" class="ov-btn" onclick="shareLink()" title="Share (Copy Link)"><i class="bi bi-share-fill"></i></button>
+                <button type="button" class="ov-btn" id="ovBtnPdf" onclick="downloadPDF()" title="Save PDF"><i class="bi bi-download"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="a4-page">
+        <div class="ov-state ov-loading-wrap" id="loadingState"></div>
+        <div class="ov-state" id="notFoundState" style="display:none;"><i class="bi bi-exclamation-triangle"></i> Task not found</div>
+
+        <div id="contentState" style="display:none;">
+            <div class="bqv-logo-row">
+                <img id="viewLogo" src="" class="bqv-logo sys-logo-img" onerror="this.style.display='none'">
+            </div>
+            <div class="bqv-head">
+                <span class="bqv-id-badge"><i class="bi bi-hash"></i><span id="taskId"></span></span>
+                <div class="bqv-title" id="taskName"></div>
+                <div class="bqv-subtitle"><i class="bi bi-folder2"></i><span id="taskSubtitle"></span></div>
+            </div>
+
+            <div class="bqv-meta-row">
+                <div class="bqv-meta-item">
+                    <div class="bqv-meta-icon"><i class="bi bi-person-fill"></i></div>
+                    <div class="bqv-meta-text">
+                        <span class="bqv-meta-label">Owner</span>
+                        <span class="bqv-meta-value" id="taskOwner"></span>
+                    </div>
+                </div>
+                <div class="bqv-meta-item">
+                    <div class="bqv-meta-icon"><i class="bi bi-calendar-check"></i></div>
+                    <div class="bqv-meta-text">
+                        <span class="bqv-meta-label">Publish Date</span>
+                        <span class="bqv-meta-value" id="taskPublishDate"></span>
+                    </div>
+                </div>
+                <div class="bqv-meta-item">
+                    <div class="bqv-meta-icon"><i class="bi bi-calendar-plus"></i></div>
+                    <div class="bqv-meta-text">
+                        <span class="bqv-meta-label">Create Date</span>
+                        <span class="bqv-meta-value" id="taskCreateDate"></span>
+                    </div>
+                </div>
+                <div class="bqv-meta-item">
+                    <div class="bqv-meta-icon"><i class="bi bi-link-45deg"></i></div>
+                    <div class="bqv-meta-text">
+                        <span class="bqv-meta-label">Link</span>
+                        <span class="bqv-meta-value" id="taskLinkWrap">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bqv-section-title"><i class="bi bi-card-text"></i> Detail</div>
+            <div class="bqv-detail-box" id="taskDetail"></div>
+
+            <div class="bqv-section-title"><i class="bi bi-people-fill"></i> Roles</div>
+            <div id="rolesContainer"></div>
+        </div>
+    </div>
+
+<script>
+    let currentQuest = null; // holds the loaded quest row — downloadPDF() reads .id for the saved file's name, editTask()/deleteTaskFromView() read it too
+    let workDataList = [];   // b_quest_work rows — same shape editTask()'s modal expects (setupDropdowns()), fetched once here instead of on demand
+
+    // Same branded spinner as b-opportunity-view.html's own loading state
+    // (system.js's bxLoader()) instead of a plain hourglass line.
+    document.getElementById('loadingState').innerHTML = bxLoader('Loading...');
+
+    // #viewLogo exists in static markup from the start (unlike
+    // b-opportunity-view.html's fully JS-templated page), so this can run
+    // synchronously right away rather than waiting for loadView() — same
+    // "as early as possible" reasoning as system.js's own
+    // applyCachedBranding() comment. Also re-applies theme accent colors,
+    // which this standalone page (no initLayout()) never picked up before.
+    document.getElementById('viewLogo').src = LOGO_URL;
+    applyCachedBranding();
+    refreshBranding();
+
+    async function loadView() {
+        const id = new URLSearchParams(window.location.search).get('id');
+        if (!id) { showNotFound(); return; }
+
+        const [{ data: quest, error: qErr }, { data: taskRoles }, { data: roles }, { data: statuses }, { data: work }] = await Promise.all([
+            supabaseClient.from('b_quest_list').select('*').eq('id', id).single(),
+            supabaseClient.from('b_quest_task_role').select('*').eq('quest_id', id),
+            supabaseClient.from('b_quest_role').select('id, name, color, icon'),
+            supabaseClient.from('b_quest_status').select('id, name, color'),
+            supabaseClient.from('b_quest_work').select('work, day, weight, max_per_day, role_id').order('work'),
+        ]);
+
+        if (qErr || !quest) { showNotFound(); return; }
+        currentQuest = quest;
+        workDataList = work || [];
+
+        const roleById = Object.fromEntries((roles || []).map(r => [r.id, r]));
+        const statusById = Object.fromEntries((statuses || []).map(s => [s.id, s]));
+
+        renderHeader(quest);
+        renderRoles(taskRoles || [], roleById, statusById);
+        applyEditDeleteVisibility(quest, taskRoles || [], roleById);
+
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('contentState').style.display = 'block';
+        document.title = `B-QUEST | ${quest.task_name || 'View'}`;
+    }
+
+    // Same rule as b-quest-list.html's own taskEditDelete() — Edit shows if
+    // any role on this task grants it, Delete only if it's granted on
+    // every role (deleting the task deletes every role row with it, so
+    // partial delete-only-some-roles isn't offered here — same as the
+    // List page's own card dropdown).
+    function applyEditDeleteVisibility(quest, taskRoles, roleById) {
+        let canEdit, canDel;
+        if (!taskRoles.length) {
+            canEdit = canBquest('edit');
+            canDel = canBquest('delete');
+        } else {
+            const isOwner = quest.owner === getBxUser()?.codename;
+            let editable = 0, deletable = 0;
+            taskRoles.forEach(r => {
+                const roleName = roleById[r.role_id]?.name;
+                if (canBquestActOnRole(roleName, r.assign, 'edit', isOwner)) editable++;
+                if (canBquestActOnRole(roleName, r.assign, 'delete', isOwner)) deletable++;
+            });
+            canEdit = editable > 0;
+            canDel = deletable === taskRoles.length;
+        }
+        document.getElementById('ovBtnEdit').style.display = canEdit ? 'flex' : 'none';
+        document.getElementById('ovBtnDelete').style.display = canDel ? 'flex' : 'none';
+    }
+
+    async function editTask() {
+        if (!currentQuest) return;
+        // openTaskModal (BQuestApp.openModal) is async — called bare with
+        // no await/catch, any rejection inside it (e.g. one of its own
+        // Promise.all DB loads failing) was an invisible unhandled
+        // rejection: no exception reaches this onclick handler, so nothing
+        // visibly happens on click at all. await + catch here turns that
+        // into an actual visible error instead of silence.
+        try {
+            await openTaskModal(currentQuest.id, workDataList);
+        } catch (err) {
+            console.error('[B-QUEST View] editTask failed:', err);
+            notify('', `Could not open Edit — ${err?.message || 'unknown error'}`, 'error');
+        }
+    }
+
+    async function deleteTaskFromView() {
+        if (!currentQuest) return;
+        const res = await Swal.fire({
+            title: 'Delete Task?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444'
+        });
+        if (!res.isConfirmed) return;
+        await supabaseClient.from('b_quest_list').delete().eq('id', currentQuest.id);
+        // Not location.reload() — the task is gone, reloading this same
+        // page would just land on the "Task not found" state. Back to the
+        // List makes more sense than staring at that.
+        window.location.href = 'b-quest-list';
+    }
+
+    function showNotFound() {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('notFoundState').style.display = 'block';
+    }
+
+    function renderHeader(quest) {
+        // b-quest-list.html reads this and, if the card isn't already in
+        // whatever page of the infinite-scroll list happens to be loaded,
+        // fetches+inserts it on its own then scrolls/expands it — see
+        // openCardFromQuery() there. No .html suffix (see CLAUDE.md's
+        // cleanUrls note — a .html link with a query string loses the
+        // query string on the redirect to the clean URL).
+        document.getElementById('backBtn').href = `b-quest-list?open=${encodeURIComponent(quest.id)}`;
+        document.getElementById('taskId').textContent = quest.id;
+        document.getElementById('taskName').textContent = quest.task_name || 'Untitled';
+        document.getElementById('taskSubtitle').textContent = `${quest.account_name || '-'}  |  ${quest.opportunity_name || '-'}`;
+        document.getElementById('taskOwner').textContent = quest.owner || '-';
+        document.getElementById('taskCreateDate').textContent = formatDate(quest.create_date);
+        document.getElementById('taskPublishDate').textContent = formatDate(quest.publish_date);
+
+        const linkWrap = document.getElementById('taskLinkWrap');
+        if (quest.link) {
+            const a = document.createElement('a');
+            a.href = safeLink(quest.link);
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.textContent = quest.link;
+            linkWrap.innerHTML = '';
+            linkWrap.appendChild(a);
+        } else {
+            linkWrap.textContent = '-';
+        }
+
+        document.getElementById('taskDetail').textContent = quest.detail || 'No details provided.';
+    }
+
+    // pickBadgeTextColor() is now the shared helper in b-quest.js (loaded
+    // in <head>, before this inline script runs) — was an identical local
+    // copy here.
+
+    function renderRoles(taskRoles, roleById, statusById) {
+        const container = document.getElementById('rolesContainer');
+        if (!taskRoles.length) {
+            container.innerHTML = '<div class="bqv-empty">No roles assigned to this task.</div>';
+            return;
+        }
+        container.innerHTML = taskRoles.map(r => {
+            const role = roleById[r.role_id];
+            const color = role?.color || '#64748b';
+            const status = statusById[r.status_id];
+            const statusColor = status?.color || '#94a3b8';
+            return `
+            <div class="bqv-role-card" style="background:${hexToRgba(color, 0.045)}">
+                <div class="bqv-role-header">
+                    <div class="bqv-role-icon" style="background:${color}; color:${pickBadgeTextColor(color)}"><i class="bi ${esc(role?.icon || 'bi-person-workspace')}"></i></div>
+                    <div class="bqv-role-name" style="color:${color}">${esc(role?.name || r.role || 'Unknown Role')}</div>
+                </div>
+                <div class="bqv-role-highlight">
+                    <div class="bqv-role-hl-item">
+                        <div class="bqv-role-hl-icon"><i class="bi bi-list-task"></i></div>
+                        <div class="bqv-role-hl-text"><span class="bqv-role-hl-label">Work</span><span class="bqv-role-hl-value">${esc(r.work) || '-'}</span></div>
+                    </div>
+                    <div class="bqv-role-hl-item">
+                        <div class="bqv-role-hl-icon"><i class="bi bi-calendar-event"></i></div>
+                        <div class="bqv-role-hl-text"><span class="bqv-role-hl-label">Deadline</span><span class="bqv-role-hl-value">${formatDate(r.deadline)}</span></div>
+                    </div>
+                </div>
+                <div class="bqv-role-fields">
+                    <div class="bqv-role-field">
+                        <div class="bqv-role-field-text">
+                            <span class="bqv-role-field-label">Status</span>
+                            <span class="bqv-status-badge" style="background:${statusColor}; color:${pickBadgeTextColor(statusColor)}">${esc(status?.name || r.status || '-')}</span>
+                        </div>
+                    </div>
+                    <div class="bqv-role-field">
+                        <i class="bi bi-bookmark-fill bqv-role-field-icon"></i>
+                        <div class="bqv-role-field-text"><span class="bqv-role-field-label">Type</span><span class="bqv-role-field-value">${esc(r.type) || '-'}</span></div>
+                    </div>
+                    <div class="bqv-role-field">
+                        <i class="bi bi-person-fill bqv-role-field-icon"></i>
+                        <div class="bqv-role-field-text"><span class="bqv-role-field-label">Assign</span><span class="bqv-role-field-value">${esc(r.assign) || '-'}</span></div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function shareLink() {
+        const url = window.location.href;
+        navigator.clipboard.writeText(url)
+            .then(() => notify('Link copied', url, 'success', 3000))
+            .catch(() => notify('', 'Could not copy link', 'error'));
+    }
+
+    // Downloads a real PDF straight away — no print dialog, so none of
+    // window.print()'s dependency on the browser's own "Background
+    // graphics"/"Headers and footers" settings (see the CSS comment on
+    // @media print above; that path is still there for anyone who prints
+    // via Ctrl+P directly, this button just no longer routes through it).
+    // Actual screenshot+slice logic lives in system/pdf-export.js, shared
+    // with b-opportunity-view.html.
+    async function downloadPDF() {
+        if (!currentQuest) return; // still loading (or not found) — nothing real to screenshot yet
+        const btn = document.getElementById('ovBtnPdf');
+        const target = document.querySelector('.a4-page');
+        if (!target) return;
+        const originalIcon = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i>';
+        try {
+            await exportElementToPDF(target, `${currentQuest?.id || 'task'}.pdf`);
+        } catch {
+            notify('', 'Could not generate PDF', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalIcon;
+        }
+    }
+
+    // Partial mitigation only — the browser's own print header/footer
+    // (date + page title on top, URL + page number on bottom) is entirely
+    // controlled by the print dialog's "Headers and footers" toggle, not
+    // by anything a page can set; there's no CSS/JS way to remove it
+    // outright. Blanking document.title here at least empties the title
+    // portion if that toggle is left on — the date/URL/page-number stay
+    // regardless. Turning that toggle off in "More settings" is the only
+    // way to remove all of it.
+    window.addEventListener('beforeprint', () => { window.__bqvPrevTitle = document.title; document.title = ''; });
+    window.addEventListener('afterprint', () => { document.title = window.__bqvPrevTitle || document.title; });
+
+    async function initPage() {
+        await initAuthGuard();
+        await loadView();
+    }
+    initPage();
+</script>
+</body>
+</html>

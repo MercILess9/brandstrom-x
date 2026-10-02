@@ -274,6 +274,19 @@ if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') 
 
 // ── BX Loader HTML (branded loading spinner — use for popups or inline placeholders) ──
 function bxLoader(label) {
+    // Was hardcoded to /favicon.ico, which was never an actual file at the
+    // site root — every loader showed a broken-image icon (404) instead of
+    // a logo. Pull the real icon mark from the same branding cache
+    // applyCachedBranding()/refreshBranding() already maintain (see
+    // BX_BRANDING_CACHE_KEY above) — same DB-driven logo as the header/auth
+    // pages, not a separate static asset. onerror hides the <img> entirely
+    // (just the spinner ring + label) rather than showing a broken icon,
+    // for the case this runs before the cache is populated at all.
+    let logoSrc = '';
+    try {
+        const cached = JSON.parse(localStorage.getItem(BX_BRANDING_CACHE_KEY) || 'null');
+        logoSrc = cached?.logo_icon_url || '';
+    } catch {}
     return `
         <svg width="0" height="0" style="position:absolute">
             <defs>
@@ -295,19 +308,19 @@ function bxLoader(label) {
             <svg class="bx-loader__arc" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="46"/>
             </svg>
-            <img class="bx-loader__logo" src="/favicon.ico" alt=""/>
+            ${logoSrc ? `<img class="bx-loader__logo" src="${logoSrc}" alt="" onerror="this.style.display='none'"/>` : ''}
         </div>
         <div class="bx-label">${label}</div>
     `;
 }
 
-function notify(title, text, icon = 'success') {
+function notify(title, text, icon = 'success', timer = 2000) {
     if (typeof Swal !== 'undefined') {
         Swal.fire({
             title: title,
             text: text,
             icon: icon,
-            timer: 2000,
+            timer: timer,
             showConfirmButton: false,
             confirmButtonColor: 'rgb(45, 71, 57)'
         });
@@ -376,6 +389,22 @@ async function loadUserProfile(userId) {
         sessionStorage.setItem('bx_user', JSON.stringify(data));
     }
     return data;
+}
+
+// Shared fallback avatar initials — for anywhere a person is shown
+// (header, assign pickers, member tables, the profile modal) before/
+// unless they've uploaded a real photo. Background/text color is NOT
+// per-person here (was hash-based in an earlier version) — deliberately
+// just the platform's own --c-accent-light/--c-accent-dark badge
+// convention, same as .ov-id-badge etc., since this is expected to be a
+// short-lived placeholder (people are expected to upload their own photo
+// eventually) rather than a permanent per-person identity marker worth
+// its own color.
+function getInitials(name) {
+    if (!name) return '?';
+    const parts = String(name).trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 async function initAuthGuard() {
@@ -499,6 +528,27 @@ async function renderSystemUI(config) {
         userDepartment.innerText = user?.department || '';
     }
 
+    // Shows the uploaded photo (profiles.avatar_url) when there is one,
+    // same fallback-initials treatment as system/profile-modal.js's own
+    // avatar preview otherwise. DOM methods (not innerHTML string-building),
+    // matching profile-modal.js's own reasoning.
+    [document.getElementById('profile-avatar-btn'), document.getElementById('profile-avatar-lg')].forEach(el => {
+        if (!el) return;
+        el.innerHTML = '';
+        if (user?.avatar_url) {
+            const img = document.createElement('img');
+            img.src = user.avatar_url;
+            img.alt = '';
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            el.appendChild(img);
+        } else {
+            const span = document.createElement('span');
+            span.className = 'sys-avatar-initials';
+            span.textContent = getInitials(user?.nick_name || user?.full_name);
+            el.appendChild(span);
+        }
+    });
+
     const avatarBtn = document.getElementById('profile-avatar-btn');
     const profileMenu = document.getElementById('profile-menu');
     if (avatarBtn && profileMenu) {
@@ -513,7 +563,8 @@ async function renderSystemUI(config) {
 }
 
 function handleEditProfile() {
-    notify('', 'Edit Profile coming soon', 'info');
+    if (typeof openEditProfileModal === 'function') openEditProfileModal();
+    else notify('', 'Edit Profile coming soon', 'info');
 }
 
 async function renderSystemMenu(config) {
@@ -563,6 +614,22 @@ const links = [
     if (!document.querySelector('script[src*="bootstrap.bundle"]')) {
         const s = document.createElement('script');
         s.src = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js";
+        document.head.appendChild(s);
+    }
+
+    // Edit Profile modal (system/profile-modal.js) is triggered from the
+    // header's own account dropdown, which every initLayout() page shows —
+    // needs to be loaded everywhere that dropdown exists, same reasoning
+    // as Bootstrap above. select-picker.js is its Department field's own
+    // dependency (openSelectPicker), not otherwise loaded on every page.
+    if (!document.querySelector('script[src*="select-picker.js"]')) {
+        const s = document.createElement('script');
+        s.src = "/system/select-picker.js";
+        document.head.appendChild(s);
+    }
+    if (!document.querySelector('script[src*="profile-modal.js"]')) {
+        const s = document.createElement('script');
+        s.src = "/system/profile-modal.js";
         document.head.appendChild(s);
     }
 

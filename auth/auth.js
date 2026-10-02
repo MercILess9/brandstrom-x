@@ -62,6 +62,10 @@ async function handleSignup(email, password, metadata) {
         let friendly;
         if (msg.includes('already registered') || msg.includes('already been registered')) {
             friendly = 'This email is already registered. Please sign in instead.';
+        } else if (msg.includes('currently closed')) {
+            friendly = 'Signups are currently closed. Please contact your administrator.';
+        } else if (msg.includes('not allowed to register')) {
+            friendly = 'Your email domain is not allowed to register. Please contact your administrator.';
         } else if (msg.includes('database error') || msg.includes('unexpected_failure') || !msg || msg === '{}') {
             friendly = 'Registration failed — Employee ID or codename may already be taken. Please contact admin.';
         } else {

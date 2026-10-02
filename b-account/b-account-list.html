@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
+    <script src="/system/select-picker.js"></script>
     <script src="b-account.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-account.css">
@@ -26,6 +27,27 @@
            with no right-group to leave a gap against, but this page now
            has one, so cap it same as Opportunity/B-Quest. */
         .flt-search { flex: 0 1 340px; min-width: 140px; }
+
+        /* Status — swapped from the segmented carousel (still used for
+           Type next to it) to a single-select dropdown via select-picker.js,
+           reusing .status-seg-wrap/.status-seg-label's own pill+label
+           capsule shell so it still matches Type visually. Fixed width
+           (not max-width — that still let the pill resize as the label
+           text changed length between All/Active/Inactive) so the pill
+           never shifts width when the value changes. active-filter follows
+           the same convention as .flt-select-box.active-filter (b-account.css)
+           used by every other dropdown filter on this page — solid accent
+           label tag + light-accent fill — shown whenever the filter isn't
+           on its "no filter" value (here: not 'all'). */
+        .status-dd-wrap { width: 170px; flex-shrink: 0; }
+        .status-dd-trigger { flex: 1; min-width: 0; height: 100%; border: none; background: transparent; padding: 0 20px 0 14px; font-size: 0.74rem; font-weight: 700; color: var(--c-accent-dark); cursor: pointer; font-family: inherit; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
+        .status-dd-trigger::after {
+            content: ''; position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            width: 9px; height: 9px; pointer-events: none;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2364748b' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat center / contain;
+        }
+        .status-dd-wrap.active-filter { background: var(--c-accent-light); border-color: var(--c-accent); }
+        .status-dd-wrap.active-filter .status-seg-label { background: var(--c-accent); color: var(--c-on-accent); border-right-color: var(--c-accent); }
 
         /* ── Card ── */
         .ac-card { background: #fff; border: 1px solid #eef2f7; border-left: 5px solid var(--c-accent); border-radius: var(--radius-card); margin-bottom: 10px; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.05); transition: box-shadow 0.2s; }
@@ -127,20 +149,21 @@
             </div>
             <div class="flt-right-group">
                 <div class="status-seg-wrap">
-                    <span class="status-seg-label">Status</span>
-                    <div class="status-seg-scroll-outer" id="statusSegOuter">
-                        <div class="status-seg-scroll" id="statusSegWrap">
-                            <div class="status-seg-slider" id="statusSegSlider"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="status-seg-wrap">
                     <span class="status-seg-label">Type</span>
                     <div class="status-seg-scroll-outer" id="typeSegOuter">
                         <div class="status-seg-scroll" id="typeSegWrap">
                             <div class="status-seg-slider" id="typeSegSlider"></div>
                         </div>
                     </div>
+                </div>
+                <div class="status-seg-wrap status-dd-wrap">
+                    <span class="status-seg-label">Status</span>
+                    <select id="statusFilterSel" style="display:none;">
+                        <option value="all">All</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                    <button type="button" class="status-dd-trigger" id="statusFilterTrigger" onclick="openStatusFilterPicker(this)">All</button>
                 </div>
             </div>
         </div>
@@ -165,15 +188,23 @@
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const isActive = a => (a.status || 'Active').toLowerCase() === 'active';
 
-    // ── Filters — Status/Type carousels, ref B-Quest via createSegControl()
-    // (shared factory in b-account.js, same one Opportunity's Status uses) ──
-    const statusSeg = createSegControl({
-        wrapId: 'statusSegWrap', outerId: 'statusSegOuter', sliderId: 'statusSegSlider', btnClass: 'status-seg-btn',
-        getButtons: () => [{ value: 'all', label: 'All' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }],
-        getActiveValue: () => _statusFilter,
-        onSelect: val => { _statusFilter = val; statusSeg.render(); renderList(); }
-    });
-    document.getElementById('statusSegWrap').addEventListener('scroll', () => statusSeg.updateFade());
+    // ── Filters — Type stays a carousel (ref B-Quest via createSegControl(),
+    // shared factory in b-account.js); Status switched to a single-select
+    // dropdown via select-picker.js instead (openStatusFilterPicker below) ──
+    const STATUS_FILTER_OPTIONS = [{ value: 'all', label: 'All' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }];
+    function syncStatusFilterTrigger() {
+        document.getElementById('statusFilterTrigger').textContent =
+            STATUS_FILTER_OPTIONS.find(o => o.value === _statusFilter)?.label || 'All';
+        document.getElementById('statusFilterTrigger').closest('.status-dd-wrap')
+            .classList.toggle('active-filter', _statusFilter !== 'all');
+    }
+    function openStatusFilterPicker(triggerBtn) {
+        openSelectPicker(triggerBtn, {
+            getOptions: () => STATUS_FILTER_OPTIONS,
+            getValue: () => _statusFilter,
+            onSelect: (value) => { _statusFilter = value; syncStatusFilterTrigger(); renderList(); }
+        });
+    }
 
     const typeSeg = createSegControl({
         wrapId: 'typeSegWrap', outerId: 'typeSegOuter', sliderId: 'typeSegSlider', btnClass: 'status-seg-btn',
@@ -405,7 +436,7 @@
             fab.onclick = () => BAccountApp.openNew();
         }
         await loadAllAccounts();
-        statusSeg.render();
+        syncStatusFilterTrigger();
         typeSeg.render();
 
         // Deep link from other projects (Finance's Edit icon uses this) —

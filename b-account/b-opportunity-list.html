@@ -79,6 +79,15 @@
         .op-card:hover { box-shadow: 0 8px 28px -4px rgba(0,0,0,0.11); transform: translateY(-1px); }
         .op-card.churn { border-left-color: #f97316; }
         .op-card.ended { border-left-color: #64748b; }
+        /* Brief glow so the card openCardFromQuery() just scrolled to and
+           expanded is obvious at a glance, not just "some card, somewhere,
+           opened" — fades out on its own, class removed after. Ref
+           b-quest-list.html's .bqc-open-highlight. */
+        .op-card.op-open-highlight { animation: opOpenPulse 1.8s ease; }
+        @keyframes opOpenPulse {
+            0% { box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.55); }
+            100% { box-shadow: 0 0 0 0 rgba(var(--c-accent-rgb), 0); }
+        }
 
         /* ── Header layout ── */
         .op-header { display: flex; align-items: center; gap: 22px; padding: 12px 18px; cursor: pointer; user-select: none; }
@@ -94,12 +103,18 @@
         .op-qt-tag { font-size: 0.62rem; font-weight: 700; color: #475569; background: #f1f5f9; border: 1px solid var(--c-border); border-radius: 20px; padding: 2px 8px; white-space: nowrap; }
 
         /* ── Name + sub ── */
-        .op-main { flex: 1; min-width: 0; max-width: 600px; }
+        /* 600→560: still freed some width for the Owner avatar added to
+           .omb-meta below (.op-meta-badges no longer carries margin-left:
+           auto, so this reduction shifts Amount/GP/Owner left with it
+           instead of leaving blank space) — but 480 left too big a dead
+           gap before the hover-only .ac-actions icons (which hold the
+           margin-left:auto now), so brought back up partway. */
+        .op-main { flex: 1; min-width: 0; max-width: 560px; }
         .op-name { font-size: 0.95rem; font-weight: 700; color: var(--c-text-main); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; user-select: text; line-height: 1.3; }
         .op-sub  { font-size: 0.8rem; color: var(--c-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; user-select: text; }
 
         /* ── Amount/GP block ── */
-        .op-meta-badges { display: flex; gap: 28px; align-items: center; flex-shrink: 0; margin-left: auto; }
+        .op-meta-badges { display: flex; gap: 28px; align-items: center; flex-shrink: 0; }
         .omb-amt { width: 190px; display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
         .omb-amt-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
         .omb-lbl { font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
@@ -114,15 +129,23 @@
         /* ── Owner/date block ── */
         /* Divider + weight ref B-Quest's .bqc-meta-zone/.bqc-meta-line —
            was a 2px darker border with bold dark owner text, heavier than
-           the rest of the card's own muted/light meta styling. */
-        .omb-meta { width: 148px; border-left: 1px solid #eef2f7; padding-left: 16px; display: flex; flex-direction: column; justify-content: center; gap: 6px; flex-shrink: 0; }
+           the rest of the card's own muted/light meta styling. Widened
+           148→190 (same +42 as B-Quest's own avatar rollout: 34px avatar +
+           8px gap) to fit the Owner avatar without cramping the text. */
+        .omb-meta { width: 190px; border-left: 1px solid #eef2f7; padding-left: 16px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .omb-owner-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--c-accent-light); color: var(--c-accent-dark); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 0.6rem; font-weight: 800; }
+        .omb-owner-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .omb-meta-lines { min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
         .omb-owner-row { display: flex; align-items: center; gap: 6px; }
         .omb-owner-row i, .omb-meta-date i { font-size: 0.68rem; color: #64748b; }
         .omb-meta-owner { font-size: 0.7rem; font-weight: 400; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .omb-meta-date { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: #64748b; white-space: nowrap; }
 
         /* ── Hover actions ── */
-        .ac-actions { display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
+        /* margin-left:auto moved here from .op-meta-badges — this is the
+           only thing that still needs to stay pinned to the card's right
+           edge regardless of name/meta width. */
+        .ac-actions { display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; margin-left: auto; }
         .op-card:hover .ac-actions { opacity: 1; }
         .ac-action-icon { border: none; background: transparent; border-radius: 50%; width: 31px; height: 31px; display: flex; align-items: center; justify-content: center; color: var(--c-text-muted); cursor: pointer; transition: 0.15s; font-size: 1.05rem; }
         .ac-action-icon:hover { background: #f1f5f9; color: var(--c-slate); }
@@ -291,8 +314,10 @@
     var _searchIndex = new Map(); // opportunity_id → searchString (lightweight)
     var _cardData    = new Map(); // opportunity_id → full enriched record (loaded pages)
     var _accMap      = new Map(); // account_id → {account_name, company_name}
+    var _profileMap  = new Map(); // codename → {nick_name, avatar_url} — feeds the Owner avatar on each card
     var _buMap       = new Map(); // opportunity_id → Set<bu>
     var _companyQtMap = new Map(); // opportunity_id → Set<company_qt>
+    var _qtNumberMap = new Map(); // opportunity_id → Set<qt_number>, folded into _searchIndex so a QT number finds its opportunity
     var _cfgBU = [], _cfgStatus = [], _cfgType = [];
     var _ownerList = [], _amList = [], _leadList = [];
     var _signedMap = new Map(); // opportunity_id → signed_date sliced to 'YYYY-MM' (unset if no signed_date)
@@ -390,23 +415,30 @@
     }
 
     async function loadMasterData() {
-        const [{ data: idx, error }, { data: accs }, { data: qts }, { data: cfg }] = await Promise.all([
+        const [{ data: idx, error }, { data: accs }, { data: qts }, { data: cfg }, { data: profiles }] = await Promise.all([
             supabaseClient.from('b_opportunity_list')
                 .select('opportunity_id, opportunity_name, owner, am, sub_am, lead_source, business_type, status, remark, account_id, signed_date'),
             supabaseClient.from('b_account_list').select('account_id, account_name, company_name'),
-            supabaseClient.from('b_opportunity_qt').select('opportunity_id, company_qt, b_opportunity_qt_item(bu)'),
-            supabaseClient.from('b_opportunity_config').select('type, value').in('type', ['bu', 'status', 'business_type']).order('value')
+            supabaseClient.from('b_opportunity_qt').select('opportunity_id, qt_number, company_qt, b_opportunity_qt_item(bu)'),
+            supabaseClient.from('b_opportunity_config').select('type, value').in('type', ['bu', 'status', 'business_type']).order('value'),
+            supabaseClient.from('profiles').select('codename, nick_name, avatar_url')
         ]);
         if (error) { console.error('[B-OPP]', error); return; }
 
         _accMap = new Map((accs || []).map(a => [a.account_id, a]));
+        _profileMap = new Map((profiles || []).map(p => [p.codename, p]));
 
         _buMap = new Map();
         _companyQtMap = new Map();
+        _qtNumberMap = new Map(); // opportunity_id → Set<qt_number>, folded into _searchIndex below
         (qts || []).forEach(q => {
             if (q.company_qt) {
                 if (!_companyQtMap.has(q.opportunity_id)) _companyQtMap.set(q.opportunity_id, new Set());
                 _companyQtMap.get(q.opportunity_id).add(q.company_qt);
+            }
+            if (q.qt_number) {
+                if (!_qtNumberMap.has(q.opportunity_id)) _qtNumberMap.set(q.opportunity_id, new Set());
+                _qtNumberMap.get(q.opportunity_id).add(q.qt_number);
             }
             (q.b_opportunity_qt_item || []).forEach(item => {
                 if (!item.bu) return;
@@ -422,9 +454,10 @@
         _searchIndex = new Map();
         (idx || []).forEach(o => {
             const acc = _accMap.get(o.account_id) || {};
+            const qtNumbers = [...(_qtNumberMap.get(o.opportunity_id) || [])].join(' ');
             _searchIndex.set(o.opportunity_id, [
                 o.opportunity_id, o.opportunity_name, acc.account_name, acc.company_name,
-                o.business_type, o.status, o.owner, o.am, o.sub_am, o.lead_source, o.remark
+                o.business_type, o.status, o.owner, o.am, o.sub_am, o.lead_source, o.remark, qtNumbers
             ].map(f => (f || '').toLowerCase()).join(' '));
         });
 
@@ -564,9 +597,16 @@
 
     function renderMetaBlock(o) {
         if (!o.owner && !o.update_date) return '';
+        const op = _profileMap.get(o.owner);
+        const avatar = o.owner ? (op?.avatar_url
+            ? `<img src="${esc(op.avatar_url)}" alt="">`
+            : `<span>${esc(getInitials((op?.nick_name || o.owner || '').replace(/\s*\(.*$/, '')))}</span>`) : '';
         return `<div class="omb-meta">
-            ${o.owner ? `<div class="omb-owner-row"><i class="bi bi-person-fill"></i><span class="omb-meta-owner">${esc(o.owner)}</span></div>` : ''}
-            ${o.update_date ? `<div class="omb-meta-date"><i class="bi bi-clock"></i>${fmtDate(o.update_date)}</div>` : ''}
+            ${o.owner ? `<div class="omb-owner-avatar">${avatar}</div>` : ''}
+            <div class="omb-meta-lines">
+                ${o.owner ? `<div class="omb-owner-row"><span class="omb-meta-owner">${esc(o.owner)}</span></div>` : ''}
+                ${o.update_date ? `<div class="omb-meta-date"><i class="bi bi-clock"></i>${fmtDate(o.update_date)}</div>` : ''}
+            </div>
         </div>`;
     }
 
@@ -826,7 +866,7 @@
         const url = `${window.location.origin}/b-account/b-opportunity-view?id=${encodeURIComponent(id)}`;
         try {
             await navigator.clipboard.writeText(url);
-            notify('', 'Copied link to clipboard', 'success');
+            notify('Link copied', url, 'success', 3000);
         } catch {
             notify('', 'Could not copy link', 'error');
         }
@@ -846,6 +886,50 @@
         notify('success', 'Deleted');
         _searchIndex.delete(id);
         applyFilters();
+    }
+
+    // ── Deep link: ?open=<id> ────────────────────────────────────────────────
+    // b-opportunity-view.html's Back button lands here with ?open=<id> so
+    // Edit/Delete can follow immediately instead of making someone
+    // search/scroll for the card manually. Ref b-quest-list.html's
+    // openCardFromQuery() — same mechanism, adapted to this page's own
+    // lazy _cardData/renderCard/toggleCard functions instead of B-Quest's.
+    async function fetchOppById(id) {
+        const { data: o, error } = await supabaseClient.from('b_opportunity_list').select('*').eq('opportunity_id', id).single();
+        if (error || !o) return null;
+        const acc = _accMap.get(o.account_id) || {};
+        return { ...o, _account_name: acc.account_name || o.account_id || '', _company_name: acc.company_name || '' };
+    }
+
+    async function openCardFromQuery() {
+        const id = new URLSearchParams(window.location.search).get('open');
+        if (!id) return;
+
+        const container = document.getElementById('listContainer');
+        let cardEl = container.querySelector(`[data-id="${CSS.escape(id)}"]`);
+
+        if (!cardEl) {
+            const o = await fetchOppById(id);
+            if (!o) return; // not found / filtered out of the current view / no permission — silently no-op, same as any other stale deep link
+            _cardData.set(o.opportunity_id, o);
+            const tmp = document.createElement('div');
+            tmp.innerHTML = renderCard(o);
+            cardEl = tmp.firstElementChild;
+            // Not its "correct" sort position — this is a one-off deep-link
+            // visit, not the list's normal order.
+            container.prepend(cardEl);
+        }
+
+        cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (!cardEl.classList.contains('open')) toggleCard(cardEl);
+
+        cardEl.classList.add('op-open-highlight');
+        setTimeout(() => cardEl.classList.remove('op-open-highlight'), 1800);
+
+        // Strip ?open= so a refresh or Back/Forward doesn't replay this.
+        const url = new URL(window.location.href);
+        url.searchParams.delete('open');
+        history.replaceState(null, '', url);
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────
@@ -915,6 +999,7 @@
                 updateResetVisibility();
             }
         });
+        openCardFromQuery();
     });
 </script>
 </body>

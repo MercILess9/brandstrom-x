@@ -208,12 +208,20 @@
             background: var(--c-accent);
             color: #fff;
             border: none;
+            padding: 0;
+            overflow: hidden;
             font-size: 1.1rem;
             cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            transition: background 0.15s;
+            transition: box-shadow 0.15s;
         }
-        .portal-avatar-btn:hover { background: var(--brand-dark); }
+        .portal-avatar-btn:hover { box-shadow: 0 0 0 4px var(--c-accent-light), 0 4px 14px rgba(var(--c-accent-rgb, 189, 196, 50), 0.35); }
+
+        /* Set by initIndex() below — same fallback-initials convention as
+           system/profile-modal.js's own avatar preview / system.js's
+           renderSystemUI(), sized down for these two smaller circles. */
+        .portal-avatar-btn .portal-avatar-initials { font-size: 0.76rem; font-weight: 800; }
+        .portal-avatar-lg .portal-avatar-initials { font-size: 1.15rem; font-weight: 800; }
 
         .portal-profile-menu {
             display: none;
@@ -241,6 +249,7 @@
             border-radius: 50%;
             background: var(--c-accent);
             color: #fff;
+            overflow: hidden;
             font-size: 1.6rem;
             display: flex; align-items: center; justify-content: center;
             margin-bottom: 10px;
@@ -312,7 +321,7 @@
             <button class="portal-avatar-btn" id="portal-avatar-btn" title="Account"><i class="bi bi-person-fill"></i></button>
             <div class="portal-profile-menu" id="portal-profile-menu">
                 <div class="portal-profile-card">
-                    <div class="portal-avatar-lg"><i class="bi bi-person-fill"></i></div>
+                    <div class="portal-avatar-lg" id="portal-avatar-lg"><i class="bi bi-person-fill"></i></div>
                     <div class="portal-profile-name" id="portal-user-display"></div>
                     <div class="portal-profile-fullname" id="portal-user-fullname"></div>
                     <a class="portal-profile-email" id="portal-user-email" href="#"></a>
@@ -437,6 +446,23 @@
             emailEl.innerText = user.email || '';
             emailEl.href = user.email ? ('mailto:' + user.email) : '#';
             document.getElementById('portal-user-department').innerText = user.department || '';
+
+            [document.getElementById('portal-avatar-btn'), document.getElementById('portal-avatar-lg')].forEach(el => {
+                if (!el) return;
+                el.innerHTML = '';
+                if (user.avatar_url) {
+                    const img = document.createElement('img');
+                    img.src = user.avatar_url;
+                    img.alt = '';
+                    img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                    el.appendChild(img);
+                } else {
+                    const span = document.createElement('span');
+                    span.className = 'portal-avatar-initials';
+                    span.textContent = getInitials(user.nick_name || user.full_name);
+                    el.appendChild(span);
+                }
+            });
 
             const avatarBtn = document.getElementById('portal-avatar-btn');
             const profileMenu = document.getElementById('portal-profile-menu');

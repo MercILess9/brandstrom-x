@@ -294,7 +294,12 @@ const B_OPP_MODAL_HTML = `
 
     /* ── Churn sections ── */
     .bopp-churn-wrap { border: 1.5px solid rgba(249,115,22,0.5); border-radius: 14px; padding: 16px; position: relative; background: rgba(249,115,22,0.03); margin-bottom: 16px; }
-    .bopp-churn-label { position: absolute; top: -10px; left: 14px; background: #f8fafc; padding: 0 8px; font-size: 0.68rem; font-weight: 800; color: #f97316; letter-spacing: 0.08em; text-transform: uppercase; }
+    .bopp-churn-label-row { position: absolute; top: -10px; left: 14px; background: #f8fafc; padding: 0 8px; display: flex; align-items: center; gap: 8px; }
+    .bopp-churn-label { font-size: 0.68rem; font-weight: 800; color: #f97316; letter-spacing: 0.08em; text-transform: uppercase; }
+    .bopp-churn-mode-seg { display: inline-flex; background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.3); border-radius: 20px; padding: 2px; }
+    .bopp-churn-mode-btn { border: none; background: transparent; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.04em; padding: 3px 9px; border-radius: 16px; cursor: pointer; color: #f97316; opacity: 0.55; transition: background 0.15s, opacity 0.15s, color 0.15s; }
+    .bopp-churn-mode-btn:hover { opacity: 0.85; }
+    .bopp-churn-mode-btn.active { background: #f97316; color: #fff; opacity: 1; }
     .bopp-churn-wrap .bopp-qt-card { border-left-color: #f97316; }
     .bopp-churn-date-wrap { position: absolute; top: -11px; right: 14px; background: #f8fafc; padding: 0 6px; display: flex; align-items: center; gap: 6px; }
     .bopp-churn-date-lbl { font-size: 0.62rem; font-weight: 700; color: rgba(249,115,22,0.7); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
@@ -529,6 +534,7 @@ const BOppApp = (() => {
 
     const findQT     = id  => _qts.find(q => q.tmpId === id) || _churnQTs.find(q => q.tmpId === id);
     const isChurnMode = ()  => el('bopp-status-sel').value === 'Churn';
+    const isChurnAllState = () => _churnQTs.every(qt => qt.items.length === 0);
     const getBsModal = () => _bsModal || (_bsModal = new bootstrap.Modal(el('b-opp-modal')));
     const buildOpts  = (list, sel = '') => list.map(v => `<option value="${escA(v)}"${v === sel ? ' selected' : ''}>${escH(v)}</option>`).join('');
 
@@ -772,9 +778,16 @@ const BOppApp = (() => {
         if (isChurnMode()) {
             const churnCards = _churnQTs.map((qt, i) => renderQTCard(qt, i, false)).join('');
             const origCards  = _qts.map((qt, i) => renderQTCard(qt, i, true)).join('');
+            const isAll = isChurnAllState();
             container.innerHTML = `
                 <div class="bopp-churn-wrap">
-                    <span class="bopp-churn-label">CHURN</span>
+                    <div class="bopp-churn-label-row">
+                        <span class="bopp-churn-label">CHURN</span>
+                        <div class="bopp-churn-mode-seg">
+                            <button type="button" class="bopp-churn-mode-btn${isAll ? '' : ' active'}" onclick="BOppApp.setChurnAllMode(false)">ITEMS</button>
+                            <button type="button" class="bopp-churn-mode-btn${isAll ? ' active' : ''}" onclick="BOppApp.setChurnAllMode(true)">ALL</button>
+                        </div>
+                    </div>
                     <div class="bopp-churn-date-wrap">
                         <span class="bopp-churn-date-lbl">Churn Date</span>
                         <input type="date" class="bopp-churn-date-inp" value="${_churnDate}" onchange="BOppApp.setChurnDate(this.value)">
@@ -906,7 +919,7 @@ const BOppApp = (() => {
     const isEmptyQT          = qt   => !qt.qt_number?.trim() && !qt.company_qt && qt.items.every(isEmptyItem);
     const updateQTDeleteBtns = () => {
         if (isChurnMode()) {
-            document.querySelectorAll('.bopp-churn-wrap .bopp-btn-del-qt').forEach(b => { b.style.display = _churnQTs.length > 1 ? '' : 'none'; });
+            document.querySelectorAll('.bopp-churn-wrap .bopp-btn-del-qt').forEach(b => { b.style.display = ''; });
         } else {
             document.querySelectorAll('.bopp-btn-del-qt').forEach(b => { b.style.display = _qts.length > 1 ? '' : 'none'; });
         }
@@ -915,8 +928,18 @@ const BOppApp = (() => {
     function updateItemTrashBtns(qt) {
         const tbody = el(`bopp-tbody-${qt.tmpId}`);
         if (!tbody) return;
-        const show = qt.items.length > 1 ? '' : 'none';
+        const inChurn = _churnQTs.some(q => q.tmpId === qt.tmpId);
+        const show = (inChurn || qt.items.length > 1) ? '' : 'none';
         tbody.querySelectorAll('.bopp-item-rm').forEach(b => { b.style.display = show; });
+    }
+
+    function updateChurnModeBadge() {
+        const seg = document.querySelector('.bopp-churn-mode-seg');
+        if (!seg) return;
+        const isAll = isChurnAllState();
+        const btns = seg.querySelectorAll('.bopp-churn-mode-btn');
+        btns[0].classList.toggle('active', !isAll);
+        btns[1].classList.toggle('active', isAll);
     }
 
     // ── Public QT operations ──────────────────────────────────────────────────
@@ -973,15 +996,17 @@ const BOppApp = (() => {
 
     function removeItem(qtTmpId, idx) {
         const qt = findQT(qtTmpId);
-        if (!qt || qt.items.length <= 1) return;
-        if (isChurnMode() && !_churnQTs.some(q => q.tmpId === qtTmpId)) return;
-        if (!isEmptyItem(qt.items[idx])) _undoStack.push({ type: 'item', qtTmpId, idx, item: { ...qt.items[idx] }, isChurn: _churnQTs.some(q => q.tmpId === qtTmpId) });
+        if (!qt) return;
+        const inChurn = _churnQTs.some(q => q.tmpId === qtTmpId);
+        if (!inChurn && qt.items.length <= 1) return;
+        if (!isEmptyItem(qt.items[idx])) _undoStack.push({ type: 'item', qtTmpId, idx, item: { ...qt.items[idx] }, isChurn: inChurn });
         qt.items.splice(idx, 1);
         qt.items.forEach(i => { i.amount = Math.max(0, (+i.qty||0) * (+i.price||0) - (+i.discount||0)); });
         reRenderQTBody(qt);
         updateItemTrashBtns(qt);
         recalcTotals();
         updateUndoBtn();
+        if (inChurn) updateChurnModeBadge();
     }
 
     function undo() {
@@ -989,13 +1014,40 @@ const BOppApp = (() => {
         const action = _undoStack.pop();
         if (action.type === 'item') {
             const qt = findQT(action.qtTmpId);
-            if (qt) { qt.items.splice(action.idx, 0, action.item); reRenderQTBody(qt); updateItemTrashBtns(qt); recalcTotals(); }
+            if (qt) { qt.items.splice(action.idx, 0, action.item); reRenderQTBody(qt); updateItemTrashBtns(qt); recalcTotals(); if (action.isChurn) updateChurnModeBadge(); }
         } else if (action.type === 'qt') {
             const arr = action.isChurn ? _churnQTs : _qts;
             arr.splice(action.qtIdx, 0, action.qt);
             renderAllQTs();
             recalcTotals();
+        } else if (action.type === 'churnAll') {
+            _churnQTs = action.churnQTs;
+            renderAllQTs();
+            recalcTotals();
         }
+        updateUndoBtn();
+    }
+
+    function setChurnAllMode(makeAll) {
+        if (!isChurnMode()) return;
+        const currentlyAll = isChurnAllState();
+        if (makeAll === currentlyAll) return;
+        _undoStack.push({ type: 'churnAll', churnQTs: JSON.parse(JSON.stringify(_churnQTs)) });
+        if (makeAll) {
+            _churnQTs = [];
+        } else {
+            // Switching back to ITEMS re-clones the original (SIGN) QTs —
+            // same starting point as first entering Churn mode — rather
+            // than leaving the user with a single blank row to rebuild
+            // the whole quotation from scratch.
+            _churnQTs = _qts.map(qt => {
+                _qtCounter++;
+                return { tmpId: `qt-${_qtCounter}`, qt_id: null, qt_number: qt.qt_number, company_qt: qt.company_qt,
+                    items: qt.items.map(i => ({ ...i, item_id: null })), _totAmt: qt._totAmt, _totGP: qt._totGP };
+            });
+        }
+        renderAllQTs();
+        recalcTotals();
         updateUndoBtn();
     }
 
@@ -1605,5 +1657,5 @@ const BOppApp = (() => {
     el('b-opp-modal').addEventListener('hidden.bs.modal', () => { if (typeof closeSelectPicker === 'function') closeSelectPicker(); });
 
     function setChurnDate(v) { _churnDate = v; }
-    return { openNew, openEdit, openDuplicate, openOverlay, closeOverlay, addQT, addItem, removeItem, removeQT, dupQT, undo, setChurnDate, openBoppPicker, openBoppItemPicker };
+    return { openNew, openEdit, openDuplicate, openOverlay, closeOverlay, addQT, addItem, removeItem, removeQT, dupQT, undo, setChurnDate, setChurnAllMode, openBoppPicker, openBoppItemPicker };
 })();

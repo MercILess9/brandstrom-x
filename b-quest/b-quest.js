@@ -121,6 +121,48 @@ function hexToRgba(hex, alpha) {
     return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
 
+// Shared luminance-based text-contrast pickers — was duplicated (a
+// self-contained inline copy of just pickBadgeTextColor) in
+// b-quest-view.html; b-quest-modal.js is the fuller original, split into
+// these 4 pieces since pickTintTextColor needs the raw r/g/b before the
+// alpha blend. Admin-picked color used directly as text — or a same-hue-
+// darkened variant of it — reads fine for dark/saturated hues but goes
+// muddy or nearly invisible for light-reading ones (lime, yellow, pale
+// cyan), because same-hue color pairs have a low perceived-contrast
+// ceiling no matter how the lightness is tuned. Both pickers below
+// sidestep that by ignoring hue entirely and picking pure near-black or
+// pure white via a plain YIQ luminance check — the only thing that
+// reliably tracks perceived contrast regardless of what hue is picked.
+function hexToRgbParts(hex) {
+    const h = (hex || '#94a3b8').replace('#', '');
+    const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+    const n = parseInt(full, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function yiqLuma(r, g, b) {
+    return (r * 299 + g * 587 + b * 114) / 1000;
+}
+
+// For a SOLID fill (the color used at full strength, e.g. a Status pill's
+// background) — check the color itself.
+function pickBadgeTextColor(hex) {
+    const [r, g, b] = hexToRgbParts(hex);
+    return yiqLuma(r, g, b) >= 150 ? '#1e293b' : '#ffffff';
+}
+
+// For a TRANSLUCENT TINT of the color over a white-ish surface (e.g. the
+// Assign badge, which sits on a 10%/18%-alpha wash of the role color, not
+// the color itself) — check the composite over white at the darkest alpha
+// actually used (0.18, the hover state), since that's the hardest case for
+// dark text to still clear. At these low alphas the composite stays close
+// to white for nearly any hue, so this is mostly a safety net for an
+// unusually dark admin-picked role color.
+function pickTintTextColor(hex, alpha = 0.18) {
+    const [r, g, b] = hexToRgbParts(hex).map(v => v * alpha + 255 * (1 - alpha));
+    return yiqLuma(r, g, b) >= 150 ? '#1e293b' : '#ffffff';
+}
+
 // Shared iOS-style sliding role-segment control — was triplicated (with
 // small behavioral differences) across b-quest-list.html, b-quest-
 // assignment.html and b-quest-settings.html's Default Filters box.
@@ -326,8 +368,15 @@ async function handleDeleteTask(id) {
     }
 }
 
-// Permission + menu entry ship now; what a share link actually does
-// (generate a URL, copy it, etc.) is designed later.
+// Copies a deep link into b-quest-view.html's read-only page for this
+// task — same clipboard+notify pattern as that page's own shareLink().
+// Absolute path from origin (not relative to whatever page this was
+// called from) and no .html suffix (see CLAUDE.md's cleanUrls note — a
+// .html link with a query string loses the query string on the redirect
+// to the clean URL).
 function handleShareTask(id) {
-    notify('', 'Share coming soon', 'info');
+    const url = `${window.location.origin}/b-quest/b-quest-view?id=${encodeURIComponent(id)}`;
+    navigator.clipboard.writeText(url)
+        .then(() => notify('Link copied', url, 'success', 3000))
+        .catch(() => notify('', 'Could not copy link', 'error'));
 }

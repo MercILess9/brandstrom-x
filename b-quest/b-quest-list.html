@@ -15,6 +15,7 @@
     <script src="/system/pull-refresh.js"></script>
 
     <script src="b-quest.js"></script>
+    <script src="b-quest-assign-picker.js"></script>
     <script src="b-quest-modal.js?v=10" defer></script>
     <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-quest.css">
@@ -70,6 +71,14 @@
         /* --- Card Styles --- */
         .bqc-card { position: relative; z-index: 1; background: white; border: 1px solid #eef2f7; border-radius: var(--radius-card); margin-bottom: 12px; border-left: 5px solid #e2e8f0; transition: box-shadow 0.2s ease, transform 0.2s ease; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.05); }
         .bqc-card:hover { box-shadow: 0 8px 24px -4px rgba(0,0,0,0.09); transform: translateY(-1px); }
+        /* Brief glow so the card openCardFromQuery() just scrolled to and
+           expanded is obvious at a glance, not just "some card, somewhere,
+           opened" — fades out on its own, class removed after. */
+        .bqc-open-highlight .bqc-card { animation: bqcOpenPulse 1.8s ease; }
+        @keyframes bqcOpenPulse {
+            0% { box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.55); }
+            100% { box-shadow: 0 0 0 0 rgba(var(--c-accent-rgb), 0); }
+        }
         /* :hover's transform gives a card its own stacking context — once
            the mouse moves off the card that opened the dropdown (into the
            dropdown itself, which overlaps the next card below), THAT next
@@ -91,8 +100,14 @@
         .bqc-role-badge .bqc-dot { margin-right: 0; }
         .bqc-no-role { font-size: 0.72rem; color: #cbd5e1; font-weight: 700; letter-spacing: 0.5px; }
 
-        /* --- Owner / Last Update, stacked, right of badges --- */
-        .bqc-meta-zone { width: 150px; flex-shrink: 0; padding-left: 16px; border-left: 1px solid #eef2f7; }
+        /* --- Owner avatar + Owner/Last Update, stacked, right of badges ---
+           Avatar spans the full height of the 2-line stack (not sized to
+           match either line individually) and centers vertically between
+           them via align-items:center on the flex row. */
+        .bqc-meta-zone { width: 200px; flex-shrink: 0; padding-left: 16px; border-left: 1px solid #eef2f7; display: flex; align-items: center; gap: 8px; }
+        .bqc-owner-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--c-accent-light); color: var(--c-accent-dark); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 0.6rem; font-weight: 800; }
+        .bqc-owner-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .bqc-meta-lines { min-width: 0; flex: 1; }
         .bqc-meta-line { font-size: 0.7rem; margin-bottom: 4px; white-space: nowrap; display: flex; align-items: center; gap: 4px; min-width: 0; }
         .bqc-meta-line:last-child { margin-bottom: 0; }
         .bqc-meta-line i { color: #64748b; font-size: 0.78rem; width: 14px; flex-shrink: 0; text-align: center; }
@@ -254,6 +269,7 @@
     let typeList = [];       // [{name}], active-only — feeds the Type multi-select
     let taskRoleAssignRows = []; // [{role_id, assign}] snapshot from loadMasterData — feeds the Assign multi-select's grouped option list
     let ownerList = [];      // distinct owner names, feeds the Owner multi-select
+    let profileMap = {};     // codename -> {nick_name, avatar_url} — feeds the Owner avatar on each card
     // createMultiSelect() instances — all initialized once near the bottom of this script
     let statusFilter, workFilter, typeFilter, assignFilter, ownerFilter;
     let deadlineFilter; // createDatePicker() instance — initialized near the Today button below
@@ -312,12 +328,13 @@
     // --- Main Logic ---
     async function loadMasterData() {
         try {
-            const [workRes, roleRes, taskRoleRes, typeRes, statusRes] = await Promise.all([
+            const [workRes, roleRes, taskRoleRes, typeRes, statusRes, profileRes] = await Promise.all([
                 supabaseClient.from('b_quest_work').select('work, day, weight, max_per_day, role_id').order('work'),
                 supabaseClient.from('b_quest_role').select('id, name, color, active, icon').order('name'),
                 supabaseClient.from('b_quest_task_role').select('role_id, assign').not('assign', 'is', null),
                 supabaseClient.from('b_quest_type').select('name').eq('active', true).order('sort_order'),
-                supabaseClient.from('b_quest_status').select('id, name, color, active').order('sort_order')
+                supabaseClient.from('b_quest_status').select('id, name, color, active').order('sort_order'),
+                supabaseClient.from('profiles').select('codename, nick_name, avatar_url')
             ]);
 
             dataList = workRes.data || [];
@@ -353,6 +370,7 @@
             statusNameMap = Object.fromEntries(allStatuses.map(s => [s.id, s.name]));
             typeList = typeRes.data || [];
             taskRoleAssignRows = taskRoleRes.data || [];
+            profileMap = Object.fromEntries((profileRes.data || []).map(p => [p.codename, p]));
 
             renderRoleSeg();
 
@@ -715,8 +733,16 @@
                         </div>
 
                         <div class="bqc-meta-zone" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
-                            <div class="bqc-meta-line"><i class="bi bi-person-fill"></i><span class="val">${esc(task.owner) || '-'}</span></div>
-                            <div class="bqc-meta-line"><i class="bi bi-clock"></i><span class="val">${formatDate(task.last_update)}</span></div>
+                            <div class="bqc-owner-avatar">${(() => {
+                                const op = profileMap[task.owner];
+                                return op?.avatar_url
+                                    ? `<img src="${esc(op.avatar_url)}" alt="">`
+                                    : `<span>${esc(getInitials((op?.nick_name || task.owner || '').replace(/\s*\(.*$/, '')))}</span>`;
+                            })()}</div>
+                            <div class="bqc-meta-lines">
+                                <div class="bqc-meta-line"><span class="val">${esc(task.owner) || '-'}</span></div>
+                                <div class="bqc-meta-line"><i class="bi bi-clock"></i><span class="val">${formatDate(task.last_update)}</span></div>
+                            </div>
                         </div>
 
                         <div class="bqc-actions">
@@ -831,8 +857,13 @@
         }
     };
 
+    // No .html here on purpose — cleanUrls (vercel.json) 308-redirects a
+    // .html-suffixed request to its clean equivalent, and that redirect
+    // drops the query string entirely (confirmed: curl -i on the .html
+    // URL came back with a Location header of just "/b-quest/b-quest-view",
+    // ?id and all). Linking straight to the clean URL skips that hop.
     function handleViewTask(id) {
-        notify('', 'View page coming soon', 'info');
+        window.open(`b-quest-view?id=${encodeURIComponent(id)}`, '_blank');
     }
 
     function resetAllFilters() {
@@ -1013,6 +1044,45 @@
         if (e.target.classList?.contains('bqc-layout-row')) updateCardScrollFade(e.target.closest('.bqc-scroll-wrap'));
     }, true);
 
+    // Deep link from b-quest-view.html's Back button (?open=<id>) — get
+    // straight to a specific task's card and pop it open, instead of
+    // leaving someone to search/scroll for it manually before they can
+    // Edit/Delete. If the card isn't already in whatever page of the
+    // infinite-scroll list happens to be loaded yet, fetches it with the
+    // same fetchQuestById()/buildCardElement() pair refreshSingleCard()
+    // already uses, and prepends it — not its "correct" sort position,
+    // but this is a one-off deep-link visit, not the list's normal order.
+    async function openCardFromQuery() {
+        const id = new URLSearchParams(window.location.search).get('open');
+        if (!id) return;
+
+        const container = document.getElementById('taskContainer');
+        let cardEl = container.querySelector(`[data-id="${CSS.escape(id)}"]`);
+
+        if (!cardEl) {
+            const task = await fetchQuestById(id);
+            if (!task) return; // not found / filtered out of the current view / no permission — silently no-op, same as any other stale deep link
+            document.getElementById('taskEmptyState')?.remove();
+            cardEl = buildCardElement(task);
+            container.prepend(cardEl);
+        }
+
+        cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        const collapseEl = document.getElementById(`collapse-${id}`);
+        if (collapseEl && !collapseEl.classList.contains('show')) {
+            bootstrap.Collapse.getOrCreateInstance(collapseEl).show();
+        }
+
+        cardEl.classList.add('bqc-open-highlight');
+        setTimeout(() => cardEl.classList.remove('bqc-open-highlight'), 1800);
+
+        // Strip ?open= so a refresh or Back/Forward doesn't replay this.
+        const url = new URL(window.location.href);
+        url.searchParams.delete('open');
+        history.replaceState(null, '', url);
+    }
+
     initPage().then(() => {
         observer.observe(document.getElementById('load-more-trigger'));
         createPullToRefresh({
@@ -1025,6 +1095,7 @@
                 updateClearAllVisibility();
             }
         });
+        openCardFromQuery();
     });
 </script>
 </body>

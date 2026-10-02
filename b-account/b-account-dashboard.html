@@ -962,13 +962,21 @@ function computeData() {
         // swapped).
         let oppRemainAmt = 0, oppRemainGP = 0;
         const oppChurnBUs = new Set();
-        const hasChurnQT = qts.some(qt => qt.qt_type === 'churn');
+        // status === 'Churn' is the real signal, not "does a churn-type QT
+        // row happen to exist" — the ALL toggle (b-opportunity-modal.js's
+        // setChurnAllMode) represents "100% churned, nothing left" as
+        // deliberately ZERO churn-type QT rows, so hasChurnQT alone used
+        // to silently exclude every fully-churned deal from this whole
+        // section (and the "Churned Opportunity" count). oppRemainAmt
+        // naturally computes to 0 for those below, which is correct — the
+        // full oppOrigAmt then shows as 100% lost.
+        const isChurned = opp.status === 'Churn';
         // Only worth the extra scan for opportunities that actually churned.
-        const oppOrigAmt = !hasChurnQT ? 0 : qts
+        const oppOrigAmt = !isChurned ? 0 : qts
             .filter(qt => qt.qt_type !== 'churn')
             .flatMap(qt => (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other')))
             .reduce((s, item) => s + Math.max(0, (+(item.qty) || 0) * (+(item.price) || 0) - (+(item.discount) || 0)), 0);
-        const oppOrigGP = !hasChurnQT ? 0 : qts
+        const oppOrigGP = !isChurned ? 0 : qts
             .filter(qt => qt.qt_type !== 'churn')
             .flatMap(qt => (qt.b_opportunity_qt_item || []).filter(i => buPasses(i.bu || 'Other')))
             .reduce((s, item) => s + (+(item.gp) || 0), 0);
@@ -1025,7 +1033,7 @@ function computeData() {
             }
         }
 
-        if (hasChurnQT) {
+        if (isChurned) {
             const oppLostAmt = Math.max(0, oppOrigAmt - oppRemainAmt);
             const oppLostGP  = oppOrigGP - oppRemainGP;
             grandChurnAmt += oppLostAmt;

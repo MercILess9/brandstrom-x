@@ -118,6 +118,8 @@
                 text-align: center; letter-spacing: 0.5px; }
             .cs-cp-hex:focus { border-color: var(--c-accent); }
             .cs-cp-hex.invalid { border-color: #ef4444; color: #ef4444; }
+            .cs-cp-eyedrop { width: 34px; height: 34px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0; transition: 0.15s; }
+            .cs-cp-eyedrop:hover { border-color: var(--c-accent); color: var(--c-accent-dark); background: var(--c-accent-light); }
         `;
         document.head.appendChild(style);
     }
@@ -199,6 +201,7 @@
             <div class="cs-cp-custom-row">
                 <div class="cs-cp-preview"></div>
                 <input type="text" class="cs-cp-hex" value="${current.toUpperCase()}" maxlength="7">
+                ${'EyeDropper' in window ? `<button type="button" class="cs-cp-eyedrop" title="Pick color from screen"><i class="bi bi-eyedropper"></i></button>` : ''}
             </div>
         `;
         panel.querySelectorAll('.cs-cp-swatch').forEach(el => {
@@ -226,6 +229,24 @@
             paintIndicators();
             apply(v);
         });
+
+        // Native browser API (Chromium-based only — the markup above
+        // already feature-detects and skips rendering this button
+        // entirely where it's unsupported) — lets the admin sample a
+        // color from anywhere on screen (a logo, a reference image, even
+        // outside the browser window), not just the gradient square above.
+        const eyedrop = panel.querySelector('.cs-cp-eyedrop');
+        if (eyedrop) {
+            eyedrop.addEventListener('click', async () => {
+                try {
+                    const result = await new EyeDropper().open();
+                    setHsvFromHex(result.sRGBHex);
+                    apply(paintCustom());
+                } catch {
+                    // User pressed Esc / cancelled the pick — not an error.
+                }
+            });
+        }
     }
 
     function onDocClick(e) {

@@ -191,6 +191,34 @@
         /* Line/Bar toggle during Compare (always bars there) — dimmed and
            inert in place, not hidden, so the rest of the row never shifts. */
         .trend-type-toggle.is-disabled { opacity: 0.35; pointer-events: none; }
+        /* Compare pill — collapsed (icon+"Compare" label) vs active (icon+
+           years dropdown), animated via an explicit width on each state
+           ('auto' can't transition). Widths are generous estimates (fit
+           "Compare" collapsed; fit "99 years" — i.e. e.g. "4 years" at this
+           font — expanded) rather than exact-measured, since there's no
+           browser available to check here; nudge if either state clips. */
+        .trend-compare-pill { display: flex; align-items: center; background: var(--c-bg); border: 1px solid #e2e8f0; border-radius: 10px; padding: 2px; flex-shrink: 0; overflow: hidden; width: 108px; height: 30px; box-sizing: border-box; transition: width 0.25s ease, background-color 0.2s, border-color 0.2s; }
+        /* Collapsed-state hover — the whole pill (icon + label are both
+           clickable now), not just the icon button alone, so hovering
+           either one gives the same visible feedback. Skipped once
+           .active (expanded) since that state already has its own solid
+           white/accent-border look and a hover tint there would fight
+           with the live years dropdown inside. */
+        .trend-compare-pill:not(.active):hover { border-color: var(--c-accent); background: var(--c-accent-light); }
+        .trend-compare-pill.active { width: 180px; background: #fff; border-color: var(--c-accent); }
+        .trend-compare-icon-btn { border: none; background: transparent; width: 26px; height: 26px; flex-shrink: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #94a3b8; cursor: pointer; transition: 0.15s; font-family: inherit; }
+        .trend-compare-pill:not(.active):hover .trend-compare-icon-btn { color: var(--c-accent-dark); }
+        .trend-compare-pill.active .trend-compare-icon-btn { background: #fff; color: var(--c-accent-dark); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+        .trend-compare-label { font-size: 0.78rem; font-weight: 700; color: #94a3b8; white-space: nowrap; padding-left: 4px; cursor: pointer; }
+        .trend-compare-pill:not(.active):hover .trend-compare-label { color: var(--c-accent-dark); }
+        .trend-compare-select { flex: 1; min-width: 0; display: flex; align-items: center; height: 100%; }
+        /* .active-filter is multi-select.js's own built-in toggle (set
+           automatically whenever the picker has >=1 value selected — see
+           its updateLabel()), same convention as every other filter
+           dropdown's .flt-select-box.active-filter. Years defaults to 2
+           selected on open, so this lights up immediately, not just after
+           an explicit change. */
+        .trend-compare-select.active-filter .bx-ms-trigger { background: var(--c-accent-light); color: var(--c-accent-dark); font-weight: 800; border-radius: 8px; }
         /* Sliding-pill toggle — "Overview" and "BU" aren't the same length,
            so a fixed 50/50 split (flex:1 + translateX(100%)) either left
            the highlight not matching the short label's width or let the
@@ -359,19 +387,21 @@
                 </div>
                 <!-- Compare — grouped-bar year-over-year view, across every
                      breakdown mode. Sits after every other toggle, never
-                     before, so turning it on only ever APPENDS the year
-                     picker to the right — nothing already on screen shifts
-                     position. (Compare being bar-only just dims
-                     #trendChartTypeGroup in place instead of hiding it —
-                     hiding/showing was exactly what made this feel janky
-                     the first pass.) An earlier, separate attempt at this
-                     same feature got fully reverted for a cluttered
-                     3-toggle-row control surface — keeping this one to a
-                     single small addition at a fixed position. -->
-                <div class="trend-type-toggle" id="trendCompareGroup">
-                    <button class="trend-type-btn" id="trendCompareBtn" onclick="toggleTrendCompare()" title="Compare years"><i class="bi bi-bar-chart-steps"></i></button>
+                     before, so turning it on only ever APPENDS to the right
+                     — nothing already on screen shifts position. Compare
+                     being bar-only just dims #trendChartTypeGroup in place
+                     rather than hiding it, for the same reason.
+                     One pill (.trend-compare-pill), not a button + separate
+                     dropdown — collapsed shows icon+"Compare" label, width
+                     set explicitly so it can transition ('auto' can't);
+                     clicking the icon/label expands it in place to
+                     icon+years dropdown via the .active modifier below,
+                     same toggleTrendCompare(). -->
+                <div class="trend-compare-pill" id="trendCompareGroup">
+                    <button class="trend-compare-icon-btn" id="trendCompareBtn" onclick="toggleTrendCompare()" title="Compare years"><i class="bi bi-arrow-left-right"></i></button>
+                    <span class="trend-compare-label" id="trendCompareLabel" onclick="toggleTrendCompare()">Compare</span>
+                    <div class="trend-compare-select" id="wrap-compareYears" style="display:none;"></div>
                 </div>
-                <div class="flt-select-box" id="wrap-compareYears" style="width:150px;height:32px;display:none"></div>
             </div>
             <div class="trend-legend" id="trendLegend"></div>
         </div>
@@ -1562,7 +1592,8 @@ function renderTrendChart() {
     document.querySelectorAll('#trendGranularityGroup .trend-type-btn').forEach(b => b.classList.toggle('active', b.dataset.g === _trendGranularity));
     document.querySelectorAll('#trendChartTypeGroup .trend-type-btn').forEach(b => b.classList.toggle('active', b.dataset.ct === _trendChartType));
     document.querySelectorAll('#trendBreakdownGroup .trend-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.bd === _trendBreakdown));
-    document.getElementById('trendCompareBtn').classList.toggle('active', _trendCompare);
+    document.getElementById('trendCompareGroup').classList.toggle('active', _trendCompare);
+    document.getElementById('trendCompareLabel').style.display = _trendCompare ? 'none' : '';
     repositionTrendBreakdownSlider();
 
     // Sales Rep mode has no time axis (see computeTrendRepSnapshotMap) —
@@ -2018,23 +2049,47 @@ function renderCompareGrowthBadge(years, totalByYear) {
 
 function toggleTrendCompare() {
     _trendCompare = !_trendCompare;
-    if (_trendCompare && !_compareYearPicker) {
+    if (_trendCompare) {
+        // Reset to this year + last year on every open, not just the
+        // first ever one — otherwise reopening after a close-triggered
+        // revert to Normal would reopen stuck on that leftover 0/1-year
+        // selection instead of a sane default.
         const thisYear = new Date().getFullYear();
         _compareYears = new Set([thisYear - 1, thisYear]);
-        _compareYearPicker = createMultiSelect({
-            trigger: document.getElementById('wrap-compareYears'),
-            label: 'Years',
-            showTag: false,
-            getOptions: () => {
-                const known = new Set([...new Set(_opps.map(o => +(o.signed_date || '').slice(0, 4)))].filter(Boolean));
-                known.add(thisYear); known.add(thisYear - 1);
-                return [...known].sort((a, b) => b - a).map(y => ({ value: String(y), label: String(y) }));
-            },
-            onChange: values => {
-                _compareYears = new Set(values.map(Number));
-                renderTrendChart();
-            }
-        });
+        if (!_compareYearPicker) {
+            _compareYearPicker = createMultiSelect({
+                trigger: document.getElementById('wrap-compareYears'),
+                label: 'Years',
+                showTag: false,
+                selectedLabel: 'years',
+                getOptions: () => {
+                    const known = new Set([...new Set(_opps.map(o => +(o.signed_date || '').slice(0, 4)))].filter(Boolean));
+                    known.add(thisYear); known.add(thisYear - 1);
+                    return [...known].sort((a, b) => b - a).map(y => ({ value: String(y), label: String(y) }));
+                },
+                // Live per click — just records the selection and redraws
+                // the chart. Safe to call renderTrendChart() straight from
+                // here since it only reads _compareYears/_trendCompare and
+                // never touches the picker's own state/DOM; calling back
+                // into the picker itself (e.g. setValues()) from inside
+                // its own checkbox 'change' handler re-enters that handler
+                // mid-dispatch and breaks checking/unchecking — don't.
+                onChange: values => {
+                    _compareYears = new Set(values.map(Number));
+                    renderTrendChart();
+                },
+                // Fires once, on actual panel close (a separate click/
+                // scroll event, never mid checkbox-click) — the only place
+                // Normal vs Compare gets decided, derived fresh from the
+                // count every time rather than nudged one direction (which
+                // gets permanently stuck once flipped): >=2 years selected
+                // stays in Compare, 0 or 1 reverts to Normal.
+                onClose: () => {
+                    _trendCompare = _compareYears.size >= 2;
+                    renderTrendChart();
+                }
+            });
+        }
         _compareYearPicker.setValues([...(_compareYears)].map(String));
     }
     renderTrendChart();
@@ -2109,7 +2164,12 @@ function renderCompareBULegend() {
 // renderTrendChart's own if/else-if shape below, just for the Compare
 // data/chart/table variants.
 function renderTrendCompare() {
-    const years = [...(_compareYears.size ? _compareYears : [new Date().getFullYear() - 1, new Date().getFullYear()])].sort();
+    // No minimum enforced here — renders whatever's currently selected
+    // (0/1/2/3+ years), so the chart just smoothly tracks each click
+    // instead of swapping to a placeholder mid-selection. Whether that's
+    // enough to stay in Compare mode is decided separately, only once the
+    // years picker closes (see toggleTrendCompare's onClose).
+    const years = [...(_compareYears)].sort();
     const yearSet = new Set(years);
 
     if (_trendBreakdown === 'rep') {
@@ -2447,7 +2507,7 @@ function renderChurnSection({ churnRows, grandChurnAmt, grandOrigAmt, grandChurn
                     <td class="c">${pct ? `<span class="churn-pct-badge">-${pct}</span>` : '—'}</td>
                     <td class="c">${esc(r.owner)}</td>
                     <td class="c">${fmtChurnDate(r.date) || '—'}</td>
-                    <td class="c"><a class="churn-view-btn" href="b-opportunity-view.html?id=${encodeURIComponent(r.opportunity_id)}" target="_blank" rel="noopener" title="Details"><i class="bi bi-info-circle"></i></a></td>
+                    <td class="c"><a class="churn-view-btn" href="b-opportunity-view?id=${encodeURIComponent(r.opportunity_id)}" target="_blank" rel="noopener" title="Details"><i class="bi bi-info-circle"></i></a></td>
                 </tr>`;
                 }).join('')}
             </tbody>

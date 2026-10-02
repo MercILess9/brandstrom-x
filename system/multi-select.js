@@ -9,8 +9,10 @@
 //       trigger: document.getElementById('wrap-filterOwner'), // the .flt-select-box element
 //       label: 'Owner',
 //       getOptions: () => ownerList.map(o => ({ value: o, label: o })), // called live each time the panel opens
-//       onChange: (values) => { ... },  // values: array of selected option values
-//       showTag: true // false = no "Owner" tag baked into the pill, for callers with their own external label
+//       onChange: (values) => { ... },  // values: array of selected option values, fires live per click
+//       onClose: () => { ... },         // optional — fires once when the panel closes, not per click
+//       showTag: true, // false = no "Owner" tag baked into the pill, for callers with their own external label
+//       selectedLabel: 'selected' // optional — the trailing word in "N {selectedLabel}" (e.g. 'years', 'items')
 //   });
 //   ownerFilter.getValues();      // current selection
 //   ownerFilter.setValues([...]); // set programmatically (e.g. restoring state)
@@ -67,7 +69,7 @@
         return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    window.createMultiSelect = function ({ trigger, label, getOptions, onChange, width = 240, showTag = true, formatLabel = null }) {
+    window.createMultiSelect = function ({ trigger, label, getOptions, onChange, onClose = null, width = 240, showTag = true, formatLabel = null, selectedLabel = 'selected' }) {
         injectStyles();
         let values = new Set();
         let panel = null;
@@ -104,7 +106,7 @@
                 const o = opts.find(o => o.value === arr[0]);
                 btn.textContent = o ? o.label : arr[0];
             } else {
-                btn.textContent = `${arr.length} selected`;
+                btn.textContent = `${arr.length} ${selectedLabel}`;
             }
             trigger.classList.toggle('active-filter', arr.length > 0);
         }
@@ -128,6 +130,12 @@
             document.removeEventListener('click', onDocClick, true);
             document.removeEventListener('scroll', onScroll, true);
             if (typeof unlockBodyScroll === 'function') unlockBodyScroll();
+            // Fires from a document click/scroll handler or the trigger's
+            // own click — never from inside a checkbox's own 'change'
+            // handler — so a caller that only wants to react once the user
+            // is done (e.g. re-rendering something expensive just once,
+            // not per click) can do that here safely.
+            if (onClose) onClose();
         }
 
         // Visible = whatever the search box currently narrows the list to
@@ -253,7 +261,17 @@
 
         return {
             getValues: () => [...values],
-            setValues(v) { values = new Set(v || []); updateLabel(); },
+            // Re-renders the open panel's checkboxes too, not just the
+            // trigger label — several callers prune stale values this way
+            // (e.g. b-quest-list.html dropping a filter value that no
+            // longer exists after a Settings change), and without this the
+            // panel's checkbox DOM would silently diverge from the Set if
+            // it happened to be open when that runs.
+            setValues(v) {
+                values = new Set(v || []);
+                updateLabel();
+                if (panel) renderList(panel.querySelector('.bx-ms-search')?.value || '');
+            },
             clear() { values.clear(); updateLabel(); }
         };
     };

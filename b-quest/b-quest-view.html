@@ -473,6 +473,15 @@
 
     async function initPage() {
         await initAuthGuard();
+        // Same gap as b-opportunity-view.html's initPage() — this page
+        // skips initLayout() (standalone document), so bx_perms_bquest
+        // never gets populated unless some other B-Quest page already
+        // did it earlier in this same tab. Opened fresh (e.g. a
+        // target="_blank" rel="noopener" link, which starts with no
+        // inherited sessionStorage), canBquest('edit'/'delete') would
+        // silently read an empty cache and hide Edit/Delete for
+        // everyone, GOD included.
+        await loadBquestPerms();
         await loadView();
     }
     initPage();

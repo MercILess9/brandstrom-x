@@ -589,8 +589,13 @@
 
     function renderAmtBlock(o, hasAmt, hasGP, pct) {
         if (!hasAmt) return '';
+        // fmtAmt() collapses 0 down to "—" (right for "nothing entered
+        // yet"), but a churned opportunity's 0 is a real, meaningful
+        // value — use fmtGP()'s plain formatting there instead so it
+        // reads as "0.00 ฿", not a blank dash that looks like missing data.
+        const amtText = o.status === 'Churn' ? fmtGP(o.total_amount) : fmtAmt(o.total_amount);
         return `<div class="omb-amt" data-amt-block>
-            <div class="omb-amt-row"><span class="omb-lbl amt">Amount</span><span class="omb-val amt" data-amt-val>${fmtAmt(o.total_amount)}</span></div>
+            <div class="omb-amt-row"><span class="omb-lbl amt">Amount</span><span class="omb-val amt" data-amt-val>${amtText}</span></div>
             ${hasGP ? `<div class="omb-amt-row"><span class="omb-lbl gp">GP<span class="omb-bar-pct" data-gp-pct>${pct || ''}</span></span><span class="omb-val gp" data-gp-val>${fmtGP(o.total_gp)}</span></div>` : ''}
         </div>`;
     }
@@ -611,7 +616,11 @@
     }
 
     function renderCard(o) {
-        const hasAmt = +o.total_amount > 0;
+        // A churned opportunity's total legitimately being exactly 0
+        // (fully churned) is real, meaningful data — not "nothing entered
+        // yet" the way 0 means for every other status — so it must still
+        // render as "0.00 ฿" instead of hiding the whole Amount/GP block.
+        const hasAmt = +o.total_amount > 0 || o.status === 'Churn';
         const hasGP  = o.total_gp != null;
         const pct    = gpPct(o.total_gp, o.total_amount);
         const sub    = o._company_name

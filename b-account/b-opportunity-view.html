@@ -522,6 +522,16 @@
 
     async function initPage() {
         await initAuthGuard();
+        // This page skips initLayout() (see the comment up top), which is
+        // what normally populates bx_perms_baccount — without this,
+        // canBaccount('edit'/'delete') silently reads an empty cache and
+        // hides Edit/Delete for EVERYONE including GOD, but only when
+        // this is the tab's first B-Account page (e.g. opened via the
+        // Dashboard Churn table's target="_blank" rel="noopener" link,
+        // which starts with no inherited sessionStorage at all) — opening
+        // from the List page in the same tab masked this, since List's
+        // own initLayout() had already populated the cache first.
+        await loadBaccountPerms();
         await loadOpportunity();
     }
 

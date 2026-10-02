@@ -13,6 +13,7 @@ const B_OPP_MODAL_HTML = `
     .bopp-header-title { color: #fff; font-size: 0.95rem; font-weight: 800; letter-spacing: 0.2px; }
     .bopp-header-right { display: flex; align-items: center; gap: 12px; }
     .bopp-hdr-totals { display: flex; align-items: center; gap: 14px; margin-right: 4px; }
+    .bopp-hdr-remain-zone { display: flex; align-items: center; gap: 14px; }
     .bopp-hdr-tbox { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
     .bopp-hdr-tval { font-size: 1.05rem; font-weight: 800; color: #fff; }
     .bopp-hdr-tval.gp { color: var(--c-accent); }
@@ -349,16 +350,18 @@ const B_OPP_MODAL_HTML = `
                                 <span class="bopp-hdr-tlbl">Churn GP</span>
                             </div>
                         </div>
-                        <div class="bopp-hdr-tbox">
-                            <span class="bopp-hdr-tval" id="bopp-hdr-amt">0</span>
-                            <span class="bopp-hdr-tlbl">Amount</span>
+                        <div class="bopp-hdr-remain-zone" id="bopp-hdr-remain-wrap">
+                            <div class="bopp-hdr-tbox">
+                                <span class="bopp-hdr-tval" id="bopp-hdr-amt">0</span>
+                                <span class="bopp-hdr-tlbl">Amount</span>
+                            </div>
+                            <div class="bopp-hdr-tdiv"></div>
+                            <div class="bopp-hdr-tbox">
+                                <span class="bopp-hdr-tval gp" id="bopp-hdr-gp">0</span>
+                                <span class="bopp-hdr-tlbl">GP</span>
+                            </div>
+                            <span class="bopp-hdr-pct-badge" id="bopp-hdr-pct"></span>
                         </div>
-                        <div class="bopp-hdr-tdiv"></div>
-                        <div class="bopp-hdr-tbox">
-                            <span class="bopp-hdr-tval gp" id="bopp-hdr-gp">0</span>
-                            <span class="bopp-hdr-tlbl">GP</span>
-                        </div>
-                        <span class="bopp-hdr-pct-badge" id="bopp-hdr-pct"></span>
                     </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -840,6 +843,13 @@ const BOppApp = (() => {
         el('bopp-hdr-gp').textContent  = fmtN(totGP);
         el('bopp-hdr-pct').textContent = totAmt > 0 && totGP > 0 ? `${(totGP/totAmt*100).toFixed(1)}%` : '';
         const lostWrap = el('bopp-hdr-lost-wrap');
+        // Plain Amount/GP here means "what remains" (srcQTs above) — under
+        // the ALL toggle that's always, definitionally, 0/0 (see
+        // setChurnAllMode), so showing "0.00 | 0.00" right next to the
+        // Churn Amount/GP box that already states the same loss is just
+        // noise, not a second real figure. Hidden only for that specific
+        // case; ITEMS mode still shows the real (possibly nonzero) remainder.
+        const remainWrap = el('bopp-hdr-remain-wrap');
         if (isChurnMode()) {
             const signAmt = _qts.reduce((s,qt) => s + qt._totAmt, 0);
             const signGP  = _qts.reduce((s,qt) => s + qt._totGP,  0);
@@ -849,8 +859,10 @@ const BOppApp = (() => {
             el('bopp-hdr-lost-amt').textContent = fmt(lostAmt);
             el('bopp-hdr-lost-gp').textContent  = fmt(lostGP);
             lostWrap.style.display = 'flex';
+            remainWrap.style.display = isChurnAllState() ? 'none' : 'flex';
         } else {
             lostWrap.style.display = 'none';
+            remainWrap.style.display = 'flex';
         }
     }
 
@@ -1224,14 +1236,13 @@ const BOppApp = (() => {
         if (opp.status === 'Churn') {
             if (churnQTs.length) {
                 _loadIntoArr(churnQTs, _churnQTs);
-            } else {
-                // clone originals if no churn QTs saved yet
-                _churnQTs = _qts.map(qt => {
-                    _qtCounter++;
-                    return { tmpId: `qt-${_qtCounter}`, qt_id: null, qt_number: qt.qt_number, company_qt: qt.company_qt,
-                        items: qt.items.map(i => ({...i, item_id: null})), _totAmt: qt._totAmt, _totGP: qt._totGP };
-                });
             }
+            // else: no saved churn QT rows means this opportunity is
+            // already saved as "ALL" (100% churned, nothing left — see
+            // setChurnAllMode) — _churnQTs stays [] so re-opening Edit
+            // shows ALL, matching what was actually saved, instead of
+            // cloning the originals back in and silently turning a saved
+            // ALL into ITEMS the moment the modal is reopened.
         }
 
         renderAllQTs();

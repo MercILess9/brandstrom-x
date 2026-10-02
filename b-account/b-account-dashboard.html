@@ -290,10 +290,25 @@
         .dash-tbl .strong { font-weight: 700; color: #1e293b; }
         .dash-tbl .amt-red { color: #dc2626; font-weight: 700; }
         .dash-tbl .amt-green { color: #16a34a; font-weight: 700; }
+        /* table-layout:fixed (scoped to this one table via .churn-tbl, not
+           every .dash-tbl) is what actually makes .churn-opp-name's 2-line
+           clamp below take effect — under the default auto layout the
+           column just kept growing to fit the name on one line instead of
+           respecting max-width, since auto-layout sizes columns from
+           content first. The <colgroup> gives every other column a fixed
+           width so Opportunity gets whatever's left over, not an
+           arbitrary auto-computed share. */
+        .churn-tbl { table-layout: fixed; }
         /* Churned Opportunity names run long (campaign period in brackets
            etc.) — clamp to 2 lines instead of forcing the row to overflow
            sideways like every other .dash-tbl's single-line cells. */
-        .churn-opp-name { white-space: normal; max-width: 360px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        /* .dash-tbl td's own white-space:nowrap (specificity 0,1,1) beats a
+           bare .churn-opp-name (0,1,0) regardless of source order — this
+           is why the 2-line clamp never actually took effect even before
+           today's table-layout fix. td.churn-opp-name (0,1,1) ties it and
+           wins on source order (declared after). */
+        td.churn-opp-name { white-space: normal; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .churn-opp-id-badge { display: inline-block; background: #f1f5f9; color: #64748b; font-size: 0.66rem; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
         .bu-mini-badge { background: #f1f5f9; color: #64748b; font-size: 0.66rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
         /* Same pill treatment as .bu-card-gp-badge, red instead of green —
            amount + its % share as one grouped unit instead of two separate
@@ -304,6 +319,52 @@
            50% radius for a true circle, not just a rounded box. */
         .churn-view-btn { background: none; border: none; color: #94a3b8; cursor: pointer; width: 31px; height: 31px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; text-decoration: none; transition: 0.15s; }
         .churn-view-btn:hover { background: var(--c-accent-light); color: var(--c-accent-dark); }
+
+        /* ── Churned Opportunity table: sort + Excel-style column filter —
+           same recipe as system/setting.html's Member tab / B-Quest
+           Members (usr-header-sortable/usr-filter-*), ported here under a
+           chf- prefix since this page has its own separate CSS/state, not
+           a shared component. ── */
+        /* Matches B-Quest's/system/setting.html's own .hover-scale — not a
+           shared global class, each page that wants this slight hover pop
+           defines it locally. */
+        .hover-scale { transition: transform 0.15s; }
+        .hover-scale:hover { transform: scale(1.06); }
+        .chf-sortable { cursor: pointer; user-select: none; transition: color 0.15s; }
+        .chf-sortable:hover { color: #1e293b; }
+        .chf-sort-icon { font-size: 0.68rem; margin-left: 3px; opacity: 0.3; }
+        .chf-sort-icon.active { opacity: 1; color: var(--c-accent-dark); }
+        .chf-filter-icon { font-size: 0.6rem; margin-left: 3px; opacity: 0.3; }
+        .chf-filter-icon.active { opacity: 1; color: var(--c-accent-dark); }
+        .chf-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 1100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .chf-overlay.show { opacity: 1; pointer-events: all; }
+        .chf-modal { background: #fff; border-radius: 20px; width: 400px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.18); transform: translateY(12px); transition: transform 0.2s; overflow: hidden; }
+        .chf-overlay.show .chf-modal { transform: translateY(0); }
+        .chf-modal-header { padding: 20px 24px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .chf-modal-title { font-size: 0.95rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+        .chf-header-actions { display: flex; align-items: center; gap: 8px; }
+        .chf-reset-link { background: none; border: 1px solid transparent; color: #94a3b8; font-size: 0.7rem; font-weight: 700; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 7px; transition: 0.15s; opacity: 0.5; }
+        .chf-reset-link:hover { background: #f1f5f9; color: #1e293b; opacity: 1; }
+        .chf-reset-link.active { opacity: 1; background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
+        .chf-modal-close { background: #f1f5f9; border: none; border-radius: 8px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: #94a3b8; transition: 0.2s; }
+        .chf-modal-close:hover { background: #e2e8f0; color: #1e293b; }
+        .chf-modal-body { padding: 16px 24px 20px; overflow-y: auto; }
+        .chf-search-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .chf-search-wrap { position: relative; flex: 1; }
+        .chf-search-input { width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 9px 34px 9px 36px; font-size: 0.85rem; outline: none; font-family: inherit; transition: 0.2s; background: #f8fafc; box-sizing: border-box; }
+        .chf-search-input:focus { border-color: var(--c-accent); background: #fff; }
+        .chf-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.85rem; pointer-events: none; }
+        .chf-search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; font-size: 1rem; cursor: pointer; padding: 3px; display: flex; align-items: center; transition: 0.15s; }
+        .chf-search-clear:hover { color: #1e293b; }
+        .chf-btn-sort { background: none; border: 1px solid #e2e8f0; color: #64748b; border-radius: 9px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; flex-shrink: 0; transition: 0.15s; }
+        .chf-btn-sort:hover { background: #f1f5f9; border-color: #cbd5e1; color: #1e293b; }
+        .chf-count { font-size: 0.72rem; font-weight: 700; color: #94a3b8; margin-left: 2px; }
+        .chf-list { max-height: 260px; overflow-y: auto; border-top: 1px solid #f1f5f9; padding-top: 4px; }
+        .chf-item { display: flex; align-items: center; gap: 12px; padding: 9px 10px; font-size: 0.82rem; font-weight: 600; color: #1e293b; cursor: pointer; border-radius: 12px; transition: background 0.15s, opacity 0.15s; }
+        .chf-item:hover { background: var(--c-accent-light); }
+        .chf-item:has(.modern-checkbox:not(:checked)) { opacity: 0.5; }
+        .chf-item.chf-select-all { opacity: 1; font-weight: 800; border-bottom: 1px solid #f1f5f9; margin-bottom: 4px; padding-bottom: 12px; }
+        .chf-empty { padding: 20px; text-align: center; color: #94a3b8; font-size: 0.8rem; font-weight: 600; }
 
         /* ── Rank badges (Sales Rep / Top Partner) ── */
         .rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; font-size: 0.72rem; font-weight: 800; color: #fff; }
@@ -519,6 +580,36 @@
     </div>
 
 </div>
+</div>
+
+<!-- Churned Opportunity table: column filter popup (same Excel-style
+     recipe as system/setting.html's Member tab) -->
+<div class="chf-overlay" id="chf-overlay" onclick="closeChurnFilterPopup(event)">
+    <div class="chf-modal" onclick="event.stopPropagation()">
+        <div class="chf-modal-header">
+            <div class="chf-modal-title">
+                <i class="bi bi-funnel-fill" style="color:var(--c-accent)"></i>
+                <span id="chf-title"></span>
+                <span class="chf-count" id="chf-count"></span>
+            </div>
+            <div class="chf-header-actions">
+                <button class="chf-reset-link" id="chf-reset-btn" onclick="resetChurnFilter()"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+                <button class="chf-modal-close" onclick="closeChurnFilterPopup()"><i class="bi bi-x"></i></button>
+            </div>
+        </div>
+        <div class="chf-modal-body">
+            <div class="chf-search-row">
+                <div class="chf-search-wrap">
+                    <i class="bi bi-search chf-search-icon"></i>
+                    <input type="text" id="chf-search" class="chf-search-input" placeholder="Search..." autocomplete="off" oninput="renderChurnFilterList(this.value); toggleChurnSearchClearBtn(this.value);">
+                    <button class="chf-search-clear" id="chf-search-clear" onclick="clearChurnFilterSearch()" title="Clear search" style="display:none;"><i class="bi bi-x-circle-fill"></i></button>
+                </div>
+                <button class="chf-btn-sort hover-scale" onclick="setChurnSortDirect(churnFilterField, 'asc')" title="Sort A → Z"><i class="bi bi-sort-alpha-down"></i></button>
+                <button class="chf-btn-sort hover-scale" onclick="setChurnSortDirect(churnFilterField, 'desc')" title="Sort Z → A"><i class="bi bi-sort-alpha-up"></i></button>
+            </div>
+            <div class="chf-list" id="chf-list"></div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -961,7 +1052,14 @@ function computeData() {
         // the leftover in the "Churn" column and the lost amount in "Net" —
         // swapped).
         let oppRemainAmt = 0, oppRemainGP = 0;
-        const oppChurnBUs = new Set();
+        // BU for the Churned Opportunity table's own BU column — collected
+        // from the ORIGINAL/Sign QT items, not the churn-type ones. A
+        // fully churned deal (the "ALL" toggle — see setChurnAllMode) has
+        // zero churn-type QT rows by design, so deriving BU from those
+        // showed "—" for every 100%-lost deal even though it obviously
+        // belongs to a real BU — the Sign QT's BU, which always exists
+        // for anything that was ever actually signed.
+        const oppOrigBUs = new Set();
         // status === 'Churn' is the real signal, not "does a churn-type QT
         // row happen to exist" — the ALL toggle (b-opportunity-modal.js's
         // setChurnAllMode) represents "100% churned, nothing left" as
@@ -992,7 +1090,6 @@ function computeData() {
                     const bu  = item.bu || 'Other';
                     oppRemainAmt += amt;
                     oppRemainGP  += gp;
-                    oppChurnBUs.add(bu);
                     if (!buMap.has(bu)) buMap.set(bu, { deals: new Set(), accounts: new Set(), origAmt: 0, origGP: 0, churnAmt: 0 });
                     buMap.get(bu).deals.add(opp.opportunity_id);
                 }
@@ -1003,6 +1100,7 @@ function computeData() {
                 const amt = Math.max(0, (+(item.qty) || 0) * (+(item.price) || 0) - (+(item.discount) || 0));
                 const gp  = +(item.gp) || 0;
                 const bu  = item.bu || 'Other';
+                oppOrigBUs.add(bu);
 
                 if (!buMap.has(bu)) buMap.set(bu, { deals: new Set(), accounts: new Set(), origAmt: 0, origGP: 0, churnAmt: 0 });
                 buMap.get(bu).deals.add(opp.opportunity_id);
@@ -1041,11 +1139,15 @@ function computeData() {
             churnRows.push({
                 opportunity: opp.opportunity_name || opp.opportunity_id,
                 opportunity_id: opp.opportunity_id,
-                bu: [...oppChurnBUs].join(', '),
+                bu: [...oppOrigBUs].join(', '),
                 amt: oppLostAmt,
                 origAmt: oppOrigAmt,
                 remainAmt: oppRemainAmt,
                 gp: oppLostGP,
+                // Pre-computed so the table's Churn% column sorts on the
+                // same number the badge displays, instead of re-deriving
+                // it (and risking drift) at render time.
+                pctVal: oppOrigAmt > 0 ? Math.abs(oppLostAmt) / oppOrigAmt * 100 : 0,
                 owner,
                 date: opp.churn_date
             });
@@ -2453,6 +2555,42 @@ const fmtChurnDate = d => {
     return (y && m && day) ? `${day}-${m}-${y}` : d;
 };
 
+// ── Churned Opportunity table: sort + column filter state. Every column
+// is sortable/filterable (per the Member-tab pattern this was asked to
+// match) — CHURN_FIELD_VALUE is each field's display/filter-match string,
+// CHURN_FIELD_SORTVAL its underlying sort value (raw number for amount
+// columns, not the formatted "1,234.00 ฿" text). ──
+const CHURN_FIELDS = ['opportunity_id','opportunity','bu','owner','date','origAmt','amt','pctVal','remainAmt'];
+const CHURN_FIELD_NUMERIC = new Set(['origAmt','amt','pctVal','remainAmt']);
+const CHURN_FIELD_VALUE = {
+    opportunity_id: r => r.opportunity_id || '—',
+    opportunity:    r => r.opportunity || '—',
+    bu:             r => r.bu || '—',
+    owner:          r => r.owner || '—',
+    date:           r => fmtChurnDate(r.date) || '—',
+    origAmt:        r => `${fmtN(r.origAmt)} ฿`,
+    amt:            r => `-${fmtN(r.amt)} ฿`,
+    pctVal:         r => r.pctVal ? `-${r.pctVal.toFixed(1)}%` : '—',
+    remainAmt:      r => `${fmtN(r.remainAmt)} ฿`,
+};
+const CHURN_FIELD_SORTVAL = {
+    opportunity_id: r => (r.opportunity_id || '').toLowerCase(),
+    opportunity:    r => (r.opportunity || '').toLowerCase(),
+    bu:             r => (r.bu || '').toLowerCase(),
+    owner:          r => (r.owner || '').toLowerCase(),
+    date:           r => r.date || '',
+    origAmt:        r => +r.origAmt || 0,
+    amt:            r => +r.amt || 0,
+    pctVal:         r => +r.pctVal || 0,
+    remainAmt:      r => +r.remainAmt || 0,
+};
+let churnSort = { field: null, dir: 'asc' }; // null field = default (newest churn_date first)
+let churnColumnFilters = {}; // field -> Set of allowed display-values, or absent/null = no filter
+let churnFilterField = null; // which column's popup is currently open
+let _allChurnRows = []; // unfiltered rows from the last computeData(), re-filtered/sorted locally on every interaction
+let _chfVisibleValues = []; // current popup's visible (search-matched) value list — toggleChurnFilterValue() indexes into this instead of re-embedding the string in onclick (avoids quote-escaping issues with values like an opportunity name containing an apostrophe)
+let _chfAllValues = []; // current popup's full (unfiltered-by-search) distinct value list — computed once when the popup opens and reused by every render/toggle while it's open, instead of re-deriving it from _allChurnRows on every single checkbox click
+
 function renderChurnSection({ churnRows, grandChurnAmt, grandOrigAmt, grandChurnGP, grandOrigGP }) {
     const rate   = pctStr(grandChurnAmt, grandOrigAmt + grandChurnAmt);
     const gpRate = pctStr(grandChurnGP, grandOrigGP + grandChurnGP);
@@ -2479,48 +2617,215 @@ function renderChurnSection({ churnRows, grandChurnAmt, grandOrigAmt, grandChurn
         </div>
     `;
 
+    _allChurnRows = churnRows;
     if (!churnRows.length) {
         document.getElementById('churnTableWrap').innerHTML = '<div class="dash-empty">No churned deals in this range</div>';
         return;
     }
+    renderChurnTable();
+}
 
-    const sorted = [...churnRows].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+function churnFilteredSortedRows() {
+    let rows = _allChurnRows.filter(r =>
+        CHURN_FIELDS.every(f => !churnColumnFilters[f] || churnColumnFilters[f].has(CHURN_FIELD_VALUE[f](r)))
+    );
+    if (churnSort.field) {
+        const f = churnSort.field, numeric = CHURN_FIELD_NUMERIC.has(f);
+        rows = [...rows].sort((a, b) => {
+            const va = CHURN_FIELD_SORTVAL[f](a), vb = CHURN_FIELD_SORTVAL[f](b);
+            const cmp = numeric ? (va - vb) : va.localeCompare(vb);
+            return churnSort.dir === 'asc' ? cmp : -cmp;
+        });
+    } else {
+        rows = [...rows].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    }
+    return rows;
+}
+
+function chfHeaderSpans(field) {
+    return `<span id="chf-sort-${field}"></span><span id="chf-filter-${field}"></span>`;
+}
+
+function renderChurnTable() {
+    const sorted = churnFilteredSortedRows();
     document.getElementById('churnTableWrap').innerHTML = `
-        <table class="dash-tbl">
+        <table class="dash-tbl churn-tbl">
+            <colgroup>
+                <col style="width:100px">
+                <col>
+                <col style="width:56px">
+                <col style="width:140px">
+                <col style="width:100px">
+                <col style="width:110px">
+                <col style="width:120px">
+                <col style="width:90px">
+                <col style="width:110px">
+                <col style="width:40px">
+            </colgroup>
             <thead>
                 <tr>
-                    <th rowspan="2">Opportunity</th>
-                    <th rowspan="2" class="c">BU</th>
+                    <th rowspan="2" class="chf-sortable" onclick="openChurnFilterPopup('opportunity_id','ID')">ID${chfHeaderSpans('opportunity_id')}</th>
+                    <th rowspan="2" class="chf-sortable" onclick="openChurnFilterPopup('opportunity','Opportunity')">Opportunity${chfHeaderSpans('opportunity')}</th>
+                    <th rowspan="2" class="c chf-sortable" style="border-left:2px solid #e2e8f0" onclick="openChurnFilterPopup('bu','BU')">BU${chfHeaderSpans('bu')}</th>
+                    <th rowspan="2" class="c chf-sortable" onclick="openChurnFilterPopup('owner','Owner')">Owner${chfHeaderSpans('owner')}</th>
+                    <th rowspan="2" class="c chf-sortable" onclick="openChurnFilterPopup('date','Date')">Date${chfHeaderSpans('date')}</th>
                     <th colspan="4" class="c" style="border-left:2px solid #e2e8f0">Amount</th>
-                    <th rowspan="2" class="c">Owner</th>
-                    <th rowspan="2" class="c">Date</th>
                     <th rowspan="2"></th>
                 </tr>
                 <tr>
-                    <th class="r" style="border-left:2px solid #e2e8f0">Sign</th>
-                    <th class="r">Net</th>
-                    <th class="r">Churn</th>
-                    <th class="c">Churn%</th>
+                    <th class="r chf-sortable" style="border-left:2px solid #e2e8f0" onclick="openChurnFilterPopup('origAmt','Amount')">Amount${chfHeaderSpans('origAmt')}</th>
+                    <th class="r chf-sortable" onclick="openChurnFilterPopup('amt','Churn')">Churn${chfHeaderSpans('amt')}</th>
+                    <th class="c chf-sortable" onclick="openChurnFilterPopup('pctVal','Churn %')">Churn%${chfHeaderSpans('pctVal')}</th>
+                    <th class="r chf-sortable" onclick="openChurnFilterPopup('remainAmt','Net Amount')">Net Amount${chfHeaderSpans('remainAmt')}</th>
                 </tr>
             </thead>
             <tbody>
-                ${sorted.map(r => {
-                    const pct = pctStr(r.amt, r.origAmt);
+                ${sorted.length ? sorted.map(r => {
+                    // r.pctVal (precomputed in computeData) — reused here
+                    // instead of re-deriving via pctStr(r.amt, r.origAmt),
+                    // so sort and display can never drift apart.
+                    const pct = r.pctVal ? r.pctVal.toFixed(1) + '%' : null;
                     return `<tr>
+                    <td><span class="churn-opp-id-badge">${esc(r.opportunity_id)}</span></td>
                     <td class="strong churn-opp-name" title="${esc(r.opportunity)}">${esc(r.opportunity)}</td>
-                    <td class="c"><span class="bu-mini-badge">${esc(r.bu || '—')}</span></td>
-                    <td class="r" style="border-left:2px solid #f1f5f9">${fmtN(r.origAmt)} ฿</td>
-                    <td class="r">${fmtN(r.remainAmt)} ฿</td>
-                    <td class="r amt-red">-${fmtN(r.amt)} ฿</td>
-                    <td class="c">${pct ? `<span class="churn-pct-badge">-${pct}</span>` : '—'}</td>
+                    <td class="c" style="border-left:2px solid #f1f5f9"><span class="bu-mini-badge">${esc(r.bu || '—')}</span></td>
                     <td class="c">${esc(r.owner)}</td>
                     <td class="c">${fmtChurnDate(r.date) || '—'}</td>
+                    <td class="r" style="border-left:2px solid #f1f5f9">${fmtN(r.origAmt)} ฿</td>
+                    <td class="r amt-red">-${fmtN(r.amt)} ฿</td>
+                    <td class="c">${pct ? `<span class="churn-pct-badge">-${pct}</span>` : '—'}</td>
+                    <td class="r">${fmtN(r.remainAmt)} ฿</td>
                     <td class="c"><a class="churn-view-btn" href="b-opportunity-view?id=${encodeURIComponent(r.opportunity_id)}" target="_blank" rel="noopener" title="Details"><i class="bi bi-info-circle"></i></a></td>
                 </tr>`;
-                }).join('')}
+                }).join('') : `<tr><td colspan="10" class="dash-empty">No matches</td></tr>`}
             </tbody>
         </table>
     `;
+    updateChurnSortIcons();
+    updateChurnFilterIcons();
+}
+
+function updateChurnSortIcons() {
+    CHURN_FIELDS.forEach(field => {
+        const el = document.getElementById(`chf-sort-${field}`);
+        if (!el) return;
+        if (churnSort.field !== field) { el.innerHTML = '<i class="bi bi-chevron-expand chf-sort-icon"></i>'; return; }
+        el.innerHTML = churnSort.dir === 'asc'
+            ? '<i class="bi bi-chevron-up chf-sort-icon active"></i>'
+            : '<i class="bi bi-chevron-down chf-sort-icon active"></i>';
+    });
+}
+
+function updateChurnFilterIcons() {
+    CHURN_FIELDS.forEach(field => {
+        const el = document.getElementById(`chf-filter-${field}`);
+        if (!el) return;
+        const active = !!churnColumnFilters[field];
+        el.innerHTML = `<i class="bi ${active ? 'bi-funnel-fill' : 'bi-funnel'} chf-filter-icon ${active ? 'active' : ''}"></i>`;
+    });
+}
+
+function setChurnSortDirect(field, dir) {
+    churnSort = { field, dir };
+    closeChurnFilterPopup();
+    renderChurnTable();
+}
+
+// ── Column filter popup (same Excel-style recipe as system/setting.html's
+// Member tab — search + Select All + checkbox list, applied immediately). ──
+function churnColumnValues(field) {
+    return [...new Set(_allChurnRows.map(r => CHURN_FIELD_VALUE[field](r)))].sort();
+}
+
+function openChurnFilterPopup(field, label) {
+    churnFilterField = field;
+    _chfAllValues = churnColumnValues(field);
+    document.getElementById('chf-title').textContent = label;
+    document.getElementById('chf-search').value = '';
+    toggleChurnSearchClearBtn('');
+    renderChurnFilterList('');
+    document.getElementById('chf-overlay').classList.add('show');
+    lockBodyScroll();
+    setTimeout(() => document.getElementById('chf-search').focus(), 100);
+}
+
+function closeChurnFilterPopup(e) {
+    if (e && e.target !== document.getElementById('chf-overlay')) return;
+    document.getElementById('chf-overlay').classList.remove('show');
+    unlockBodyScroll();
+}
+
+function toggleChurnSearchClearBtn(val) {
+    const btn = document.getElementById('chf-search-clear');
+    if (btn) btn.style.display = val ? 'flex' : 'none';
+}
+
+function clearChurnFilterSearch() {
+    const input = document.getElementById('chf-search');
+    input.value = '';
+    input.focus();
+    toggleChurnSearchClearBtn('');
+    renderChurnFilterList('');
+}
+
+function renderChurnFilterList(searchQ) {
+    const field = churnFilterField;
+    const all = _chfAllValues;
+    const ql = searchQ.trim().toLowerCase();
+    const visible = ql ? all.filter(v => v.toLowerCase().includes(ql)) : all;
+    _chfVisibleValues = visible;
+    const selected = churnColumnFilters[field];
+    const list = document.getElementById('chf-list');
+
+    const selectedTotal = selected ? selected.size : all.length;
+    document.getElementById('chf-count').textContent = selectedTotal === all.length ? '' : `${selectedTotal}/${all.length} selected`;
+    document.getElementById('chf-reset-btn')?.classList.toggle('active', !!selected);
+
+    if (!visible.length) { list.innerHTML = '<div class="chf-empty">No matches</div>'; return; }
+    const checkedCount = visible.filter(v => !selected || selected.has(v)).length;
+    list.innerHTML = `
+        <label class="chf-item chf-select-all">
+            <input type="checkbox" class="modern-checkbox" id="chf-select-all-cb" ${checkedCount === visible.length ? 'checked' : ''} onchange="toggleAllChurnVisible(this.checked)">
+            <span>Select All${ql ? ` (${visible.length} matching)` : ''}</span>
+        </label>
+        ${visible.map((v, i) => `
+        <label class="chf-item">
+            <input type="checkbox" class="modern-checkbox" ${!selected || selected.has(v) ? 'checked' : ''} onchange="toggleChurnFilterValue(${i}, this.checked)">
+            <span>${esc(v)}</span>
+        </label>`).join('')}
+    `;
+    const selectAllCb = document.getElementById('chf-select-all-cb');
+    if (selectAllCb) selectAllCb.indeterminate = checkedCount > 0 && checkedCount < visible.length;
+}
+
+function toggleChurnFilterValue(idx, checked) {
+    const field = churnFilterField;
+    const value = _chfVisibleValues[idx];
+    if (!churnColumnFilters[field]) churnColumnFilters[field] = new Set(_chfAllValues);
+    checked ? churnColumnFilters[field].add(value) : churnColumnFilters[field].delete(value);
+    if (churnColumnFilters[field].size === _chfAllValues.length) churnColumnFilters[field] = null;
+    renderChurnTable();
+    renderChurnFilterList(document.getElementById('chf-search')?.value || '');
+}
+
+function toggleAllChurnVisible(checked) {
+    const field = churnFilterField;
+    const ql = (document.getElementById('chf-search')?.value || '').trim().toLowerCase();
+    const all = _chfAllValues;
+    const visible = ql ? all.filter(v => v.toLowerCase().includes(ql)) : all;
+    if (!churnColumnFilters[field]) churnColumnFilters[field] = new Set(all);
+    visible.forEach(v => checked ? churnColumnFilters[field].add(v) : churnColumnFilters[field].delete(v));
+    if (churnColumnFilters[field].size === all.length) churnColumnFilters[field] = null;
+    renderChurnTable();
+    renderChurnFilterList(document.getElementById('chf-search')?.value || '');
+}
+
+function resetChurnFilter() {
+    churnColumnFilters[churnFilterField] = null;
+    document.getElementById('chf-search').value = '';
+    toggleChurnSearchClearBtn('');
+    renderChurnTable();
+    renderChurnFilterList('');
 }
 
 // ── Lead Source ───────────────────────────────────────────────────────────────

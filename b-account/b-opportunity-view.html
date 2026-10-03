@@ -159,7 +159,7 @@
         .ov-qt-card:last-child { margin-bottom: 0; }
         .ov-qt-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; }
         .ov-qt-icon { width: 30px; height: 30px; border-radius: 9px; background: var(--c-accent-light); color: var(--c-accent-dark); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
-        .ov-churn-wrap .ov-qt-icon { background: rgba(249,115,22,0.14); color: #c2410c; }
+        .ov-churn-wrap .ov-qt-icon { background: rgba(var(--c-churn-rgb, 249,115,22),0.14); color: #c2410c; }
         .ov-qt-num { font-size: 0.88rem; font-weight: 800; color: var(--c-dark); }
         .ov-qt-totals { margin-left: auto; display: flex; gap: 14px; }
         .ov-qt-stat { display: flex; flex-direction: column; align-items: flex-end; }
@@ -176,10 +176,10 @@
 
         /* ── Churn / Sign groups ── */
         .ov-churn-wrap, .ov-sign-wrap { border-radius: 14px; padding: 20px 16px 8px; position: relative; margin-bottom: 16px; break-inside: avoid; page-break-inside: avoid; }
-        .ov-churn-wrap { border: 1.5px solid rgba(249,115,22,0.35); background: rgba(249,115,22,0.025); }
+        .ov-churn-wrap { border: 1.5px solid rgba(var(--c-churn-rgb, 249,115,22),0.35); background: rgba(var(--c-churn-rgb, 249,115,22),0.025); }
         .ov-sign-wrap { border: 1px solid rgba(0,0,0,0.06); }
         .ov-churn-label, .ov-sign-label, .ov-churn-date-badge { position: absolute; top: -9px; background: #fff; padding: 0 8px; font-size: 0.64rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-        .ov-churn-label { left: 14px; color: #f97316; }
+        .ov-churn-label { left: 14px; color: var(--c-churn, #f97316); }
         .ov-sign-label  { left: 14px; color: var(--c-muted); }
         .ov-churn-date-badge { right: 14px; color: #c2410c; font-weight: 700; }
 
@@ -374,11 +374,10 @@
         document.getElementById('backBtn').href = `b-opportunity-list?open=${encodeURIComponent(o.opportunity_id)}`;
         document.title = `${o.opportunity_id} | ${o.opportunity_name || ''}`;
 
-        // Flat check, no per-role complexity like B-Quest's task-role
-        // model — B-Account's edit/delete permission is a single
-        // account-wide flag each.
-        document.getElementById('ovBtnEdit').style.display = canBaccount('edit') ? 'flex' : 'none';
-        document.getElementById('ovBtnDelete').style.display = canBaccount('delete') ? 'flex' : 'none';
+        // Own/All scope — a record whose owner isn't the logged-in user is
+        // only editable/deletable when the viewer's scope is 'all'.
+        document.getElementById('ovBtnEdit').style.display = canActOnRecord('edit', o.owner) ? 'flex' : 'none';
+        document.getElementById('ovBtnDelete').style.display = canActOnRecord('delete', o.owner) ? 'flex' : 'none';
 
         const pctNum = o.total_amount > 0 && o.total_gp > 0 ? Math.min(+o.total_gp / +o.total_amount * 100, 100).toFixed(1) : 0;
 
@@ -541,6 +540,7 @@
         // from the List page in the same tab masked this, since List's
         // own initLayout() had already populated the cache first.
         await loadBaccountPerms();
+        loadBaccountConfig('status').then(rows => applyChurnColorVar(Object.fromEntries(rows.map(r => [r.value, r.color]))));
         await loadOpportunity();
     }
 

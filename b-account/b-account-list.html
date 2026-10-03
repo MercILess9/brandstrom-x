@@ -182,7 +182,9 @@
 <script>
 
     var allAccounts = [];
-    let _canEdit = false, _canDel = false;
+    // Edit/Delete are scope-aware (Own/All) — checked per-record via
+    // canActOnRecord() at each render/menu site instead of a flat page-
+    // global flag.
     let _statusFilter = 'active', _typeFilter = 'all', _sortFilter = 'latest';
 
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -289,9 +291,14 @@
 
     function cardActions(accountId) {
         const id = esc(accountId);
-        const hasMenu = _canEdit || _canDel;
+        // Own/All scope — a record whose create_by isn't the logged-in user
+        // is only editable/deletable when the viewer's scope is 'all'.
+        const owner = allAccounts.find(a => a.account_id === accountId)?.create_by;
+        const canEditThis = canActOnRecord('edit', owner);
+        const canDelThis  = canActOnRecord('delete', owner);
+        const hasMenu = canEditThis || canDelThis;
         return `<div class="ac-actions">
-            ${_canEdit ? `<button class="ac-action-icon ac-action-edit" onclick="event.stopPropagation();editAccount('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>` : ''}
+            ${canEditThis ? `<button class="ac-action-icon ac-action-edit" onclick="event.stopPropagation();editAccount('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>` : ''}
             ${hasMenu  ? `<button class="ac-action-icon" onclick="event.stopPropagation();showMenu(this,'${id}')" title="More"><i class="bi bi-three-dots-vertical"></i></button>` : ''}
         </div>`;
     }
@@ -375,9 +382,12 @@
         const menu = document.createElement('div');
         menu.className = 'ac-floating-menu';
         menu.style.cssText = `position:fixed;top:${rect.bottom + 4}px;right:${window.innerWidth - rect.right}px;z-index:500;`;
+        const owner = allAccounts.find(a => a.account_id === accountId)?.create_by;
+        const canEditThis = canActOnRecord('edit', owner);
+        const canDelThis  = canActOnRecord('delete', owner);
         menu.innerHTML = `
-            ${_canEdit ? `<button onclick="duplicateAccount('${esc(accountId)}');this.closest('.ac-floating-menu').remove()"><i class="bi bi-copy"></i> Duplicate</button>` : ''}
-            ${_canDel  ? `<hr><button class="danger" onclick="deleteAccount('${esc(accountId)}');this.closest('.ac-floating-menu').remove()"><i class="bi bi-trash3"></i> Delete</button>` : ''}
+            ${canEditThis ? `<button onclick="duplicateAccount('${esc(accountId)}');this.closest('.ac-floating-menu').remove()"><i class="bi bi-copy"></i> Duplicate</button>` : ''}
+            ${canDelThis  ? `<hr><button class="danger" onclick="deleteAccount('${esc(accountId)}');this.closest('.ac-floating-menu').remove()"><i class="bi bi-trash3"></i> Delete</button>` : ''}
         `;
         document.body.appendChild(menu);
         setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 50);
@@ -428,8 +438,7 @@
     async function initPage() {
         sessionStorage.removeItem('bx_perms_baccount');
         await initLayout(B_ACCOUNT_CONFIG);
-        _canEdit = canBaccount('edit');
-        _canDel  = canBaccount('delete');
+        if (!canBaccount('account')) { window.location.replace('b-opportunity-list.html'); return; }
         if (canBaccount('new')) {
             const fab = document.getElementById('btn-add');
             fab.style.display = 'flex';
@@ -446,7 +455,8 @@
         // into BAccountApp.openEdit() on this page.
         const editId = new URLSearchParams(window.location.search).get('edit');
         if (editId) {
-            if (_canEdit && allAccounts.some(a => a.account_id === editId)) {
+            const rec = allAccounts.find(a => a.account_id === editId);
+            if (rec && canActOnRecord('edit', rec.create_by)) {
                 BAccountApp.openEdit(editId);
             } else {
                 notify('', 'Account not found or you don\'t have permission to edit', 'error');

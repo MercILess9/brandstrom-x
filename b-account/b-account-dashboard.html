@@ -619,6 +619,7 @@ let _qtMap = new Map(); // oppId → [{qt_type, b_opportunity_qt_item:[{bu,qty,p
 let _accMap = new Map(); // account_id → {account_name}
 let _profileMap = new Map(); // codename → {nick_name, avatar_url} — feeds the Owner avatar on Sales Performance/Churned Opportunity
 let _cfgBU  = []; // ordered list of BU values from config — drives chip order + stable color assignment
+let _cfgBUColor = {}, _cfgStatusColor = {}, _cfgTypeColor = {}; // value → color, from b_opportunity_config (Settings page); built from ALL rows (not just active) so an inactive/removed value still colors correctly on old records
 let _yearFilters  = new Set(); // the range picker only ever sets exactly one year — kept as a Set (not a scalar) because the filtering logic below still treats it generically
 let _monthFilters = new Set(); // '01'..'12', empty = all months
 let _buFilters    = new Set(); // empty = all BUs
@@ -643,16 +644,19 @@ let _trendCompare = false;
 let _compareYears = new Set();
 let _compareYearPicker = null; // createMultiSelect instance, built lazily on first toggleTrendCompare()
 
-const TYPE_CLR = { 'New Business': '#1d4ed8', 'Retention': '#6d28d9', 'Up Sale': '#0d7a70' }; // ref .op-type badge colors in b-opportunity-list.html
-const STATUS_CLR = { 'Churn': '#f97316', 'End Contact': '#64748b' }; // ref .op-card.churn/.ended — everything else uses the brand accent
+// Fallback palette only — used when a BU/Status/Business Type value has no
+// color saved yet in b_opportunity_config (Settings page), e.g. right after
+// it's added and before anyone picks a color for it.
 const CAT_PALETTE = ['#3b82f6','#8b5cf6','#f97316','#0ea5e9','#ec4899','#14b8a6','#eab308','#6366f1'];
 const MONTHS   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function buColor(bu) {
+    if (_cfgBUColor[bu]) return _cfgBUColor[bu];
     const idx = _cfgBU.indexOf(bu);
     return CAT_PALETTE[(idx >= 0 ? idx : 0) % CAT_PALETTE.length];
 }
-function statusColor(s) { return STATUS_CLR[s] || 'var(--c-accent)'; }
+function statusColor(s) { return _cfgStatusColor[s] || 'var(--c-accent)'; }
+function typeColor(t) { return _cfgTypeColor[t] || '#94a3b8'; }
 
 // Chart.js draws its tooltip via <canvas>, which can't resolve a CSS
 // variable reference the way a DOM element's inline style can — it needs
@@ -935,7 +939,7 @@ async function loadData() {
         { data: qts,      error: e2 },
         { data: items,    error: e3 },
         { data: accs,     error: e4 },
-        { data: cfgBU },
+        { data: cfg },
         { data: profiles }
     ] = await Promise.all([
         supabaseClient.from('b_opportunity_list')
@@ -950,7 +954,7 @@ async function loadData() {
             .select('qt_id, bu, qty, price, discount, gp')
             .limit(20000),
         supabaseClient.from('b_account_list').select('account_id, account_name'),
-        supabaseClient.from('b_opportunity_config').select('value').eq('type','bu').order('value'),
+        supabaseClient.from('b_opportunity_config').select('type, value, color, active').in('type', ['bu', 'status', 'business_type']).order('value'),
         supabaseClient.from('profiles').select('codename, nick_name, avatar_url')
     ]);
 
@@ -959,7 +963,10 @@ async function loadData() {
     _opps = opps || [];
     _accMap = new Map((accs || []).map(a => [a.account_id, a]));
     _profileMap = new Map((profiles || []).map(p => [p.codename, p]));
-    _cfgBU = (cfgBU || []).map(c => c.value);
+    _cfgBU = (cfg || []).filter(c => c.type === 'bu' && c.active !== false).map(c => c.value);
+    _cfgBUColor     = Object.fromEntries((cfg || []).filter(c => c.type === 'bu').map(c => [c.value, c.color]));
+    _cfgStatusColor = Object.fromEntries((cfg || []).filter(c => c.type === 'status').map(c => [c.value, c.color]));
+    _cfgTypeColor   = Object.fromEntries((cfg || []).filter(c => c.type === 'business_type').map(c => [c.value, c.color]));
     // _buFilters is already set by initFilterDropdowns() (restored from
     // sessionStorage, or the empty "all BUs" default) — drop any BU that
     // no longer exists in the config we just loaded, so a stale saved
@@ -2508,7 +2515,7 @@ function renderTypeDonut({ typeMap }) {
     const entries = [...typeMap.entries()].sort((a, b) => b[1].amt - a[1].amt);
     const labels  = entries.map(([t]) => t);
     const amts    = entries.map(([,d]) => d.amt);
-    const colors  = labels.map(t => TYPE_CLR[t] || '#94a3b8');
+    const colors  = labels.map(t => typeColor(t));
     const total   = amts.reduce((s,a) => s+a, 0);
 
     const ctx = document.getElementById('typeChart').getContext('2d');
@@ -2535,7 +2542,7 @@ function renderTypeDonut({ typeMap }) {
             <thead><tr><th>Type</th><th class="r">Amount</th><th class="r">GP</th><th class="r">GP%</th><th class="r">Opportunity</th></tr></thead>
             <tbody>
                 ${entries.map(([t, d]) => `<tr>
-                    <td class="strong"><span class="leg-dot" style="background:${TYPE_CLR[t]||'#94a3b8'};display:inline-block;vertical-align:middle;margin-right:6px"></span>${esc(t)}</td>
+                    <td class="strong"><span class="leg-dot" style="background:${typeColor(t)};display:inline-block;vertical-align:middle;margin-right:6px"></span>${esc(t)}</td>
                     <td class="r">${fmtN(d.amt)} ฿</td>
                     <td class="r amt-green">${fmtN(d.gp)} ฿</td>
                     <td class="r">${pctStr(d.gp, d.amt) || '—'}</td>
@@ -3073,6 +3080,7 @@ function renderClientTable({ accountMap, grandOrigAmt }) {
 async function initPage() {
     sessionStorage.removeItem('bx_perms_baccount');
     await initLayout(B_ACCOUNT_CONFIG);
+    if (!canBaccount('dashboard')) { window.location.replace('b-opportunity-list.html'); return; }
     initFilterDropdowns();
     await loadData();
     createPullToRefresh({

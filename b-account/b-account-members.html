@@ -159,6 +159,17 @@
         .bq-toggle.small .bq-slider:before { height: 10px; width: 10px; left: 3px; bottom: 3px; }
         .bq-toggle.small input:checked + .bq-slider:before { transform: translateX(12px); }
 
+        /* ── Own/All scope badge (Edit/Delete only) — ref B-Quest's own
+           .mem-scope-badge, click-to-flip since there's only 2 values. All
+           is amber, same "elevated privilege" color as the Bulk toggle
+           elsewhere, so scanning for who has broad access doesn't require
+           reading every cell. ── */
+        .mem-action-cell { display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .mem-scope-badge { border: 1px solid var(--c-border); background: #fff; color: var(--c-muted); font-size: 0.56rem; font-weight: 800; font-family: inherit; text-transform: uppercase; letter-spacing: 0.3px; border-radius: 5px; padding: 2px 5px; cursor: pointer; transition: 0.15s; line-height: 1.2; }
+        .mem-scope-badge:hover { border-color: var(--c-slate); color: var(--c-dark); }
+        .mem-scope-badge.all { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+        .mem-scope-badge.all:hover { background: #fef3c7; border-color: #f59e0b; }
+
         /* ── Excel-style column header filter (Member/ID/Department) ── */
         .mem-filter-modal { width: 420px; }
         .mem-filter-modal-header { padding: 22px 26px 18px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
@@ -319,11 +330,19 @@
 </div>
 
 <script>
-    const PERM_COLS = ['new', 'edit', 'delete', 'setting'];
+    // Ref B-Quest's own b-quest-members.html flat Dashboard/Duplicate/Share
+    // toggles — grouped into 4 visual zones (module access / opportunity
+    // actions / task CRUD / admin), a mem-zone-divider marks each group's
+    // first column. Setting/Member are handled separately (canSeeAccess-
+    // gated, not in this array) same as B-Quest's own Setting/Member pair.
+    const PERM_COLS = ['dashboard', 'account', 'duplicate', 'share', 'new', 'edit', 'delete'];
+    const ZONE_STARTS = new Set(['dashboard', 'duplicate', 'new', 'setting']);
+    const SCOPE_COL = { edit: 'edit_scope', delete: 'delete_scope' }; // Own/All badge lives next to these two only
 
     // ── Members State ─────────────────────────────────────────────
-    let _members = [];   // { codename, ae, new, edit, delete, setting, _state: 'existing'|'new'|'deleted' }
+    let _members = [];   // { codename, dashboard, account, duplicate, share, new, edit, edit_scope, delete, delete_scope, setting, member, _state: 'existing'|'new'|'deleted' }
     let _allProfiles = [];
+    let _canSeeAccess = false; // Setting/Member columns only exist in the DOM for a viewer who has 'setting' themselves — same visibility gate as B-Quest/System
     let _amSelected = new Set();
     let _memberSearch = '';
     let memberSort = { field: 'nick_name', dir: 'asc' }; // field: 'nick_name' | 'employee_id' | 'department'
@@ -347,6 +366,22 @@
         const m = _members.find(m => m.codename === codename);
         if (!m) return;
         m[perm] = !m[perm];
+        // Setting is a forced superset of Member (same rule as system_access
+        // / B-Quest's own Setting+Member pair): Setting on auto-forces
+        // Member on; Member off auto-forces Setting off.
+        if (perm === 'setting' && m.setting) m.member = true;
+        if (perm === 'member' && !m.member) m.setting = false;
+        if (m._state === 'existing') m._changed = true;
+        markDirty();
+        renderPermTable();
+        recomputeSaveBarCount();
+    }
+
+    // Own/All click-to-flip badge, Edit/Delete only.
+    function toggleScope(codename, scopeCol) {
+        const m = _members.find(m => m.codename === codename);
+        if (!m) return;
+        m[scopeCol] = m[scopeCol] === 'all' ? 'own' : 'all';
         if (m._state === 'existing') m._changed = true;
         markDirty();
         renderPermTable();
@@ -524,6 +559,7 @@
             return memberSort.dir === 'asc' ? cmp : -cmp;
         });
 
+        const cols = _canSeeAccess ? [...PERM_COLS, 'setting', 'member'] : PERM_COLS;
         container.innerHTML = `
         <table class="mem-matrix">
             <colgroup>
@@ -532,7 +568,7 @@
                 <col style="width:80px">
                 <col style="width:190px">
                 ${advancedMode ? '<col style="width:44px">' : ''}
-                ${PERM_COLS.map(() => '<col>').join('')}
+                ${cols.map(() => '<col>').join('')}
             </colgroup>
             <thead>
                 <tr>
@@ -541,9 +577,9 @@
                     <th class="mem-col-code mem-header-filterable" onclick="openColumnFilterPopup('employee_id', 'ID')">ID ${sortIcon('employee_id')} ${filterIcon('employee_id')}</th>
                     <th class="mem-col-dept mem-header-filterable" onclick="openColumnFilterPopup('department', 'Department')">Department ${sortIcon('department')} ${filterIcon('department')}</th>
                     ${advancedMode ? `<th class="mem-col-bulk-row" title="Bulk toggle: click a row's icon to enable/disable everything for that member"><i class="bi bi-lightning-charge-fill" style="color:#f59e0b"></i></th>` : ''}
-                    ${PERM_COLS.map((col, i) => {
+                    ${cols.map(col => {
                         const label = col.charAt(0).toUpperCase() + col.slice(1);
-                        const cls = `mem-col-action ${i === 0 ? 'mem-zone-divider' : ''} ${advancedMode ? 'mem-col-adv' : ''}`;
+                        const cls = `mem-col-action ${ZONE_STARTS.has(col) ? 'mem-zone-divider' : ''} ${advancedMode ? 'mem-col-adv' : ''}`;
                         const attrs = advancedMode ? ` onclick="bulkToggleFlag('${col}')" title="Click to toggle ${label} for everyone shown"` : ` title="${label}"`;
                         return `<th class="${cls}"${attrs}>${label}${advancedMode ? bulkColIcon() : ''}</th>`;
                     }).join('')}
@@ -552,7 +588,7 @@
             <tbody>
                 ${!rows.length ? `
                 <tr>
-                    <td colspan="${4 + (advancedMode ? 1 : 0) + PERM_COLS.length}" class="mem-empty-row">
+                    <td colspan="${4 + (advancedMode ? 1 : 0) + cols.length}" class="mem-empty-row">
                         <i class="bi bi-people"></i> No Member
                     </td>
                 </tr>` : rows.map(m => {
@@ -580,13 +616,20 @@
                         <td class="mem-col-bulk-row">
                             <button class="mem-bulk-row-btn" onclick="bulkToggleRow('${esc(m.codename)}')" title="Toggle everything for ${esc(p?.nick_name || m.codename)}"><i class="bi bi-lightning-charge-fill"></i></button>
                         </td>` : ''}
-                        ${PERM_COLS.map((col, i) => `
-                        <td class="mem-col-action ${i === 0 ? 'mem-zone-divider' : ''}">
-                            <label class="bq-toggle small">
-                                <input type="checkbox" ${m[col] ? 'checked' : ''} onchange="toggle('${esc(m.codename)}','${col}')">
-                                <span class="bq-slider"></span>
-                            </label>
-                        </td>`).join('')}
+                        ${cols.map(col => {
+                            const scopeCol = SCOPE_COL[col];
+                            const scope = scopeCol && m[scopeCol] === 'all' ? 'all' : 'own';
+                            return `
+                        <td class="mem-col-action ${ZONE_STARTS.has(col) ? 'mem-zone-divider' : ''}">
+                            <div class="mem-action-cell">
+                                <label class="bq-toggle small">
+                                    <input type="checkbox" ${m[col] ? 'checked' : ''} onchange="toggle('${esc(m.codename)}','${col}')">
+                                    <span class="bq-slider"></span>
+                                </label>
+                                ${scopeCol && m[col] ? `<button type="button" class="mem-scope-badge ${scope}" onclick="toggleScope('${esc(m.codename)}','${scopeCol}')" title="Click to switch to ${scope === 'own' ? 'All' : 'Own'}">${scope === 'own' ? 'Own' : 'All'}</button>` : ''}
+                            </div>
+                        </td>`;
+                        }).join('')}
                     </tr>`;
                 }).join('')}
             </tbody>
@@ -669,6 +712,8 @@
         const allOn = rows.every(m => m[flag]);
         rows.forEach(m => {
             m[flag] = !allOn;
+            if (flag === 'setting' && m.setting) m.member = true;
+            if (flag === 'member' && !m.member) m.setting = false;
             if (m._state === 'existing') m._changed = true;
         });
         markDirty();
@@ -679,8 +724,9 @@
     function bulkToggleRow(codename) {
         const m = _members.find(m => m.codename === codename);
         if (!m) return;
-        const allOn = PERM_COLS.every(col => m[col]);
-        PERM_COLS.forEach(col => { m[col] = !allOn; });
+        const cols = _canSeeAccess ? [...PERM_COLS, 'setting', 'member'] : PERM_COLS;
+        const allOn = cols.every(col => m[col]);
+        cols.forEach(col => { m[col] = !allOn; });
         if (m._state === 'existing') m._changed = true;
         markDirty();
         renderPermTable();
@@ -749,7 +795,11 @@
     function confirmAddMembers() {
         _amSelected.forEach(codename => {
             if (!_members.find(m => m.codename === codename)) {
-                _members.push({ codename, ae: false, new: false, edit: false, delete: false, setting: false, _state: 'new', _changed: false });
+                _members.push({
+                    codename, dashboard: false, account: false, duplicate: false, share: false,
+                    new: false, edit: false, edit_scope: 'own', delete: false, delete_scope: 'own',
+                    setting: false, member: false, _state: 'new', _changed: false
+                });
             }
         });
         closeAddMember();
@@ -762,7 +812,8 @@
     // by the module itself, this just does the writes + local commit.
     async function saveAll() {
         const toUpsert = _members.filter(m => m._state === 'new' || (m._state === 'existing' && m._changed))
-            .map(({ codename, ae, new: n, edit, delete: d, setting }) => ({ codename, ae, new: n, edit, delete: d, setting }));
+            .map(({ codename, dashboard, account, duplicate, share, new: n, edit, edit_scope, delete: d, delete_scope, setting, member }) =>
+                ({ codename, dashboard, account, duplicate, share, new: n, edit, edit_scope, delete: d, delete_scope, setting, member }));
         const toDelete = _members.filter(m => m._state === 'deleted').map(m => m.codename);
         const ops = [];
         if (toUpsert.length) ops.push(supabaseClient.from('b_account_setting').upsert(toUpsert, { onConflict: 'codename' }));
@@ -802,7 +853,11 @@
     async function initPage() {
         sessionStorage.removeItem('bx_perms_baccount');
         await initLayout(B_ACCOUNT_CONFIG);
-        if (!canBaccount('setting')) window.location.replace('b-opportunity-list.html');
+        // Setting is a forced superset of Member, so anyone who can see this
+        // page at all holds at least one of the two — same admission rule
+        // as system/setting.html's guardAfterLoad().
+        if (!canBaccount('setting') && !canBaccount('member')) { window.location.replace('b-opportunity-list.html'); return; }
+        _canSeeAccess = canBaccount('setting'); // Setting/Member columns themselves stay admin-only
         saveBar = createSaveBar({ label: 'B-Account Members', onSave: saveAll, onCancel: cancelAllChanges });
         await Promise.all([loadMembers(), loadProfiles()]);
         renderPermTable();

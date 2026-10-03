@@ -9,6 +9,7 @@
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="/system/save-bar.js"></script>
+    <script src="/system/color-picker.js"></script>
     <script src="b-account.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-account.css">
@@ -31,17 +32,26 @@
         .settings-tab:hover { border-color: var(--c-accent); color: var(--c-dark); }
         .settings-tab.active { background: var(--c-dark); color: var(--c-accent); border-color: var(--c-dark); }
 
+        /* Matches B-Quest's own .hover-scale (b-quest.css) — page-local on
+           purpose, not a shared global class; a slight pop on hover for
+           buttons/swatches that should feel clickable. */
+        .hover-scale { transition: transform 0.15s; }
+        .hover-scale:hover { transform: scale(1.06); }
+
         /* ── Section ── */
         .section { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; margin-bottom: 20px; overflow: hidden; }
         .section-header { display: flex; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--c-border); }
         .section-title { font-size: 0.82rem; font-weight: 800; color: var(--c-dark); text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 8px; }
         .section-title i { font-size: 1rem; }
         .section-body { padding: 20px 24px; }
+        .dirty-dot { width: 7px; height: 7px; background: #f59e0b; border-radius: 50%; display: none; }
+        .section.is-dirty .dirty-dot { display: inline-block; }
+        .section.is-dirty { border-color: #fde68a; }
 
-        /* ── Config boxes (Dropdown) — horizontal-scroll carousel, exact
-           pattern from B-Quest's Role/Status/Type section: fixed-width
-           .section boxes in a row instead of a squeezed 2-col grid, with
-           edge-fade hints when there's more to scroll to. ── */
+        /* ── Status / BU / Business Type / Company QT — horizontal scroll
+           carousel, same recipe as B-Quest's Role/Status/Type section:
+           each box gets a comfortable fixed width instead of being
+           squeezed into equal quarters. ── */
         .cfg-carousel-wrap { position: relative; margin-bottom: 20px; }
         .cfg-carousel-wrap::before, .cfg-carousel-wrap::after {
             content: ''; position: absolute; top: 0; bottom: 6px; width: 48px;
@@ -51,36 +61,73 @@
         .cfg-carousel-wrap::after { right: 0; background: linear-gradient(to left, rgba(30,41,59,0.14), transparent); }
         .cfg-carousel-wrap.fade-left::before { opacity: 1; }
         .cfg-carousel-wrap.fade-right::after { opacity: 1; }
-        .cfg-carousel-grid { display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 6px; }
-        .cfg-carousel-grid .section { margin-bottom: 0; flex: 0 0 380px; scroll-snap-align: start; }
-        @media (max-width: 600px) { .cfg-carousel-grid .section { flex-basis: 90vw; } }
+        .cfg-3col-page-grid { display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 6px; }
+        .cfg-3col-page-grid .section { margin-bottom: 0; flex: 0 0 550px; scroll-snap-align: start; }
+        .cfg-count-badge { font-size: 0.66rem; font-weight: 700; color: var(--c-slate); text-transform: none; letter-spacing: 0; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 1px 8px; }
+        @media (max-width: 600px) { .cfg-3col-page-grid .section { flex-basis: 90vw; } }
 
-        .cfg-count-badge { font-size: 0.66rem; font-weight: 700; color: var(--c-slate); background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 1px 8px; }
-        .dirty-dot { width: 7px; height: 7px; background: #f59e0b; border-radius: 50%; display: none; }
-        .section.is-dirty .dirty-dot { display: inline-block; }
-        .section.is-dirty { border-color: #fde68a; }
-        .cfg-header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+        /* ── Standalone row below the carousel (Company QT + Lead Source),
+           not part of the horizontal scroller — sit side by side, each the
+           same width as a carousel box (550px), plain single-column
+           vertical list (not split left/right like Departments). ── */
+        #cfgStandalone { display: flex; gap: 20px; flex-wrap: wrap; }
+        #cfgStandalone .section { width: 550px; max-width: 100%; margin-bottom: 0; }
 
-        /* list rows */
-        .cfg-list { padding: 6px 0; min-height: 40px; }
-        .cfg-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 4px; border-bottom: 1px solid #f1f5f9; border-radius: 8px; transition: background 0.12s; }
+        /* ── Shared: reorderable config list — lean, divider-based rows
+           instead of a bordered card per row. Verbatim from B-Quest's own
+           Role/Status/Type list CSS, including every hover effect. ── */
+        .cfg-list { display: flex; flex-direction: column; }
+        .cfg-row { display: flex; align-items: center; gap: 8px; padding: 8px 4px; border-bottom: 1px solid #f1f5f9; border-radius: 8px; transition: 0.15s; }
         .cfg-row:last-child { border-bottom: none; }
         .cfg-row:hover { background: var(--c-bg); }
         .cfg-row.is-new { background: #f0fdf4; }
-        .cfg-row.is-new .cfg-row-val { color: #166534; }
-        .cfg-row.is-del { background: #fff5f5; opacity: 0.6; }
-        .cfg-row.is-del .cfg-row-val { text-decoration: line-through; color: #b91c1c; }
-        .cfg-row-val { font-size: 0.83rem; font-weight: 700; color: var(--c-dark); }
-        .cfg-row-del { background: none; border: none; padding: 3px 5px; cursor: pointer; color: #cbd5e1; border-radius: 6px; display: flex; align-items: center; font-size: 0.9rem; transition: 0.15s; }
-        .cfg-row-del:hover { background: #fee2e2; color: #ef4444; }
-        .cfg-row.is-del .cfg-row-del { color: #86efac; }
-        .cfg-row.is-del .cfg-row-del:hover { background: #f0fdf4; color: #16a34a; }
-        .cfg-empty { padding: 16px 18px; font-size: 0.78rem; color: #cbd5e1; font-weight: 600; }
-        .cfg-list--grid { display: grid; grid-template-columns: 1fr 1fr; }
-        .cfg-name-input { flex: 1; border: 1px solid var(--c-accent); border-radius: 8px; padding: 6px 10px; font-size: 0.83rem; font-weight: 700; color: var(--c-dark); background: #fff; outline: none; font-family: inherit; }
+        .cfg-row.is-inactive { opacity: 0.5; }
+        .cfg-row.is-deleted { opacity: 0.75; background: #fef2f2; text-decoration: line-through; text-decoration-color: var(--c-danger); text-decoration-thickness: 1.5px; pointer-events: none; }
+        .cfg-row.is-deleted .cfg-flex-spacer { pointer-events: auto; text-decoration: none; }
+        .cfg-row.is-deleted .cfg-name-input { color: var(--c-danger); }
+        .cfg-drag-handle { flex-shrink: 0; color: #cbd5e1; cursor: grab; font-size: 0.95rem; display: flex; align-items: center; padding: 2px; touch-action: none; }
+        .cfg-drag-handle:hover { color: var(--c-slate); }
+        .cfg-row.dragging { opacity: 0.35; }
+        .cfg-row.drag-over { background: var(--c-accent-light) !important; }
+        .cfg-swatch { position: relative; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(0,0,0,0.08); flex-shrink: 0; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+        .cfg-swatch:hover { transform: scale(1.15); box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
+        .cfg-name-input { flex: 1; min-width: 100px; border: 1px solid transparent; border-radius: 8px; padding: 6px 10px; font-size: 0.85rem; font-weight: 700; color: var(--c-dark); background: transparent; outline: none; font-family: inherit; }
+        .cfg-name-input:hover { border-color: var(--c-border); background: var(--c-bg); }
+        .cfg-name-input:focus { border-color: var(--c-accent); background: #fff; }
+        .cfg-flex-spacer { flex-shrink: 0; }
 
-        .btn-cfg-add { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 7px 14px; font-size: 0.76rem; font-weight: 700; cursor: pointer; transition: 0.15s; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
-        .btn-cfg-add:hover { background: #0f172a; }
+        /* ── Table-style header row above each list ── */
+        .cfg-header-row { display: flex; align-items: center; gap: 8px; padding: 0 4px 8px; border-bottom: 1px solid var(--c-border); margin-bottom: 4px; }
+        .cfg-header-row span { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+        .cfg-col-drag { width: 15px; flex-shrink: 0; }
+        .cfg-col-color { width: 45px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .cfg-col-name { flex: 1; min-width: 0; }
+        .cfg-col-toggle { width: 70px; flex-shrink: 0; text-align: center; }
+        .cfg-col-trash { width: 26px; flex-shrink: 0; }
+
+        .cfg-btn-del { background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 5px; border-radius: 7px; font-size: 0.9rem; display: flex; align-items: center; flex-shrink: 0; }
+        .cfg-btn-del:hover { color: var(--c-danger); }
+        .cfg-btn-undo { background: none; border: none; color: var(--c-danger); cursor: pointer; padding: 5px; border-radius: 7px; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; flex-shrink: 0; }
+        .cfg-btn-undo:hover { color: var(--c-danger-dark); }
+        .cfg-btn-add { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 7px 14px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: 0.15s; }
+        .cfg-btn-sort { background: none; border: 1px solid var(--c-border); color: var(--c-slate); border-radius: 9px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; margin-left: auto; flex-shrink: 0; transition: 0.15s; }
+        .cfg-btn-sort:hover { background: #f1f5f9; border-color: #cbd5e1; color: var(--c-dark); }
+        .cfg-empty { padding: 16px 18px; font-size: 0.78rem; color: #cbd5e1; font-weight: 600; }
+
+        /* Active toggle — same .bq-toggle pill used by B-Quest's own Role/
+           Status/Type Active column. */
+        .cfg-mini-toggle-wrap { display: flex; align-items: center; justify-content: center; }
+        .bq-toggle { position: relative; display: inline-block; width: 34px; height: 19px; flex-shrink: 0; }
+        .bq-toggle.small { width: 28px; height: 16px; }
+        .bq-toggle input { opacity: 0; width: 0; height: 0; }
+        .bq-slider { position: absolute; cursor: pointer; inset: 0; background: var(--c-border); transition: .3s; border-radius: 34px; }
+        .bq-toggle:hover .bq-slider { box-shadow: 0 0 0 4px rgba(0,0,0,0.06); }
+        .bq-toggle:hover input:checked + .bq-slider { box-shadow: 0 0 0 4px rgba(var(--c-accent-rgb), 0.25); }
+        .bq-slider:before { content: ''; position: absolute; height: 13px; width: 13px; left: 3px; bottom: 3px; background: #fff; transition: .3s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .bq-toggle.small .bq-slider:before { height: 12px; width: 12px; left: 2px; bottom: 2px; }
+        .bq-toggle input:checked + .bq-slider { background: var(--c-accent); }
+        .bq-toggle input:checked + .bq-slider:before { transform: translateX(15px); }
+        .bq-toggle.small input:checked + .bq-slider:before { transform: translateX(12px); }
     </style>
 </head>
 <body>
@@ -95,142 +142,397 @@
         <a href="b-account-members.html" class="settings-tab"><i class="bi bi-people-fill"></i> Member</a>
     </div>
 
-    <!-- Dropdown Config — 5 separate boxes, side by side (ref B-Quest's Role/Status/Type carousel) -->
+    <!-- Status / BU / Business Type / Company QT — carousel, ref B-Quest's
+         own Role/Status/Type section -->
     <div class="cfg-carousel-wrap" id="cfgCarouselWrap">
-        <div class="cfg-carousel-grid" id="cfgGrid"></div>
+        <div class="cfg-3col-page-grid" id="cfgCarousel"></div>
     </div>
+
+    <!-- Lead Source — standalone, 30% width, single-column list -->
+    <div id="cfgStandalone"></div>
 </div>
 
 <script>
 
-    // ── Config State ──────────────────────────────────────────────
-    const CFG_TYPES = [
-        { key: 'status',        label: 'Status',             icon: 'bi-circle-fill' },
-        { key: 'business_type', label: 'Business Type',      icon: 'bi-briefcase-fill' },
-        { key: 'company',       label: 'Company QT',         icon: 'bi-building-fill' },
-        { key: 'bu',            label: 'Business Unit (BU)', icon: 'bi-grid-fill' },
-        { key: 'lead_source',   label: 'Lead Source',        icon: 'bi-funnel-fill', full: true },
+    // ── Config groups — all 5 share ONE table (b_opportunity_config,
+    // discriminated by `type`), unlike B-Quest where each list is its own
+    // table — so this page uses one generic parameterized render/stage/
+    // drag system instead of 5 copy-pasted per-type function sets. ──
+    const CFG_GROUPS = [
+        { key: 'status',        label: 'Status',             icon: 'bi-circle-fill',       hasColor: true,  hasToggle: true,  carousel: true },
+        { key: 'bu',             label: 'Business Unit (BU)', icon: 'bi-grid-fill',         hasColor: true,  hasToggle: true,  carousel: true },
+        { key: 'business_type', label: 'Business Type',      icon: 'bi-briefcase-fill',    hasColor: true,  hasToggle: false, carousel: true },
+        { key: 'company',       label: 'Company QT',         icon: 'bi-building-fill',     hasColor: false, hasToggle: false, carousel: false },
+        { key: 'lead_source',   label: 'Lead Source',        icon: 'bi-funnel-fill',       hasColor: false, hasToggle: false, carousel: false },
     ];
 
-    const _cfg = {};  // _cfg[key] = { original: [], toAdd: [], toDelete: Set }
+    // ── State ──
+    let cfgOriginal = {};   // key -> [{...row, _ck}] as loaded from DB
+    let cfgChanges = {};    // key -> { _ck -> {field: value} }, 'new-N' _ck = unsaved new row
+    let cfgDeletes = {};    // key -> Set(_ck)
+    let cfgIdSeq = -1;      // negative temp ids for unsaved new rows
+    let saveBar = null;
+    let undoStack = [];
+    let lastSnapshotAt = 0;
+    let dragState = null;   // { key, ck }
 
-    function cfgIsDirty(key) {
-        return _cfg[key].toAdd.length > 0 || _cfg[key].toDelete.size > 0;
+    // ═══════════════════════════════════════════
+    // Load
+    // ═══════════════════════════════════════════
+    async function loadAllConfig() {
+        // sort_order doesn't exist in the live DB yet (migration written,
+        // not applied — see the plan this page was built against) —
+        // ordering by it errors, so fall back to alphabetical exactly like
+        // the page's previous implementation did.
+        let { data, error } = await supabaseClient.from('b_opportunity_config').select('*').order('sort_order', { ascending: true, nullsFirst: false });
+        if (error) ({ data } = await supabaseClient.from('b_opportunity_config').select('*').order('value'));
+
+        const grouped = {};
+        CFG_GROUPS.forEach(g => { grouped[g.key] = []; });
+        (data || []).forEach(row => {
+            if (!grouped[row.type]) return;
+            const idx = grouped[row.type].length;
+            // _ck ("client key") is a plain, content-free identifier — the
+            // real `id` column doesn't exist until the migration lands, so
+            // existing rows fall back to a positional key instead of their
+            // `value` (never derived from it — a value containing a quote
+            // would break the onclick/data-ck attributes it's interpolated
+            // into below). sort_order likewise falls back to load position
+            // so a newly-added row's "append to end" math lines up with
+            // what's on screen instead of jumping to the top.
+            grouped[row.type].push({ ...row, _ck: row.id || ('v' + idx), sort_order: row.sort_order ?? idx });
+        });
+        cfgOriginal = grouped;
+        CFG_GROUPS.forEach(g => { cfgChanges[g.key] = {}; cfgDeletes[g.key] = new Set(); });
     }
 
-    function cfgCount(key) {
-        const state = _cfg[key];
-        return state.original.filter(v => !state.toDelete.has(v)).length + state.toAdd.length;
+    // ═══════════════════════════════════════════
+    // Render
+    // ═══════════════════════════════════════════
+    function cfgBuffer(key) {
+        const orig = cfgOriginal[key] || [];
+        const changes = cfgChanges[key];
+        const deletes = cfgDeletes[key];
+        return orig.map(r => ({ ...r, ...(changes[r._ck] || {}), _deleted: deletes.has(r._ck) }))
+            .concat(Object.entries(changes).filter(([ck]) => ck.startsWith('new-')).map(([ck, c]) => ({ _ck: ck, ...c, _new: true })))
+            .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
     }
 
-    function renderCfgCard(type, values) {
-        _cfg[type.key] = { original: [...values], toAdd: [], toDelete: new Set() };
-        const listClass = type.full ? 'cfg-list cfg-list--grid' : 'cfg-list';
-        return `<div class="section" id="cfgCard-${type.key}">
+    function renderCfgSection(group) {
+        const headerCols = `
+            <span class="cfg-col-drag"></span>
+            ${group.hasColor ? '<span class="cfg-col-color">Color</span>' : ''}
+            <span class="cfg-col-name">${esc(group.label)}</span>
+            ${group.hasToggle ? '<span class="cfg-col-toggle">Active</span>' : ''}
+            <span class="cfg-col-trash"></span>`;
+        return `<div class="section" id="section-${group.key}">
             <div class="section-header">
-                <div class="section-title"><i class="bi ${type.icon}"></i> ${type.label} <span class="cfg-count-badge" id="cfgCount-${type.key}"></span> <span class="dirty-dot"></span></div>
-                <div class="cfg-header-actions">
-                    <button class="btn-cfg-add" onclick="addCfgTag('${type.key}')"><i class="bi bi-plus-lg"></i> Add</button>
-                </div>
+                <div class="section-title"><i class="bi ${group.icon}"></i> ${esc(group.label)} <span class="cfg-count-badge" id="cfgCount-${group.key}"></span> <span class="dirty-dot"></span></div>
+                <button class="cfg-btn-sort hover-scale" onclick="sortAlphaCfg('${group.key}')" title="Sort A-Z"><i class="bi bi-sort-alpha-down"></i></button>
+                <button class="cfg-btn-add hover-scale" onclick="addCfgItem('${group.key}')"><i class="bi bi-plus-lg"></i> Add</button>
             </div>
             <div class="section-body">
-                <div class="${listClass}" id="cfgTags-${type.key}"></div>
+                <div class="cfg-header-row">${headerCols}</div>
+                <div class="cfg-list" id="cfgList-${group.key}"></div>
             </div>
         </div>`;
     }
 
-    function refreshCfgTags(key) {
-        const container = document.getElementById(`cfgTags-${key}`);
-        const state = _cfg[key];
-        const rows = [
-            ...state.original.filter(v => !state.toDelete.has(v)).map(v =>
-                `<div class="cfg-row">
-                    <span class="cfg-row-val">${esc(v)}</span>
-                    <button class="cfg-row-del" onclick="removeCfgTag('${key}','${esc(v)}')" title="Remove"><i class="bi bi-trash3"></i></button>
-                </div>`
-            ),
-            ...state.toAdd.map(v =>
-                `<div class="cfg-row is-new">
-                    <span class="cfg-row-val">${esc(v)}</span>
-                    <button class="cfg-row-del" onclick="undoAddCfgTag('${key}','${esc(v)}')" title="Undo"><i class="bi bi-arrow-counterclockwise"></i></button>
-                </div>`
-            ),
-            ...([...state.toDelete].map(v =>
-                `<div class="cfg-row is-del">
-                    <span class="cfg-row-val">${esc(v)}</span>
-                    <button class="cfg-row-del" onclick="undoDeleteCfgTag('${key}','${esc(v)}')" title="Undo"><i class="bi bi-arrow-counterclockwise"></i></button>
-                </div>`
-            )),
-            ...(state.drafting ? [`<div class="cfg-row is-new">
-                <input type="text" class="cfg-name-input" id="cfgDraft-${key}" placeholder="New value..." onkeydown="if(event.key==='Enter')this.blur()" onblur="commitCfgDraft('${key}', this.value)">
-            </div>`] : [])
-        ].join('');
-        container.innerHTML = rows || '<div class="cfg-empty">No values</div>';
-        document.getElementById(`cfgCount-${key}`).textContent = cfgCount(key);
-        document.getElementById(`cfgCard-${key}`).classList.toggle('is-dirty', cfgIsDirty(key));
-        if (state.drafting) document.getElementById(`cfgDraft-${key}`)?.focus();
+    function renderCfgRow(group, r) {
+        return `<div class="cfg-row ${r._new ? 'is-new' : ''} ${r._deleted ? 'is-deleted' : ''} ${group.hasToggle && r.active === false ? 'is-inactive' : ''}" data-ck="${r._ck}"
+             draggable="${!r._deleted}"
+             ondragstart="dragStart(event,'${group.key}','${r._ck}')" ondragend="dragEnd(event)"
+             ondragover="event.preventDefault()" ondragenter="dragEnterRow(event,'${group.key}','${r._ck}')" ondragleave="dragLeaveRow(event)"
+             ondrop="dropOnRow(event,'${group.key}','${r._ck}')">
+            <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i></div>
+            ${group.hasColor ? `<div class="cfg-col-color"><div class="cfg-swatch" style="background:${r.color || '#94a3b8'}" onclick="openColorPicker(this, { getValue: () => cfgBuffer('${group.key}').find(x => x._ck === '${r._ck}')?.color || '#94a3b8', onSelect: (c) => onCfgField('${group.key}','${r._ck}','color', c) })"></div></div>` : ''}
+            <input class="cfg-name-input cfg-col-name" value="${esc(r.value || '')}" oninput="onCfgField('${group.key}','${r._ck}','value', this.value)">
+            ${group.hasToggle ? `<div class="cfg-mini-toggle-wrap cfg-col-toggle">
+                <label class="bq-toggle small">
+                    <input type="checkbox" ${r.active !== false ? 'checked' : ''} onchange="onCfgField('${group.key}','${r._ck}','active', this.checked)">
+                    <span class="bq-slider"></span>
+                </label>
+            </div>` : ''}
+            <div class="cfg-flex-spacer cfg-col-trash">
+                ${r._deleted
+                    ? `<button class="cfg-btn-undo" onclick="undoRemoveCfg('${group.key}','${r._ck}')" title="Undo delete"><i class="bi bi-arrow-counterclockwise"></i></button>`
+                    : `<button class="cfg-btn-del" onclick="removeCfg('${group.key}','${r._ck}')" title="Delete"><i class="bi bi-trash3"></i></button>`}
+            </div>
+        </div>`;
+    }
+
+    function renderCfgGroup(key) {
+        const group = CFG_GROUPS.find(g => g.key === key);
+        const list = cfgBuffer(key);
+        document.getElementById(`cfgCount-${key}`).textContent = list.filter(r => !r._deleted).length;
+        document.getElementById(`cfgList-${key}`).innerHTML = list.length ? list.map(r => renderCfgRow(group, r)).join('') : '<div class="cfg-empty">No values yet</div>';
+    }
+
+    function renderAllCfg() {
+        document.getElementById('cfgCarousel').innerHTML = CFG_GROUPS.filter(g => g.carousel).map(renderCfgSection).join('');
+        document.getElementById('cfgStandalone').innerHTML = CFG_GROUPS.filter(g => !g.carousel).map(renderCfgSection).join('');
+        CFG_GROUPS.forEach(g => renderCfgGroup(g.key));
+    }
+
+    // ═══════════════════════════════════════════
+    // Field edits / add / delete
+    // ═══════════════════════════════════════════
+    function onCfgField(key, ck, field, value) {
+        if (!cfgChanges[key][ck]) cfgChanges[key][ck] = {};
+        cfgChanges[key][ck][field] = value;
+        markDirty(key);
+        if (field !== 'value') renderCfgGroup(key); // name-field edits skip re-render to avoid losing cursor/focus
+    }
+
+    const AUTO_COLOR_SEQUENCE = ['#16a34a', '#0d9488', '#2563eb', '#7c3aed', '#db2777', '#d97706', '#ea580c', '#dc2626'];
+    function nextAutoColor(existingColors) {
+        const used = new Set(existingColors.filter(Boolean).map(c => c.toLowerCase()));
+        const next = AUTO_COLOR_SEQUENCE.find(c => !used.has(c.toLowerCase()));
+        if (next) return next;
+        const palette = window.COLOR_PALETTE || [];
+        return palette.length ? palette[Math.floor(Math.random() * palette.length)] : '#94a3b8';
+    }
+
+    function addCfgItem(key) {
+        const group = CFG_GROUPS.find(g => g.key === key);
+        const ck = `new-${cfgIdSeq--}`;
+        const buf = cfgBuffer(key);
+        const maxOrder = Math.max(0, ...buf.map(r => r.sort_order || 0));
+        cfgChanges[key][ck] = {
+            value: '',
+            sort_order: maxOrder + 1,
+            ...(group.hasColor ? { color: nextAutoColor(buf.map(r => r.color)) } : {}),
+            ...(group.hasToggle ? { active: true } : {}),
+        };
+        markDirty(key);
+        renderCfgGroup(key);
+        focusNewRow(ck, '.cfg-name-input');
+    }
+
+    function removeCfg(key, ck) {
+        if (ck.startsWith('new-')) delete cfgChanges[key][ck];
+        else cfgDeletes[key].add(ck);
+        markDirty(key);
+        renderCfgGroup(key);
+    }
+
+    function undoRemoveCfg(key, ck) {
+        cfgDeletes[key].delete(ck);
+        markDirty(key);
+        renderCfgGroup(key);
+    }
+
+    // Newly-added rows are blank and need a name typed in right away.
+    function focusNewRow(ck, inputSelector) {
+        requestAnimationFrame(() => {
+            const el = document.querySelector(`[data-ck="${CSS.escape(ck)}"] ${inputSelector}`);
+            if (el) { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); el.focus(); }
+        });
+    }
+
+    // ═══════════════════════════════════════════
+    // Drag & drop reordering — one generic handler set for all 5 groups
+    // (discriminated by `key`), unlike B-Quest's per-kind hardcoding,
+    // since every group here is the same {value,color?,active?,sort_order}
+    // shape. Reorder is only computed on "drop", not during dragover —
+    // native DnD is fragile if the dragged DOM node gets replaced mid-drag
+    // by an innerHTML re-render.
+    // ═══════════════════════════════════════════
+    function dragStart(e, key, ck) {
+        dragState = { key, ck };
+        e.currentTarget.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', ck);
+    }
+
+    function dragEnd(e) {
+        e.currentTarget.classList.remove('dragging');
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        dragState = null;
+    }
+
+    function dragEnterRow(e, key, ck) {
+        if (!dragState || dragState.key !== key || dragState.ck === ck) return;
+        e.currentTarget.classList.add('drag-over');
+    }
+
+    function dragLeaveRow(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+
+    function reorderList(list, fromCk, toCk) {
+        const fromIdx = list.findIndex(x => x._ck === fromCk);
+        const toIdx = list.findIndex(x => x._ck === toCk);
+        if (fromIdx === -1 || toIdx === -1) return list;
+        const [moved] = list.splice(fromIdx, 1);
+        list.splice(toIdx, 0, moved);
+        return list;
+    }
+
+    function dropOnRow(e, key, ck) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+        if (!dragState || dragState.key !== key || dragState.ck === ck) { dragState = null; return; }
+        const list = reorderList(cfgBuffer(key), dragState.ck, ck);
+        list.forEach((r, i) => { (cfgChanges[key][r._ck] ||= {}).sort_order = i + 1; });
+        markDirty(key);
+        renderCfgGroup(key);
+        dragState = null;
+    }
+
+    // One-click "reset to alphabetical" — reassigns sort_order by value,
+    // staged like any other change (confirmed on Save, not immediate).
+    function sortAlphaCfg(key) {
+        const list = cfgBuffer(key).filter(r => !r._deleted)
+            .sort((a, b) => (a.value || '').localeCompare(b.value || '', undefined, { sensitivity: 'base' }));
+        list.forEach((r, i) => { (cfgChanges[key][r._ck] ||= {}).sort_order = i + 1; });
+        markDirty(key);
+        renderCfgGroup(key);
+    }
+
+    // ═══════════════════════════════════════════
+    // Save Bar / staged-change bookkeeping
+    // ═══════════════════════════════════════════
+    function markDirty(key) {
+        document.getElementById(`section-${key}`)?.classList.add('is-dirty');
+        pushUndoSnapshot();
         recomputeSaveBarCount();
     }
 
-    function addCfgTag(key) {
-        _cfg[key].drafting = true;
-        refreshCfgTags(key);
+    function countPending(changes, deletes) {
+        return new Set([...Object.keys(changes), ...deletes]).size;
     }
 
-    function commitCfgDraft(key, rawVal) {
-        const state = _cfg[key];
-        state.drafting = false;
-        const val = rawVal.trim();
-        if (val) {
-            const exists = [...state.original, ...state.toAdd].some(v => v.toLowerCase() === val.toLowerCase());
-            if (!exists) state.toAdd.push(val);
+    function recomputeSaveBarCount() {
+        if (!saveBar) return;
+        let total = 0;
+        CFG_GROUPS.forEach(g => { total += countPending(cfgChanges[g.key], cfgDeletes[g.key]); });
+        saveBar.setCount(total);
+    }
+
+    function snapshotState() {
+        return {
+            changes: JSON.parse(JSON.stringify(cfgChanges)),
+            deletes: Object.fromEntries(CFG_GROUPS.map(g => [g.key, [...cfgDeletes[g.key]]])),
+        };
+    }
+
+    function applySnapshot(snap) {
+        cfgChanges = snap.changes;
+        cfgDeletes = Object.fromEntries(CFG_GROUPS.map(g => [g.key, new Set(snap.deletes[g.key] || [])]));
+    }
+
+    function emptySnapshot() {
+        return { changes: Object.fromEntries(CFG_GROUPS.map(g => [g.key, {}])), deletes: Object.fromEntries(CFG_GROUPS.map(g => [g.key, []])) };
+    }
+
+    function pushUndoSnapshot() {
+        const now = Date.now();
+        if (undoStack.length && now - lastSnapshotAt < 600) {
+            undoStack[undoStack.length - 1] = snapshotState(); // coalesce rapid same-field edits into one step
+        } else {
+            undoStack.push(snapshotState());
+            if (undoStack.length > 50) undoStack.shift();
         }
-        refreshCfgTags(key);
+        lastSnapshotAt = now;
+        saveBar?.setUndoAvailable(undoStack.length > 0);
     }
 
-    function removeCfgTag(key, val) {
-        _cfg[key].toDelete.add(val);
-        refreshCfgTags(key);
+    function undoLastChange() {
+        if (!undoStack.length) return;
+        undoStack.pop(); // discard the state we're undoing away from
+        applySnapshot(undoStack.length ? undoStack[undoStack.length - 1] : emptySnapshot());
+        lastSnapshotAt = 0;
+        document.querySelectorAll('.section').forEach(el => el.classList.remove('is-dirty'));
+        CFG_GROUPS.forEach(g => { if (countPending(cfgChanges[g.key], cfgDeletes[g.key]) > 0) document.getElementById(`section-${g.key}`)?.classList.add('is-dirty'); });
+        renderAllCfg();
+        recomputeSaveBarCount();
+        saveBar.setUndoAvailable(undoStack.length > 0);
     }
 
-    function undoAddCfgTag(key, val) {
-        _cfg[key].toAdd = _cfg[key].toAdd.filter(v => v !== val);
-        refreshCfgTags(key);
+    function clearDirty() {
+        CFG_GROUPS.forEach(g => { cfgChanges[g.key] = {}; cfgDeletes[g.key] = new Set(); });
+        undoStack = [];
+        document.querySelectorAll('.section').forEach(el => el.classList.remove('is-dirty'));
+        saveBar?.setUndoAvailable(false);
+        saveBar.clear();
     }
 
-    function undoDeleteCfgTag(key, val) {
-        _cfg[key].toDelete.delete(val);
-        refreshCfgTags(key);
+    // Cancel button on the shared save bar — revert every staged edit/
+    // delete back to what's already saved, without touching the server.
+    function cancelAllChanges() {
+        CFG_GROUPS.forEach(g => { cfgChanges[g.key] = {}; cfgDeletes[g.key] = new Set(); });
+        undoStack = [];
+        document.querySelectorAll('.section').forEach(el => el.classList.remove('is-dirty'));
+        saveBar?.setUndoAvailable(false);
+        renderAllCfg();
     }
 
-    function cfgOps(key) {
-        const state = _cfg[key];
-        const toDelete = [...state.toDelete];
-        const toInsert = state.toAdd.map(v => ({ type: key, value: v }));
-        const ops = [];
-        if (toDelete.length) ops.push(supabaseClient.from('b_opportunity_config').delete().eq('type', key).in('value', toDelete));
-        if (toInsert.length) ops.push(supabaseClient.from('b_opportunity_config').insert(toInsert));
-        return ops;
+    // ═══════════════════════════════════════════
+    // Save — writes real color/active/sort_order payloads, ready for when
+    // the migration (see the plan this page was built against) actually
+    // lands. Until then, any write that touches those columns will error
+    // (they don't exist in the live DB yet) — caught per-group below like
+    // B-Quest's own saveTable(), so one group's failure doesn't block the
+    // others and nothing is silently lost.
+    // ═══════════════════════════════════════════
+    async function saveConfigGroup(key, errors) {
+        const group = CFG_GROUPS.find(g => g.key === key);
+        const orig = cfgOriginal[key] || [];
+        const changes = cfgChanges[key];
+        const deletes = cfgDeletes[key];
+
+        for (const [ck, ch] of Object.entries(changes)) {
+            if (deletes.has(ck)) continue;
+            if (ck.startsWith('new-')) {
+                if (!ch.value?.trim()) continue;
+                const { error } = await supabaseClient.from('b_opportunity_config').insert([{ type: key, ...ch, value: ch.value.trim() }]);
+                if (error) errors.push(`${group.label} add "${ch.value}": ` + error.message);
+            } else {
+                const origRow = orig.find(r => r._ck === ck);
+                if (!origRow) continue;
+                let q = supabaseClient.from('b_opportunity_config').update(ch);
+                q = origRow.id ? q.eq('id', origRow.id) : q.eq('type', key).eq('value', origRow.value);
+                const { error } = await q;
+                if (error) errors.push(`${group.label} update: ` + error.message);
+            }
+        }
+        for (const ck of deletes) {
+            const origRow = orig.find(r => r._ck === ck);
+            if (!origRow) continue;
+            let q = supabaseClient.from('b_opportunity_config').delete();
+            q = origRow.id ? q.eq('id', origRow.id) : q.eq('type', key).eq('value', origRow.value);
+            const { error } = await q;
+            if (error) {
+                errors.push(error.code === '23503'
+                    ? `Cannot Delete: ${group.label} is used by existing records. Deactivate it instead.`
+                    : `${group.label} delete: ` + error.message);
+            }
+        }
     }
 
-    function commitCfgState(key) {
-        const state = _cfg[key];
-        state.original = [...state.original.filter(v => !state.toDelete.has(v)), ...state.toAdd];
-        state.toDelete.clear();
-        state.toAdd = [];
-        refreshCfgTags(key);
-    }
+    async function saveAll() {
+        try {
+            const errors = [];
+            for (const g of CFG_GROUPS) await saveConfigGroup(g.key, errors);
 
-    async function loadConfig() {
-        const { data } = await supabaseClient.from('b_opportunity_config').select('type, value').order('value');
-        const grouped = {};
-        CFG_TYPES.forEach(t => { grouped[t.key] = []; });
-        (data || []).forEach(row => { if (grouped[row.type]) grouped[row.type].push(row.value); });
+            if (errors.length) {
+                const allCannotDelete = errors.every(e => e.startsWith('Cannot Delete:'));
+                const title = allCannotDelete ? 'Cannot Delete' : 'Some errors occurred';
+                const body = allCannotDelete ? errors.map(e => e.replace('Cannot Delete: ', '')).join('\n') : errors.join('\n');
+                Swal.fire(title, body, 'error');
+                await loadAllConfig();
+                renderAllCfg();
+                return;
+            }
 
-        const grid = document.getElementById('cfgGrid');
-        grid.innerHTML = CFG_TYPES.map(t => renderCfgCard(t, grouped[t.key])).join('');
-        CFG_TYPES.forEach(t => refreshCfgTags(t.key));
-        setupCarouselFade('cfgGrid', 'cfgCarouselWrap');
+            Swal.fire({ icon: 'success', title: 'Saved!', showConfirmButton: false, timer: 1200 });
+            clearDirty();
+            await loadAllConfig();
+            renderAllCfg();
+        } catch (e) {
+            Swal.fire('Error', e.message, 'error');
+        }
     }
 
     // Generic left/right scroll-fade hint — ref B-Quest's own settings carousel.
@@ -247,50 +549,14 @@
         setTimeout(update, 300);
     }
 
-    let saveBar = null;
-
-    function recomputeSaveBarCount() {
-        if (!saveBar) return;
-        let total = 0;
-        CFG_TYPES.forEach(t => { const s = _cfg[t.key]; total += s.toAdd.length + s.toDelete.size; });
-        saveBar.setCount(total);
-    }
-
-    // onSave for the shared save bar — button disable/spinner is handled
-    // by the module itself, this just does the writes + local commit.
-    async function saveAll() {
-        const dirtyKeys = CFG_TYPES.map(t => t.key).filter(cfgIsDirty);
-        const ops = dirtyKeys.flatMap(cfgOps);
-
-        const results = await Promise.all(ops);
-
-        const hasError = results.some(r => r.error);
-        if (hasError) { notify('', 'Save failed', 'error'); return; }
-
-        dirtyKeys.forEach(commitCfgState);
-        saveBar.clear();
-        notify('success', 'Settings saved');
-    }
-
-    // Cancel button on the shared save bar — discard every staged edit
-    // without touching the server.
-    async function cancelAllChanges() {
-        CFG_TYPES.forEach(t => {
-            const state = _cfg[t.key];
-            state.toAdd = [];
-            state.toDelete = new Set();
-            state.drafting = false;
-            refreshCfgTags(t.key);
-        });
-        recomputeSaveBarCount();
-    }
-
     async function initPage() {
         sessionStorage.removeItem('bx_perms_baccount');
         await initLayout(B_ACCOUNT_CONFIG);
-        if (!canBaccount('setting')) window.location.replace('b-opportunity-list.html');
-        saveBar = createSaveBar({ label: 'B-Account Settings', onSave: saveAll, onCancel: cancelAllChanges });
-        await loadConfig();
+        if (!canBaccount('setting')) { window.location.replace('b-opportunity-list.html'); return; }
+        saveBar = createSaveBar({ label: 'B-Account Settings', onSave: saveAll, onCancel: cancelAllChanges, onUndo: undoLastChange });
+        await loadAllConfig();
+        renderAllCfg();
+        setupCarouselFade('cfgCarousel', 'cfgCarouselWrap');
     }
 
     initPage();

@@ -20,10 +20,10 @@ const B_OPP_MODAL_HTML = `
     .bopp-hdr-tlbl { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: rgba(255,255,255,0.4); }
     .bopp-hdr-pct-badge { background: var(--c-accent); color: var(--c-on-accent); border-radius: 100px; padding: 5px 10px; font-size: 0.85rem; font-weight: 800; line-height: 1; white-space: nowrap; }
     .bopp-hdr-pct-badge:empty { display: none; }
-    .bopp-hdr-lost-zone { display: none; align-items: center; gap: 12px; border: 1px solid rgba(249,115,22,0.45); border-radius: 10px; padding: 5px 14px; background: rgba(249,115,22,0.08); margin-right: 6px; }
-    .bopp-hdr-lost-zone .bopp-hdr-tval { color: #f97316; }
+    .bopp-hdr-lost-zone { display: none; align-items: center; gap: 12px; border: 1px solid rgba(var(--c-churn-rgb, 249,115,22),0.45); border-radius: 10px; padding: 5px 14px; background: rgba(var(--c-churn-rgb, 249,115,22),0.08); margin-right: 6px; }
+    .bopp-hdr-lost-zone .bopp-hdr-tval { color: var(--c-churn, #f97316); }
     .bopp-hdr-lost-zone .bopp-hdr-tlbl { color: rgba(255,255,255,0.4); }
-    .bopp-hdr-lost-zone .bopp-hdr-tdiv { background: rgba(249,115,22,0.3); }
+    .bopp-hdr-lost-zone .bopp-hdr-tdiv { background: rgba(var(--c-churn-rgb, 249,115,22),0.3); }
     .bopp-hdr-tdiv { width: 1px; height: 26px; background: rgba(255,255,255,0.15); }
     /* Status is driven entirely by JS-set inline colors (updateStatusColor,
        one per status value) rather than a fixed palette, so the picker
@@ -294,17 +294,17 @@ const B_OPP_MODAL_HTML = `
     .bopp-btn-save:disabled { opacity: 0.6; pointer-events: none; }
 
     /* ── Churn sections ── */
-    .bopp-churn-wrap { border: 1.5px solid rgba(249,115,22,0.5); border-radius: 14px; padding: 16px; position: relative; background: rgba(249,115,22,0.03); margin-bottom: 16px; }
+    .bopp-churn-wrap { border: 1.5px solid rgba(var(--c-churn-rgb, 249,115,22),0.5); border-radius: 14px; padding: 16px; position: relative; background: rgba(var(--c-churn-rgb, 249,115,22),0.03); margin-bottom: 16px; }
     .bopp-churn-label-row { position: absolute; top: -10px; left: 14px; background: #f8fafc; padding: 0 8px; display: flex; align-items: center; gap: 8px; }
-    .bopp-churn-label { font-size: 0.68rem; font-weight: 800; color: #f97316; letter-spacing: 0.08em; text-transform: uppercase; }
-    .bopp-churn-mode-seg { display: inline-flex; background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.3); border-radius: 20px; padding: 2px; }
-    .bopp-churn-mode-btn { border: none; background: transparent; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.04em; padding: 3px 9px; border-radius: 16px; cursor: pointer; color: #f97316; opacity: 0.55; transition: background 0.15s, opacity 0.15s, color 0.15s; }
+    .bopp-churn-label { font-size: 0.68rem; font-weight: 800; color: var(--c-churn, #f97316); letter-spacing: 0.08em; text-transform: uppercase; }
+    .bopp-churn-mode-seg { display: inline-flex; background: rgba(var(--c-churn-rgb, 249,115,22),0.08); border: 1px solid rgba(var(--c-churn-rgb, 249,115,22),0.3); border-radius: 20px; padding: 2px; }
+    .bopp-churn-mode-btn { border: none; background: transparent; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.04em; padding: 3px 9px; border-radius: 16px; cursor: pointer; color: var(--c-churn, #f97316); opacity: 0.55; transition: background 0.15s, opacity 0.15s, color 0.15s; }
     .bopp-churn-mode-btn:hover { opacity: 0.85; }
-    .bopp-churn-mode-btn.active { background: #f97316; color: #fff; opacity: 1; }
-    .bopp-churn-wrap .bopp-qt-card { border-left-color: #f97316; }
+    .bopp-churn-mode-btn.active { background: var(--c-churn, #f97316); color: #fff; opacity: 1; }
+    .bopp-churn-wrap .bopp-qt-card { border-left-color: var(--c-churn, #f97316); }
     .bopp-churn-date-wrap { position: absolute; top: -11px; right: 14px; background: #f8fafc; padding: 0 6px; display: flex; align-items: center; gap: 6px; }
-    .bopp-churn-date-lbl { font-size: 0.62rem; font-weight: 700; color: rgba(249,115,22,0.7); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
-    .bopp-churn-date-inp { border: 1px solid rgba(249,115,22,0.35); border-radius: 7px; background: #fff; color: #f97316; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; height: 22px; outline: none; font-family: inherit; cursor: pointer; text-align: center; }
+    .bopp-churn-date-lbl { font-size: 0.62rem; font-weight: 700; color: rgba(var(--c-churn-rgb, 249,115,22),0.7); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+    .bopp-churn-date-inp { border: 1px solid rgba(var(--c-churn-rgb, 249,115,22),0.35); border-radius: 7px; background: #fff; color: var(--c-churn, #f97316); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; height: 22px; outline: none; font-family: inherit; cursor: pointer; text-align: center; }
     .bopp-original-wrap { border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; position: relative; margin-bottom: 16px; }
     .bopp-original-label { position: absolute; top: -10px; left: 14px; background: #f8fafc; padding: 0 8px; font-size: 0.68rem; font-weight: 800; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; }
     .bopp-qt-card--disabled { pointer-events: none; opacity: 0.6; }
@@ -431,9 +431,6 @@ const B_OPP_MODAL_HTML = `
                                     <div class="bopp-picker-wrap">
                                         <select id="bopp-type" class="bopp-iinp" required>
                                             <option value="" disabled selected hidden></option>
-                                            <option value="New Business">New Business</option>
-                                            <option value="Retention">Retention</option>
-                                            <option value="Up Sale">Up Sale</option>
                                         </select>
                                         <button type="button" class="bopp-picker-trigger placeholder" id="bopp-type-trigger" onclick="BOppApp.openBoppPicker(this, 'bopp-type')">Select...</button>
                                     </div>
@@ -532,7 +529,8 @@ const BOppApp = (() => {
 
     let _bsModal = null, _editingId = null, _loaded = false;
     let _accounts = [], _accNames = [], _profiles = [];
-    let _buList = [], _companyList = [], _statusList = [], _leadList = [];
+    let _buList = [], _companyList = [], _statusList = [], _leadList = [], _typeList = [];
+    let _statusColor = {}; // value → color, from b_opportunity_config (Settings page)
     let _qts = [], _churnQTs = [], _qtCounter = 0, _undoStack = [], _churnDate = '';
 
     const findQT     = id  => _qts.find(q => q.tmpId === id) || _churnQTs.find(q => q.tmpId === id);
@@ -547,14 +545,16 @@ const BOppApp = (() => {
         const [{ data: accs }, { data: profs }, { data: cfg }] = await Promise.all([
             supabaseClient.from('b_account_list').select('account_id, account_name, company_name').order('account_name'),
             supabaseClient.from('profiles').select('codename').neq('level','god').order('codename'),
-            supabaseClient.from('b_opportunity_config').select('type, value').in('type',['bu','company','status','lead_source']).order('value')
+            supabaseClient.from('b_opportunity_config').select('type, value, color, active').in('type',['bu','company','status','lead_source','business_type']).order('value')
         ]);
         _accounts     = accs || [];
         _profiles     = (profs || []).map(p => p.codename).filter(Boolean);
-        _buList       = (cfg || []).filter(c => c.type === 'bu').map(c => c.value);
-        _companyList  = (cfg || []).filter(c => c.type === 'company').map(c => c.value);
-        _statusList   = (cfg || []).filter(c => c.type === 'status').map(c => c.value);
-        _leadList     = (cfg || []).filter(c => c.type === 'lead_source').map(c => c.value);
+        _buList       = (cfg || []).filter(c => c.type === 'bu' && c.active !== false).map(c => c.value);
+        _companyList  = (cfg || []).filter(c => c.type === 'company' && c.active !== false).map(c => c.value);
+        _statusList   = (cfg || []).filter(c => c.type === 'status' && c.active !== false).map(c => c.value);
+        _leadList     = (cfg || []).filter(c => c.type === 'lead_source' && c.active !== false).map(c => c.value);
+        _typeList     = (cfg || []).filter(c => c.type === 'business_type' && c.active !== false).map(c => c.value);
+        _statusColor  = Object.fromEntries((cfg || []).filter(c => c.type === 'status').map(c => [c.value, c.color]));
         _accNames   = [...new Set(_accounts.map(a => a.account_name).filter(Boolean))].sort((a,b) => a.localeCompare(b,'th'));
         _loaded = true;
         buildDropdowns();
@@ -568,6 +568,8 @@ const BOppApp = (() => {
         ['bopp-am','bopp-subam'].forEach(id => { const s = el(id); if (s) { s.innerHTML = blank + pplOpts; syncBoppPickerTrigger(id); } });
         el('bopp-lead').innerHTML = blank + buildOpts(_leadList);
         syncBoppPickerTrigger('bopp-lead');
+        el('bopp-type').innerHTML = blank + buildOpts(_typeList);
+        syncBoppPickerTrigger('bopp-type');
         el('bopp-status-sel').innerHTML = _statusList.length ? buildOpts(_statusList) : '<option value="Active">Active</option>';
     }
 
@@ -1079,26 +1081,18 @@ const BOppApp = (() => {
         recalcTotals();
     }
 
-    // ── Status color ──────────────────────────────────────────────────────────
-    const STATUS_COLORS = {
-        'Active':        { bg: '#16a34a', text: '#fff' },
-        'Won':           { bg: 'var(--c-accent)', text: 'var(--c-on-accent)' },
-        'Lost':          { bg: '#ef4444', text: '#fff' },
-        'Churn':         { bg: '#f97316', text: '#fff' },
-        'End Contact':   { bg: '#64748b', text: '#fff' },
-        'Pending':       { bg: '#f59e0b', text: '#1e293b' },
-        'In Progress':   { bg: '#3b82f6', text: '#fff' },
-    };
-
+    // ── Status color — sourced from b_opportunity_config.color (Settings
+    // page, _statusColor built in loadHelpers), not a hardcoded map, so a
+    // color change in Settings reflects here without a code change. ──
     function updateStatusColor() {
         const sel = el('bopp-status-sel');
         const trigger = el('bopp-status-trigger');
         trigger.textContent = sel.options[sel.selectedIndex]?.textContent || sel.value;
-        const c = STATUS_COLORS[sel.value];
-        if (c) {
-            trigger.style.backgroundColor = c.bg;
-            trigger.style.color           = c.text;
-            trigger.style.borderColor     = c.bg;
+        const bg = _statusColor[sel.value];
+        if (bg) {
+            trigger.style.backgroundColor = bg;
+            trigger.style.color           = pickBadgeTextColor(bg);
+            trigger.style.borderColor     = bg;
         } else {
             trigger.style.backgroundColor = 'rgba(255,255,255,0.08)';
             trigger.style.color           = '#e2e8f0';

@@ -95,6 +95,7 @@
            of the viewport with no way to reach the rest of it — it scrolls
            internally instead. */
         .cfg-picker { position: absolute; z-index: 201; background: #fff; border: 1px solid var(--c-border); border-radius: 14px; box-shadow: 0 14px 34px rgba(0,0,0,0.15); padding: 12px; width: 210px; max-height: calc(100vh - 32px); overflow-y: auto; box-sizing: border-box; }
+        .cfg-picker.medium { width: 340px; }
 
         /* ── Members ── */
         .section-header .table-search-wrap { max-width: 450px; }
@@ -326,6 +327,12 @@
         .bq-toggle:hover input:checked + .bq-slider { box-shadow: 0 0 0 4px rgba(var(--c-accent-rgb), 0.25); }
         .bq-slider:before { position: absolute; content: ""; height: 13px; width: 13px; left: 3px; bottom: 3px; background: #fff; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
         .bq-toggle input:checked + .bq-slider { background: var(--c-accent); }
+        /* Setting/Member — the 2 admin-level access toggles — use amber
+           instead of accent green, matching the same "elevated privilege"
+           color already used on this page for the Own/All scope badge and
+           the Bulk-mode toggle (see system/setting.html's matching
+           Setting/Holiday/Member toggles for the sibling of this change). */
+        .bq-toggle.t-admin input:checked + .bq-slider { background: #f59e0b; }
         .bq-toggle input:checked + .bq-slider:before { transform: translateX(15px); }
         .bq-toggle.small { width: 28px; height: 16px; }
         .bq-toggle.small .bq-slider:before { height: 10px; width: 10px; left: 3px; bottom: 3px; }
@@ -352,13 +359,13 @@
                 <i class="bi bi-people-fill"></i> Member Access
                 <span class="cfg-count-badge" id="table-count"></span>
                 <span class="dirty-dot"></span>
+                <button class="cfg-btn-info" onclick="openMemberPermInfoPopup(event)" title="What do New / Edit / Delete / Accept / Assign mean?"><i class="bi bi-info-circle"></i></button>
             </div>
             <div class="table-search-wrap">
                 <i class="bi bi-search table-search-icon"></i>
                 <input type="text" id="table-search" class="table-search-input" placeholder="Search...">
             </div>
             <div class="mem-header-right-group">
-                <button class="cfg-btn-info" onclick="openMemberPermInfoPopup(event)" title="What do New / Edit / Delete / Accept / Assign mean?"><i class="bi bi-info-circle"></i></button>
                 <div class="mem-advmode-toggle" title="Bulk-toggle whole columns/rows at once — off by default, meant for initial project setup">
                     <span><i class="bi bi-lightning-charge-fill" style="color:#f59e0b"></i> Bulk</span>
                     <label class="bq-toggle small">
@@ -629,22 +636,22 @@
             </div>
             <div class="cfg-info-item divided">
                 <div class="cfg-info-title"><i class="bi bi-pencil-fill"></i> Edit</div>
-                <div class="cfg-info-scope-row"><span class="mem-scope-badge own">Own</span><span class="info-txt">Only roles assigned to you — other roles on the same task stay locked.</span></div>
-                <div class="cfg-info-scope-row"><span class="mem-scope-badge all">All</span><span class="info-txt">Edit any task with your role, even ones assigned to someone else.</span></div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge own">Own</span><span class="info-txt">Only your own assigned roles.</span></div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge all">All</span><span class="info-txt">Any task with your role.</span></div>
             </div>
             <div class="cfg-info-item divided">
                 <div class="cfg-info-title"><i class="bi bi-trash3-fill"></i> Delete</div>
-                <div class="cfg-info-scope-row"><span class="mem-scope-badge own">Own</span><span class="info-txt">Only if you're assigned to every role on the task.</span></div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge own">Own</span><span class="info-txt">Only if you hold every role on the task.</span></div>
                 <div class="cfg-info-scope-row"><span class="mem-scope-badge all">All</span><span class="info-txt">Any task with your role.</span></div>
-                <div class="cfg-info-warning"><i class="bi bi-exclamation-triangle-fill"></i> A task with more than 1 role can't be fully deleted unless you're assigned to all of them — but you can still Edit to remove just your own role from it.</div>
+                <div class="cfg-info-warning"><i class="bi bi-exclamation-triangle-fill"></i> Multi-role tasks need all roles to be yours to fully delete — Edit can still remove just your own.</div>
             </div>
             <div class="cfg-info-item divided">
                 <div class="cfg-info-title"><i class="bi bi-hand-thumbs-up-fill"></i> Accept</div>
-                <p>Eligible to receive assigned work.</p>
+                <p>Can receive assigned work.</p>
             </div>
             <div class="cfg-info-item">
                 <div class="cfg-info-title"><i class="bi bi-person-plus-fill"></i> Assign</div>
-                <p>Assign tasks to other members.</p>
+                <p>Assign tasks to others.</p>
             </div>
         `;
         positionPicker(evt);
@@ -1023,13 +1030,13 @@
                         }).join('')}
                         ${canSeeAccess ? `
                         <td class="mem-col-settings mem-zone-divider">
-                            <label class="bq-toggle small">
+                            <label class="bq-toggle small t-admin">
                                 <input type="checkbox" ${hasSetting ? 'checked' : ''} onchange="onMemberSettingToggle('${esc(member.codename)}', this.checked)">
                                 <span class="bq-slider"></span>
                             </label>
                         </td>
                         <td class="mem-col-settings">
-                            <label class="bq-toggle small">
+                            <label class="bq-toggle small t-admin">
                                 <input type="checkbox" ${hasMember ? 'checked' : ''} onchange="onMemberMemberToggle('${esc(member.codename)}', this.checked)">
                                 <span class="bq-slider"></span>
                             </label>

@@ -42,6 +42,24 @@
         .cfg-empty { padding: 20px; text-align: center; color: var(--c-muted); font-size: 0.8rem; font-weight: 600; }
         .cfg-btn-add { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 7px 14px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: 0.15s; }
         .cfg-btn-add:hover { background: #0f172a; transform: scale(1.06); }
+
+        /* ── Info popover (What do these permissions mean?) — ref B-Quest's
+           own b-quest-members.html, same markup/positioning convention. ── */
+        .cfg-btn-info { background: none; border: none; color: var(--c-muted); cursor: pointer; padding: 2px; font-size: 1rem; display: flex; align-items: center; transition: 0.15s; }
+        .cfg-btn-info:hover { color: var(--c-accent); transform: scale(1.15); }
+        .cfg-picker-backdrop { position: fixed; inset: 0; z-index: 200; display: none; }
+        .cfg-picker-backdrop.show { display: block; }
+        .cfg-picker { position: absolute; z-index: 201; background: #fff; border: 1px solid var(--c-border); border-radius: 14px; box-shadow: 0 14px 34px rgba(0,0,0,0.15); padding: 12px; width: 340px; max-height: calc(100vh - 32px); overflow-y: auto; box-sizing: border-box; }
+        .cfg-info-item { margin-bottom: 10px; }
+        .cfg-info-item:last-child { margin-bottom: 0; }
+        .cfg-info-item p { margin: 2px 0 0; color: var(--c-slate); font-size: 0.76rem; line-height: 1.4; }
+        .cfg-info-item.divided { padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; }
+        .cfg-info-item.divided:last-child { padding-bottom: 0; border-bottom: none; }
+        .cfg-info-title { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; font-weight: 700; color: var(--c-dark); }
+        .cfg-info-title i { font-size: 0.8rem; color: var(--c-accent-dark); }
+        .cfg-info-scope-row { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
+        .cfg-info-scope-row .mem-scope-badge { flex-shrink: 0; pointer-events: none; cursor: default; }
+        .cfg-info-scope-row span.info-txt { color: var(--c-slate); font-size: 0.76rem; line-height: 1.4; }
         .cfg-btn-sort { background: none; border: 1px solid var(--c-border); color: var(--c-slate); border-radius: 9px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; margin-left: auto; flex-shrink: 0; transition: 0.15s; }
         .cfg-btn-sort:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
         .cfg-btn-undo { background: none; border: none; color: var(--c-danger); cursor: pointer; padding: 5px; border-radius: 7px; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; flex-shrink: 0; }
@@ -154,6 +172,11 @@
         .bq-toggle:hover input:checked + .bq-slider { box-shadow: 0 0 0 4px rgba(var(--c-accent-rgb), 0.25); }
         .bq-slider:before { position: absolute; content: ""; height: 13px; width: 13px; left: 3px; bottom: 3px; background: #fff; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
         .bq-toggle input:checked + .bq-slider { background: var(--c-accent); }
+        /* Setting/Member — the 2 admin-level access toggles — use amber
+           instead of accent green, same "elevated privilege" color as the
+           Own/All scope badge on this page (and the sibling change on
+           B-Quest's/system/setting.html's own Setting/Member toggles). */
+        .bq-toggle.t-admin input:checked + .bq-slider { background: #f59e0b; }
         .bq-toggle input:checked + .bq-slider:before { transform: translateX(15px); }
         .bq-toggle.small { width: 28px; height: 16px; }
         .bq-toggle.small .bq-slider:before { height: 10px; width: 10px; left: 3px; bottom: 3px; }
@@ -165,6 +188,15 @@
            elsewhere, so scanning for who has broad access doesn't require
            reading every cell. ── */
         .mem-action-cell { display: flex; align-items: center; justify-content: center; gap: 4px; }
+        /* New/Edit/Delete use a round dot (not the pill toggle) — ref
+           B-Quest's own per-role action grid. B-Quest colors each dot by
+           that role's own color; B-Account has no role dimension here, so
+           these are a fixed blue instead, per request. */
+        .bq-dot { position: relative; display: inline-flex; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; }
+        .bq-dot input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .bq-dot-circle { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--c-border); background: #fff; transition: 0.15s; box-sizing: border-box; }
+        .bq-dot:hover .bq-dot-circle { transform: scale(1.15); border-color: var(--dot-color, var(--c-accent)); }
+        .bq-dot input:checked + .bq-dot-circle { background: var(--dot-color, var(--c-accent)); border-color: var(--dot-color, var(--c-accent)); }
         .mem-scope-badge { border: 1px solid var(--c-border); background: #fff; color: var(--c-muted); font-size: 0.56rem; font-weight: 800; font-family: inherit; text-transform: uppercase; letter-spacing: 0.3px; border-radius: 5px; padding: 2px 5px; cursor: pointer; transition: 0.15s; line-height: 1.2; }
         .mem-scope-badge:hover { border-color: var(--c-slate); color: var(--c-dark); }
         .mem-scope-badge.all { background: #fffbeb; border-color: #fde68a; color: #b45309; }
@@ -256,6 +288,7 @@
                 <i class="bi bi-people-fill"></i> Member Access
                 <span class="cfg-count-badge" id="table-count"></span>
                 <span class="dirty-dot"></span>
+                <button class="cfg-btn-info" onclick="openMemberPermInfoPopup(event)" title="What do these permissions mean?"><i class="bi bi-info-circle"></i></button>
             </div>
             <div class="table-search-wrap">
                 <i class="bi bi-search table-search-icon"></i>
@@ -329,6 +362,11 @@
     </div>
 </div>
 
+<!-- Info popover (What do these permissions mean?) -->
+<div class="cfg-picker-backdrop" id="picker-backdrop" onclick="closePicker()">
+    <div class="cfg-picker" id="picker-panel" onclick="event.stopPropagation()"></div>
+</div>
+
 <script>
     // Ref B-Quest's own b-quest-members.html flat Dashboard/Duplicate/Share
     // toggles — grouped into 4 visual zones (module access / opportunity
@@ -338,6 +376,8 @@
     const PERM_COLS = ['dashboard', 'account', 'duplicate', 'share', 'new', 'edit', 'delete'];
     const ZONE_STARTS = new Set(['dashboard', 'duplicate', 'new', 'setting']);
     const SCOPE_COL = { edit: 'edit_scope', delete: 'delete_scope' }; // Own/All badge lives next to these two only
+    const DOT_COLS = new Set(['new', 'edit', 'delete']); // round dot (ref B-Quest's role-action grid) instead of the pill toggle
+    const DOT_COLOR = '#3b82f6';
 
     // ── Members State ─────────────────────────────────────────────
     let _members = [];   // { codename, dashboard, account, duplicate, share, new, edit, edit_scope, delete, delete_scope, setting, member, _state: 'existing'|'new'|'deleted' }
@@ -622,10 +662,15 @@
                             return `
                         <td class="mem-col-action ${ZONE_STARTS.has(col) ? 'mem-zone-divider' : ''}">
                             <div class="mem-action-cell">
-                                <label class="bq-toggle small">
+                                ${DOT_COLS.has(col) ? `
+                                <label class="bq-dot" style="--dot-color:${DOT_COLOR}">
+                                    <input type="checkbox" ${m[col] ? 'checked' : ''} onchange="toggle('${esc(m.codename)}','${col}')">
+                                    <span class="bq-dot-circle"></span>
+                                </label>` : `
+                                <label class="bq-toggle small ${col === 'setting' || col === 'member' ? 't-admin' : ''}">
                                     <input type="checkbox" ${m[col] ? 'checked' : ''} onchange="toggle('${esc(m.codename)}','${col}')">
                                     <span class="bq-slider"></span>
-                                </label>
+                                </label>`}
                                 ${scopeCol && m[col] ? `<button type="button" class="mem-scope-badge ${scope}" onclick="toggleScope('${esc(m.codename)}','${scopeCol}')" title="Click to switch to ${scope === 'own' ? 'All' : 'Own'}">${scope === 'own' ? 'Own' : 'All'}</button>` : ''}
                             </div>
                         </td>`;
@@ -688,6 +733,82 @@
             window.addEventListener('resize', syncMemStickyHdrPosition);
             memHeaderHintListenersBound = true;
         }
+    }
+
+    // ── Info popover (ref B-Quest's own positionPicker/closePicker) ──
+    function positionPicker(evt) {
+        const panel = document.getElementById('picker-panel');
+        document.getElementById('picker-backdrop').classList.add('show');
+        lockBodyScroll();
+        const rect = evt.currentTarget.getBoundingClientRect();
+        const margin = 8;
+        const spaceBelow = window.innerHeight - rect.bottom - margin;
+        const spaceAbove = rect.top - margin;
+        if (spaceBelow >= 200 || spaceBelow >= spaceAbove) {
+            panel.style.top = (rect.bottom + 6) + 'px';
+            panel.style.bottom = 'auto';
+            panel.style.maxHeight = Math.max(150, spaceBelow - 6) + 'px';
+        } else {
+            panel.style.top = 'auto';
+            panel.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+            panel.style.maxHeight = Math.max(150, spaceAbove - 6) + 'px';
+        }
+        const panelWidth = panel.offsetWidth;
+        let left = rect.left;
+        if (left + panelWidth > window.innerWidth - margin) {
+            left = Math.max(margin, rect.right - panelWidth);
+        }
+        panel.style.left = left + 'px';
+    }
+
+    function closePicker() {
+        document.getElementById('picker-backdrop').classList.remove('show');
+        unlockBodyScroll();
+    }
+
+    function openMemberPermInfoPopup(evt) {
+        const panel = document.getElementById('picker-panel');
+        panel.innerHTML = `
+            <div class="cfg-info-item divided">
+                <div class="cfg-info-title"><i class="bi bi-speedometer2"></i> Dashboard</div>
+                <p>View the Dashboard page.</p>
+            </div>
+            <div class="cfg-info-item divided">
+                <div class="cfg-info-title"><i class="bi bi-person-vcard-fill"></i> Account</div>
+                <p>View the Account list page.</p>
+            </div>
+            <div class="cfg-info-item divided">
+                <div class="cfg-info-title"><i class="bi bi-copy"></i> Duplicate</div>
+                <p>Duplicate an existing Opportunity.</p>
+            </div>
+            <div class="cfg-info-item divided">
+                <div class="cfg-info-title"><i class="bi bi-share-fill"></i> Share</div>
+                <p>Share an Opportunity's link.</p>
+            </div>
+            <div class="cfg-info-item divided">
+                <div class="cfg-info-title"><i class="bi bi-plus-circle-fill"></i> New</div>
+                <p>Create new Opportunities / Accounts.</p>
+            </div>
+            <div class="cfg-info-item divided">
+                <div class="cfg-info-title"><i class="bi bi-pencil-fill"></i> Edit</div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge own">Own</span><span class="info-txt">Only records you created.</span></div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge all">All</span><span class="info-txt">Any record.</span></div>
+            </div>
+            <div class="cfg-info-item divided">
+                <div class="cfg-info-title"><i class="bi bi-trash3-fill"></i> Delete</div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge own">Own</span><span class="info-txt">Only records you created.</span></div>
+                <div class="cfg-info-scope-row"><span class="mem-scope-badge all">All</span><span class="info-txt">Any record.</span></div>
+            </div>
+            <div class="cfg-info-item divided">
+                <div class="cfg-info-title"><i class="bi bi-gear-fill"></i> Setting</div>
+                <p>Open the Settings page.</p>
+            </div>
+            <div class="cfg-info-item">
+                <div class="cfg-info-title"><i class="bi bi-people-fill"></i> Member</div>
+                <p>Open this Member page.</p>
+            </div>
+        `;
+        positionPicker(evt);
     }
 
     function updateTableCount(shown, total) {

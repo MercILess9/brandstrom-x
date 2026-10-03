@@ -431,6 +431,12 @@
         .bq-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #e2e8f0; transition: .3s; border-radius: 34px; }
         .bq-slider:before { position: absolute; content: ""; height: 13px; width: 13px; left: 3px; bottom: 3px; background: #fff; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
         .bq-toggle.t-sys input:checked + .bq-slider { background: var(--c-accent); }
+        /* Setting/Holiday/Member — the 3 admin-level access toggles — use
+           amber instead of the regular accent green, matching this app's
+           existing "elevated privilege" color (same amber as B-Quest's own
+           Own/All scope badge and Bulk-mode toggle) so elevated access
+           reads at a glance instead of blending into every other toggle. */
+        .bq-toggle.t-admin input:checked + .bq-slider { background: #f59e0b; }
         .bq-toggle input:checked + .bq-slider:before { transform: translateX(15px); }
 
         /* Read-only project-membership dot — plain filled/unfilled circle,
@@ -2838,19 +2844,19 @@
             // cells and header cells drift out of column alignment.
             const sysAccessToggles = canSeeSystemAccess() ? `
                 <td class="usr-zone-divider">
-                    <label class="bq-toggle t-sys">
+                    <label class="bq-toggle t-sys t-admin">
                         <input type="checkbox" ${acc.system_setting ? 'checked' : ''} onchange="onSysSettingToggle('${u.id}',this.checked)" ${isDeleted ? 'disabled' : ''}>
                         <span class="bq-slider"></span>
                     </label>
                 </td>
                 <td>
-                    <label class="bq-toggle t-sys">
+                    <label class="bq-toggle t-sys t-admin">
                         <input type="checkbox" ${acc.system_holiday ? 'checked' : ''} onchange="onSysHolidayToggle('${u.id}',this.checked)" ${isDeleted ? 'disabled' : ''}>
                         <span class="bq-slider"></span>
                     </label>
                 </td>
                 <td>
-                    <label class="bq-toggle t-sys">
+                    <label class="bq-toggle t-sys t-admin">
                         <input type="checkbox" ${acc.system_member ? 'checked' : ''} onchange="onSysMemberToggle('${u.id}',this.checked)" ${isDeleted ? 'disabled' : ''}>
                         <span class="bq-slider"></span>
                     </label>

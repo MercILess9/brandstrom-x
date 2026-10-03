@@ -8,6 +8,7 @@
     --c-muted:        #94a3b8;
     --c-slate:        #626e7f;
     --c-border:       #e2e8f0;
+    --c-danger:       #ef4444;
     --left-w:         260px;
     --header-h:       60px;
 }
@@ -674,33 +675,7 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 .table-search-input { width: 100%; border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 12px 7px 32px; font-size: 0.82rem; color: var(--c-dark); background: var(--c-bg); outline: none; font-family: inherit; transition: 0.2s; }
 .table-search-input:focus { border-color: var(--c-accent); background: #fff; }
 .table-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.8rem; pointer-events: none; }
-.table-count { font-size: 0.75rem; font-weight: 700; color: var(--c-muted); white-space: nowrap; }
-
-/* Grid: Name | View | Edit | Setting | X */
-.perm-table-head,
-.perm-row { display: grid; grid-template-columns: 200px repeat(3, 1fr) 44px; align-items: center; padding: 0 4px; }
-.perm-table-head { height: 36px; background: var(--c-bg); border-radius: 10px; margin-bottom: 4px; }
-.perm-row { height: 54px; border-bottom: 1px solid #f8fafc; border-radius: 8px; transition: background 0.15s; }
-.perm-row:last-child { border-bottom: none; }
-.perm-row:hover { background: #fafbff; }
-.perm-row.is-new { background: #f0fdf4; }
-.perm-row.is-deleted { opacity: 0.4; background: #fff5f5; pointer-events: none; }
-.perm-row.is-deleted .btn-remove { pointer-events: all; }
-.perm-col-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; text-align: center; }
-.perm-col-name  { font-size: 0.68rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.8px; padding-left: 8px; }
-.perm-name-zone { display: flex; align-items: center; padding-left: 4px; }
-.perm-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--c-dark); color: var(--c-accent); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; flex-shrink: 0; margin-right: 10px; }
-.perm-codename { font-size: 0.82rem; font-weight: 700; color: var(--c-dark); }
-.perm-nick { font-size: 0.68rem; color: var(--c-muted); margin-top: 1px; }
-.perm-check-cell { display: flex; justify-content: center; }
-.perm-check { width: 18px; height: 18px; accent-color: var(--c-dark); cursor: pointer; }
-.btn-remove { background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 6px; border-radius: 8px; transition: 0.15s; font-size: 1rem; display: flex; align-items: center; }
-.btn-remove:hover { background: #fee2e2; color: #ef4444; }
-.perm-empty { padding: 24px; text-align: center; font-size: 0.82rem; color: var(--c-muted); }
-
-.save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1e293b; padding: 14px 32px; display: none; align-items: center; justify-content: space-between; z-index: 100; box-shadow: 0 -4px 20px rgba(0,0,0,0.2); }
-.save-bar.visible { display: flex; }
-.save-bar-info { font-size: 0.82rem; color: rgba(255,255,255,0.7); display: flex; align-items: center; gap: 8px; }
-.save-bar-info::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; display: inline-block; }
-.btn-save { background: var(--c-accent); color: var(--c-on-accent); border: none; border-radius: 10px; padding: 8px 24px; font-size: 0.82rem; font-weight: 800; cursor: pointer; font-family: inherit; transition: 0.15s; }
-.btn-save:hover { filter: brightness(1.12); }
+/* Old Member-page grid (.perm-*), its own .save-bar/.btn-save, and
+   .table-count were only ever used by b-finance-members.html, which was
+   rewritten 2026-10-03 to the shared mem-matrix/save-bar.js pattern (ref
+   B-Quest's own Members page) — removed as dead. */

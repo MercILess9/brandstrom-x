@@ -95,6 +95,21 @@ async function refreshBranding() {
     } catch {}
 }
 
+// Reads whether new signups are currently open — used by login.html (hide
+// the Sign Up link) and signup.html (block the form before anyone fills it
+// out) so a closed-signups state shows a clear message up front instead of
+// letting someone fill the whole form and hit fn_handle_new_user()'s real
+// "Signups are currently closed" exception, whose text Supabase Auth
+// swallows into a generic "Database error" — auth.js's fallback mapping
+// then shows a misleading "Employee ID or codename may already be taken".
+async function isSignupOpen() {
+    if (!supabaseClient) return true;
+    try {
+        const { data } = await supabaseClient.from('system_setting').select('value').eq('key', 'signup_allow_new').single();
+        return data?.value !== 'false'; // fail open — no row / fetch error shouldn't silently lock everyone out
+    } catch { return true; }
+}
+
 // Body scroll lock for the many custom fixed-overlay popups across the
 // app (Settings, Members, assign-picker, ...) — Bootstrap's own modals
 // already lock scroll via their .modal-open class, so this is only for

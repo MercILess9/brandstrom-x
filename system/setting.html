@@ -7,6 +7,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <!-- HEIC/HEIF (iPhone photos) aren't decodable by <img>/canvas in any
+         browser except Safari — this converts them to PNG client-side
+         first so the normal crop flow can take over. -->
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="/system/save-bar.js"></script>
@@ -291,10 +297,7 @@
            element, which blocks position:sticky no matter which ancestor
            it's set on (verified before landing on the floating clone
            below instead — see #usr-sticky-hdr). */
-        .usr-matrix thead th { background: #fff; z-index: 2; text-align: center; font-size: 0.62rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 8px; border-bottom: 1px solid var(--c-border); white-space: nowrap; box-sizing: border-box; }
-        .usr-matrix th.usr-group-head { height: 34px; font-size: 0.68rem; text-transform: none; letter-spacing: normal; border-left: 1px solid var(--c-border); }
-        .usr-matrix thead tr:last-child th { height: 26px; padding: 0 6px; font-size: 0.6rem; border-top: 1px solid var(--c-bg); overflow: hidden; text-overflow: ellipsis; }
-        .group-access { color: #2563eb; }
+        .usr-matrix thead th { background: #fff; z-index: 2; text-align: center; font-size: 0.62rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 8px; height: 44px; border-bottom: 1px solid var(--c-border); white-space: nowrap; box-sizing: border-box; }
 
         /* Floating header-lookalike — a real <table><colgroup><thead>
            clone (rebuildUsrStickyHdrClone()) reusing .usr-matrix's own
@@ -326,8 +329,17 @@
 
         .usr-matrix .usr-header-sortable { cursor: pointer; user-select: none; transition: color 0.15s; }
         .usr-matrix .usr-header-sortable:hover { color: var(--c-dark); }
-        .usr-sort-icon { font-size: 0.7rem; margin-left: 2px; opacity: 0.35; }
-        .usr-sort-icon.active { opacity: 1; color: var(--c-accent-dark); }
+        /* Sort direction is still fully functional (set from the A→Z/Z→A
+           buttons inside the filter popup this header opens) — just not
+           shown as a separate chevron in the header anymore, since one
+           funnel icon already communicates "click for sort+filter"
+           clearly enough on its own. */
+        .usr-sort-icon { display: none; }
+        /* Exception: the Access tab's Registered/Last Login columns sort
+           directly on click (setAccDateSort) with no filter popup at all —
+           no funnel icon either, so the chevron is the ONLY sort-direction
+           indicator they have. Keep it visible for just these two. */
+        #acc-sort-created_at .usr-sort-icon, #acc-sort-last_sign_in_at .usr-sort-icon { display: inline-block; }
         .usr-filter-icon { font-size: 0.62rem; margin-left: 3px; opacity: 0.35; }
         .usr-filter-icon.active { opacity: 1; color: var(--c-accent-dark); }
 
@@ -425,6 +437,13 @@
         .usr-row.is-deleted .inline-input { color: #ef4444; }
         .usr-row.is-deleted td.usr-col-trash, .usr-row.is-deleted td.usr-col-name { background: #fef2f2; }
 
+        /* Access tab — a disabled (banned) account's row fades, not a
+           strikethrough (that would read as "deleted"); stays fully
+           interactive since re-enabling means clicking the very toggle
+           that caused this state. */
+        .usr-row.is-banned { opacity: 0.45; }
+        .usr-row.is-banned:hover { opacity: 0.7; }
+
         /* Toggle */
         .bq-toggle { position: relative; display: inline-block; width: 34px; height: 19px; }
         .bq-toggle input { opacity: 0; width: 0; height: 0; }
@@ -456,6 +475,34 @@
         .usr-empty { padding: 48px; text-align: center; color: var(--c-muted); }
         .usr-empty i { font-size: 2.5rem; margin-bottom: 12px; display: block; opacity: 0.35; }
         .usr-empty p { font-size: 0.84rem; font-weight: 600; margin: 0; }
+
+        /* ── Access tab — account status pill + icon action buttons ── */
+        .acc-matrix td.usr-col-trash, .acc-matrix th.usr-col-trash { width: 46px; }
+        .acc-matrix td.usr-col-name { white-space: normal; }
+        .acc-name-main { font-size: 0.82rem; font-weight: 700; color: var(--c-dark); }
+        .acc-name-sub { font-size: 0.72rem; color: var(--c-muted); }
+        .acc-confirm-icon { font-size: 1.05rem; }
+        .acc-confirm-icon.ok { color: #15803d; }
+        .acc-confirm-icon.warn { color: #b45309; }
+        .acc-actions-row { display: flex; align-items: center; justify-content: center; gap: 2px; }
+        .btn-acc-action { background: none; border: none; color: #94a3b8; cursor: pointer; border-radius: 9px; transition: 0.2s; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; width: 30px; height: 30px; }
+        .btn-acc-action:hover { background: var(--c-accent-light); color: var(--c-dark); }
+        .btn-acc-action.danger { color: #cbd5e1; }
+        .btn-acc-action.danger:hover { background: #fee2e2; color: #ef4444; }
+        .btn-acc-action:disabled { opacity: 0.35; cursor: not-allowed; }
+        .setpw-input { width: 100%; padding: 11px 14px; border: 1.5px solid var(--c-border); border-radius: 10px; font-size: 0.86rem; outline: none; margin: 14px 0 4px; font-family: inherit; transition: 0.2s; }
+        .setpw-input:focus { border-color: var(--c-accent); }
+
+        /* Logo crop modal — wider than the other .del-modal dialogs since
+           it needs room for the crop frame itself. */
+        .crop-modal { width: 480px; }
+        .crop-stage { margin: 14px 0 4px; background: #111; border-radius: 12px; overflow: hidden; max-height: 420px; }
+        .crop-stage img { display: block; max-width: 100%; }
+        /* Cropper.js's own crop-box border/handles default to its library
+           blue — swap to the app's accent so the modal doesn't look like
+           it's borrowing a foreign widget. */
+        .cropper-view-box, .cropper-face { outline-color: var(--c-accent); }
+        .cropper-line, .cropper-point { background-color: var(--c-accent); }
 
         /* Dirty indicator */
         .dirty-dot { width: 7px; height: 7px; background: #f59e0b; border-radius: 50%; display: none; }
@@ -664,6 +711,7 @@
         <button class="top-tab-btn active" id="top-tab-settings" onclick="switchTopTab('settings')"><i class="bi bi-gear-fill"></i> Setting</button>
         <button class="top-tab-btn" id="top-tab-holiday" onclick="switchTopTab('holiday')"><i class="bi bi-calendar-event"></i> Holiday</button>
         <button class="top-tab-btn" id="top-tab-access" onclick="switchTopTab('access')"><i class="bi bi-people-fill"></i> Member</button>
+        <button class="top-tab-btn" id="top-tab-accounts" onclick="switchTopTab('accounts')"><i class="bi bi-shield-lock-fill"></i> Access</button>
     </div>
 
     <div id="tab-settings">
@@ -685,10 +733,10 @@
                             <div class="brand-logo-preview-wrap"><div class="brand-logo-preview is-wide" id="logo-header-preview"><i class="bi bi-image"></i></div></div>
                             <div class="brand-logo-info">
                                 <div class="brand-logo-label">Header Logo</div>
-                                <div class="brand-logo-hint">~300×80px · PNG, ICO</div>
+                                <div class="brand-logo-hint">Crop to 3.75:1</div>
                                 <label class="btn-choose-logo">
                                     <i class="bi bi-upload"></i> Choose
-                                    <input type="file" accept="image/png,image/x-icon,.ico" style="display:none" onchange="onLogoFileChange(event, 'header')">
+                                    <input type="file" accept="image/*,.heic,.heif,.ico" style="display:none" onchange="onLogoFileChange(event, 'header')">
                                 </label>
                             </div>
                         </div>
@@ -696,10 +744,10 @@
                             <div class="brand-logo-preview-wrap"><div class="brand-logo-preview is-square" id="logo-icon-preview"><i class="bi bi-image"></i></div></div>
                             <div class="brand-logo-info">
                                 <div class="brand-logo-label">Icon Logo</div>
-                                <div class="brand-logo-hint">≥240×240px · PNG, ICO</div>
+                                <div class="brand-logo-hint">Crop to 1:1 (Square)</div>
                                 <label class="btn-choose-logo">
                                     <i class="bi bi-upload"></i> Choose
-                                    <input type="file" accept="image/png,image/x-icon,.ico" style="display:none" onchange="onLogoFileChange(event, 'icon')">
+                                    <input type="file" accept="image/*,.heic,.heif,.ico" style="display:none" onchange="onLogoFileChange(event, 'icon')">
                                 </label>
                             </div>
                         </div>
@@ -727,7 +775,7 @@
         <div style="padding: 20px 24px;">
             <div class="signup-row">
                 <div class="signup-row-info">
-                    <div class="signup-row-label">New Signups</div>
+                    <div class="signup-row-label">Close Signups</div>
                 </div>
                 <div class="signup-row-control">
                     <label class="signup-switch">
@@ -840,7 +888,7 @@
             <div class="usr-sticky-hdr" id="usr-sticky-hdr" style="display:none;"></div>
             <div class="section-header mem-header-grid">
                 <div class="section-title">
-                    <i class="bi bi-people-fill"></i> Member Access
+                    <i class="bi bi-people-fill"></i> Member
                     <span class="cfg-count-badge" id="table-count"></span>
                     <span class="dirty-dot"></span>
                 </div>
@@ -873,6 +921,94 @@
         </div>
     </div>
 
+    <!-- Tab: Access — auth-level account actions (confirm/password/ban),
+         separate from Member (identity/directory data) since these are
+         privileged server-side actions and keeping this tab's own surface
+         minimal is itself a security benefit. GOD + system_setting only. -->
+    <div id="tab-accounts" style="display:none;">
+        <div class="section" id="section-accounts">
+            <div class="section-header mem-header-grid">
+                <div class="section-title">
+                    <i class="bi bi-shield-lock-fill"></i> Access
+                    <span class="cfg-count-badge" id="acc-count"></span>
+                </div>
+                <div class="table-search-wrap">
+                    <i class="bi bi-search table-search-icon"></i>
+                    <input type="text" id="acc-search" class="table-search-input" placeholder="Search..." oninput="renderAccounts()">
+                </div>
+                <div class="mem-header-right-group"></div>
+            </div>
+            <div class="section-body" style="padding: 20px 24px;">
+                <div class="usr-matrix-wrap" id="acc-list-wrap">
+                    <table class="usr-matrix acc-matrix">
+                        <colgroup>
+                            <col style="width:46px">
+                            <col style="width:228px">
+                            <col style="width:120px">
+                            <col>
+                            <col style="width:100px">
+                            <col style="width:100px">
+                            <col style="width:110px">
+                            <col style="width:110px">
+                            <col style="width:150px">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th class="usr-col-trash"></th>
+                                <th class="usr-col-name usr-header-sortable" style="text-align:left" onclick="openColumnFilterPopup('nick_name','Member','access')">Member<span id="acc-sort-nick_name"></span><span id="acc-filter-nick_name"></span></th>
+                                <th class="usr-zone-divider usr-header-sortable" onclick="openColumnFilterPopup('employee_id','ID','access')">ID<span id="acc-sort-employee_id"></span><span id="acc-filter-employee_id"></span></th>
+                                <th class="usr-header-sortable" onclick="openColumnFilterPopup('email','Email','access')">Email<span id="acc-sort-email"></span><span id="acc-filter-email"></span></th>
+                                <th class="usr-header-sortable" onclick="setAccDateSort('created_at')">Registered<span id="acc-sort-created_at"></span></th>
+                                <th class="usr-header-sortable" onclick="setAccDateSort('last_sign_in_at')">Last Login<span id="acc-sort-last_sign_in_at"></span></th>
+                                <th>Confirmed</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="acc-list">
+                            <tr><td colspan="9" class="usr-empty"><p>Loading...</p></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Set Password Modal — same shell recipe as .del-overlay/.del-modal -->
+<div class="del-overlay" id="setpw-overlay">
+    <div class="del-modal">
+        <div class="del-title"><i class="bi bi-key-fill" style="color:var(--c-accent)"></i> Set Password</div>
+        <div class="del-sub">
+            Set a new password for <span class="del-highlight" id="setpw-target-name"></span>.
+        </div>
+        <input type="text" id="setpw-input" class="setpw-input" placeholder="New password (min 6 characters)" autocomplete="off">
+        <div class="del-actions">
+            <button class="btn-del-cancel" onclick="closeSetPwModal()">Cancel</button>
+            <button class="btn-del-confirm" id="btn-setpw-confirm" onclick="confirmSetPassword()" style="background:var(--c-accent);">
+                <i class="bi bi-check-lg"></i> Set Password
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Logo Crop Modal — Cropper.js locked to the slot's own ratio (3.75:1
+     for the Header Logo, 1:1 for the Icon Logo); pan/zoom are free inside
+     that frame, matching the "fixed ratio, not fixed size" approach. -->
+<div class="del-overlay" id="crop-overlay">
+    <div class="del-modal crop-modal">
+        <div class="del-title"><i class="bi bi-crop" style="color:var(--c-accent)"></i> <span id="crop-title">Crop Logo</span></div>
+        <div class="crop-stage">
+            <img id="crop-image" alt="">
+        </div>
+        <div class="del-actions">
+            <button class="btn-del-cancel" onclick="closeCropModal()">Cancel</button>
+            <button class="btn-del-confirm" onclick="confirmCrop()" style="background:var(--c-accent);">
+                <i class="bi bi-check-lg"></i> Apply
+            </button>
+        </div>
+    </div>
 </div>
 
 <!-- Get Holidays Modal — same recipe as b-quest-members.html's Add Member
@@ -1034,6 +1170,9 @@
     let brandingChanges = {};       // key -> new value (color hex strings only)
     let brandingLogoFiles = {};     // 'header'|'icon' -> staged File object, uploaded on Save
     let brandingLogoPreviews = {};  // 'header'|'icon' -> object URL for the staged file's preview
+    let cropper = null;             // active Cropper.js instance, while the crop modal is open
+    let cropSlot = null;            // 'header' | 'icon' — which slot the open crop modal is editing
+    const LOGO_CROP_RATIO = { header: 300 / 80, icon: 1 };
 
     // Fixed list, kept in sync by hand with index.html's own PROJECTS
     // array — a project only exists once real code backs it, so this
@@ -1066,12 +1205,14 @@
     let signupDomains = [];         // domains as currently staged in the UI (the array the chip UI actually edits)
 
     let allUsers = [];
+    let allUsersById = new Map(); // uid -> live reference into allUsers (same objects, not a copy) — O(1) lookup for the Access tab's auth-row<->profile join, instead of re-scanning allUsers with .find()/.some() on every render/filter/search pass
     let originalUsersById = new Map(); // uid -> pristine {nick_name, full_name, employee_id, department, codename} snapshot from load, used to revert display fields on Undo (onNickChange etc. mutate allUsers in place for immediate feedback)
     let accessData = {};     // codename -> access row
     let accessChanges = {};  // codename -> changed fields
     let pendingDeleteUser = null;
     let usrSort = { field: null, dir: 'asc' }; // field: null | 'nick_name' | 'department' | 'employee_id'
     let filterPopupField = null; // which column's popup is currently open
+    let filterPopupTarget = 'member'; // 'member' | 'access' — which tab's sort/filter state the open popup edits
     let usrColumnFilters = { nick_name: null, department: null, employee_id: null }; // field -> Set of allowed values, or null = no filter
 
     // ── Shared Save Bar (createSaveBar from /system/save-bar.js) ──
@@ -1088,8 +1229,24 @@
     let importYear = null;
     let importResults = [];       // [{date, localName, checked}] from Nager.Date, for the currently open Import modal
 
+    // ── Access tab (auth-level account actions) ──
+    let accountsLoaded = false;
+    let allAccounts = [];         // [{id, email, created_at, email_confirmed_at, banned_until, last_sign_in_at}] from admin-manage-account Edge Function
+    let pendingSetPwUserId = null;
+    // Own sort/filter state, parallel to the Member tab's usrSort/
+    // usrColumnFilters — kept separate so opening a filter popup from one
+    // tab never clobbers the other's state. Shares the same popup markup/
+    // functions (openColumnFilterPopup etc.), routed by filterPopupTarget.
+    let accSort = { field: 'created_at', dir: 'desc' }; // default: newest registered first
+    let accColumnFilters = { nick_name: null, employee_id: null, email: null };
+
     // ── Init ──
     async function loadPage() {
+        // The Access tab's own data is lazy-loaded (only on first switch to
+        // it), but its static placeholder row should already be the app's
+        // real branded loader (system.js's bxLoader()) instead of a plain
+        // icon, in case someone switches to it before anything else here finishes.
+        document.getElementById('acc-list').innerHTML = `<tr><td colspan="9" class="usr-empty">${bxLoader('Loading...')}</td></tr>`;
         await initLayout(SYSTEM_CONFIG);
         guardSystemSetting();
         saveBar = createSaveBar({ label: 'System Settings', onSave: saveAll, onCancel: cancelAllChanges, onUndo: undoLastChange });
@@ -1389,8 +1546,11 @@
     }
 
     function renderSignup() {
-        const allowOpen = signupValue('signup_allow_new') !== 'false';
-        document.getElementById('signup-allow-switch').checked = allowOpen;
+        // The switch reads as "Close Signups" — checked = closed — which is
+        // the inverse of the underlying signup_allow_new value ('true' =
+        // open), kept as-is to avoid touching every other reader of this key.
+        const closed = signupValue('signup_allow_new') === 'false';
+        document.getElementById('signup-allow-switch').checked = closed;
 
         const lockOn = signupValue('signup_domain_lock_enabled') === 'true';
         document.getElementById('signup-lock-switch').checked = lockOn;
@@ -1407,7 +1567,8 @@
     }
 
     function onSignupAllowChange(checked) {
-        signupChanges.signup_allow_new = checked ? 'true' : 'false';
+        // checked = closed, so this is inverted against the stored value.
+        signupChanges.signup_allow_new = checked ? 'false' : 'true';
         markDirtySignup();
         renderSignup();
     }
@@ -1727,13 +1888,87 @@
         });
     }
 
-    function onLogoFileChange(e, slot) {
+    async function onLogoFileChange(e, slot) {
         const file = e.target.files[0];
+        e.target.value = ''; // so choosing the same file again still fires onchange
         if (!file) return;
-        brandingLogoFiles[slot] = file;
-        brandingLogoPreviews[slot] = URL.createObjectURL(file);
-        markDirtyBranding();
-        renderBranding();
+
+        // HEIC/HEIF (iPhone photos) can't be decoded by <img>/canvas in any
+        // browser except Safari — convert to PNG first so the rest of the
+        // flow (which every other format already goes through unchanged,
+        // .ico included) never has to know the difference.
+        let workingFile = file;
+        if (/\.hei[cf]$/i.test(file.name) || /heic|heif/i.test(file.type)) {
+            if (typeof heic2any !== 'function') {
+                return Swal.fire('Error', "HEIC support didn't load — please try a PNG or JPG instead.", 'error');
+            }
+            try {
+                const converted = await heic2any({ blob: file, toType: 'image/png' });
+                workingFile = Array.isArray(converted) ? converted[0] : converted;
+            } catch (err) {
+                return Swal.fire('Error', "Couldn't read this HEIC file — please try a PNG or JPG instead.", 'error');
+            }
+        }
+
+        openCropModal(workingFile, slot);
+    }
+
+    function openCropModal(file, slot) {
+        cropSlot = slot;
+        document.getElementById('crop-title').textContent = slot === 'header' ? 'Crop Header Logo' : 'Crop Icon Logo';
+        const img = document.getElementById('crop-image');
+        const reader = new FileReader();
+        reader.onload = () => {
+            document.getElementById('crop-overlay').classList.add('show');
+            lockBodyScroll();
+            // Wait for the browser to actually finish decoding the image
+            // (not a blind timeout) — matters most here since .ico/odd
+            // formats are exactly the ones most likely to fail to decode
+            // at all, which onerror below catches with a clear message
+            // instead of Cropper silently initializing on a blank image.
+            img.onerror = () => {
+                img.onerror = null; img.onload = null;
+                closeCropModal();
+                Swal.fire('Error', "This image format isn't supported by the browser — please try PNG, JPG, or WEBP instead.", 'error');
+            };
+            img.onload = () => {
+                img.onerror = null; img.onload = null;
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(img, {
+                    aspectRatio: LOGO_CROP_RATIO[slot],
+                    viewMode: 1,
+                    autoCropArea: 1,
+                    background: false,
+                });
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function closeCropModal() {
+        document.getElementById('crop-overlay').classList.remove('show');
+        unlockBodyScroll();
+        if (cropper) { cropper.destroy(); cropper = null; }
+        cropSlot = null;
+    }
+
+    function confirmCrop() {
+        if (!cropper || !cropSlot) return;
+        const slot = cropSlot;
+        // Fixed output size per slot (not just ratio) — keeps every
+        // upload consistent regardless of the source image's resolution.
+        const outSize = slot === 'header' ? { width: 600, height: 160 } : { width: 480, height: 480 };
+        const canvas = cropper.getCroppedCanvas(outSize);
+        canvas.toBlob((blob) => {
+            const file = new File([blob], `logo-${slot}.png`, { type: 'image/png' });
+            brandingLogoFiles[slot] = file;
+            if (brandingLogoPreviews[slot]) URL.revokeObjectURL(brandingLogoPreviews[slot]);
+            brandingLogoPreviews[slot] = URL.createObjectURL(file);
+            markDirtyBranding();
+            renderBranding();
+            closeCropModal();
+        }, 'image/png');
     }
 
     function markDirtyBranding() {
@@ -2579,10 +2814,15 @@
         document.getElementById('top-tab-settings').classList.toggle('active', tab === 'settings');
         document.getElementById('top-tab-holiday').classList.toggle('active', tab === 'holiday');
         document.getElementById('top-tab-access').classList.toggle('active', tab === 'access');
+        document.getElementById('top-tab-accounts').classList.toggle('active', tab === 'accounts');
         document.getElementById('tab-settings').style.display = tab === 'settings' ? '' : 'none';
         document.getElementById('tab-holiday').style.display = tab === 'holiday' ? '' : 'none';
         document.getElementById('tab-access').style.display = tab === 'access' ? '' : 'none';
+        document.getElementById('tab-accounts').style.display = tab === 'accounts' ? '' : 'none';
         if (tab !== 'access') { const bar = document.getElementById('usr-sticky-hdr'); if (bar) bar.style.display = 'none'; }
+        // Lazy-load — the Edge Function call only needs to happen the
+        // first time someone actually opens this tab, not on every page load.
+        if (tab === 'accounts' && !accountsLoaded) loadAccounts();
     }
 
     // The page itself now admits anyone with at least one of the 3 tab
@@ -2629,18 +2869,15 @@
         `;
         document.getElementById('usr-thead').innerHTML = `
             <tr>
-                <th class="usr-col-trash" rowspan="2"></th>
-                <th class="usr-col-name usr-header-sortable" rowspan="2" style="text-align:left" onclick="openColumnFilterPopup('nick_name', 'Member')">Member<span id="usr-sort-nick_name"></span><span id="usr-filter-nick_name"></span></th>
-                <th class="usr-zone-divider usr-header-sortable" rowspan="2" onclick="openColumnFilterPopup('employee_id', 'ID')">ID<span id="usr-sort-employee_id"></span><span id="usr-filter-employee_id"></span></th>
-                <th class="usr-header-sortable" rowspan="2" onclick="openColumnFilterPopup('department', 'Department')">Department<span id="usr-sort-department"></span><span id="usr-filter-department"></span></th>
-                <th class="usr-group-head" colspan="${PROJECT_COLS.length}"><span class="group-label group-access">PROJECT ACCESS</span></th>
-                ${canSee ? `
-                <th class="usr-zone-divider" rowspan="2" title="Can open the Setting tab">Setting</th>
-                <th rowspan="2" title="Can open the Holiday tab">Holiday</th>
-                <th rowspan="2" title="Can open the Member tab">Member</th>` : ''}
-            </tr>
-            <tr>
+                <th class="usr-col-trash"></th>
+                <th class="usr-col-name usr-header-sortable" style="text-align:left" onclick="openColumnFilterPopup('nick_name', 'Member')">Member<span id="usr-sort-nick_name"></span><span id="usr-filter-nick_name"></span></th>
+                <th class="usr-zone-divider usr-header-sortable" onclick="openColumnFilterPopup('employee_id', 'ID')">ID<span id="usr-sort-employee_id"></span><span id="usr-filter-employee_id"></span></th>
+                <th class="usr-header-sortable" onclick="openColumnFilterPopup('department', 'Department')">Department<span id="usr-sort-department"></span><span id="usr-filter-department"></span></th>
                 ${PROJECT_COLS.map((p, i) => `<th class="${i === 0 ? 'usr-zone-divider' : ''}" title="${PROJECT_COL_TITLE[p.key] || ''}">${p.label}</th>`).join('')}
+                ${canSee ? `
+                <th class="usr-zone-divider" title="Can open the Setting tab">Setting</th>
+                <th title="Can open the Holiday tab">Holiday</th>
+                <th title="Can open the Member tab">Member</th>` : ''}
             </tr>
         `;
         rebuildUsrStickyHdrClone();
@@ -2709,10 +2946,14 @@
         const canSetting = isGod || !!acc.system_setting;
         const canHoliday = isGod || !!acc.system_holiday;
         const canMember  = isGod || !!acc.system_member;
+        // Access tab (auth-level actions) — GOD + system_setting only, same
+        // gate as who can even see the Setting/Holiday/Member toggle columns.
+        const canAccounts = canSetting;
 
         document.getElementById('top-tab-settings').style.display = canSetting ? '' : 'none';
         document.getElementById('top-tab-holiday').style.display = canHoliday ? '' : 'none';
         document.getElementById('top-tab-access').style.display = canMember ? '' : 'none';
+        document.getElementById('top-tab-accounts').style.display = canAccounts ? '' : 'none';
 
         if (!canSetting) {
             if (canHoliday) switchTopTab('holiday');
@@ -2727,6 +2968,7 @@
             .neq('level', 'god')
             .order('codename');
         allUsers = data || [];
+        allUsersById = new Map(allUsers.map(u => [u.id, u]));
         originalUsersById = new Map(allUsers.map(u => [u.id, { ...u }]));
     }
 
@@ -2778,20 +3020,40 @@
     // buttons (A→Z / Z→A) — same as B-Quest Members, no separate toggle
     // click on the header itself (the header click opens the popup instead).
     function setUsrSortDirect(field, dir) {
-        usrSort = { field, dir };
+        if (filterPopupTarget === 'access') { accSort = { field, dir }; }
+        else { usrSort = { field, dir }; }
         closeColumnFilterPopup();
-        applyFilters();
+        applyActiveFilters();
     }
 
-    function updateUsrSortIcons() {
-        ['nick_name', 'department', 'employee_id'].forEach(field => {
-            const el = document.getElementById(`usr-sort-${field}`);
+    // Registered/Last Login sort directly on click (toggle asc/desc) —
+    // unlike the other Access columns, dates have no useful "pick which
+    // values to show" checklist, so they skip the filter popup entirely.
+    // Newest-first is the default direction on first click of a column,
+    // since that's what you want when checking who just signed up.
+    function setAccDateSort(field) {
+        accSort = accSort.field === field && accSort.dir === 'desc' ? { field, dir: 'asc' } : { field, dir: 'desc' };
+        renderAccounts();
+    }
+
+    function updateSortIconsFor(fields, sortState, prefix) {
+        fields.forEach(field => {
+            const el = document.getElementById(`${prefix}-sort-${field}`);
             if (!el) return;
-            if (usrSort.field !== field) { el.innerHTML = '<i class="bi bi-chevron-expand usr-sort-icon"></i>'; return; }
-            el.innerHTML = usrSort.dir === 'asc'
+            if (sortState.field !== field) { el.innerHTML = '<i class="bi bi-chevron-expand usr-sort-icon"></i>'; return; }
+            el.innerHTML = sortState.dir === 'asc'
                 ? '<i class="bi bi-chevron-up usr-sort-icon active"></i>'
                 : '<i class="bi bi-chevron-down usr-sort-icon active"></i>';
         });
+    }
+
+    function updateUsrSortIcons() {
+        updateSortIconsFor(['nick_name', 'department', 'employee_id'], usrSort, 'usr');
+    }
+
+    function applyActiveFilters() {
+        if (filterPopupTarget === 'access') renderAccounts();
+        else applyFilters();
     }
 
     function renderUsers(q = '') {
@@ -2820,7 +3082,7 @@
             });
         }
 
-        updateCount(rows.length, allUsers.length);
+        updateCount('table-count', rows.length, allUsers.length);
 
         if (!rows.length) {
             const colspan = 4 + PROJECT_COLS.length + (canSeeSystemAccess() ? 3 : 0);
@@ -2899,20 +3161,34 @@
         renderUsers(q);
     }
 
-    function updateCount(shown, total) {
-        document.getElementById('table-count').textContent = shown === total
+    function updateCount(elId, shown, total) {
+        document.getElementById(elId).textContent = shown === total
             ? `${total}` : `${shown} / ${total}`;
     }
 
-    // ── Column filter popup (Member/Full Name/Department/Employee ID) —
-    // same Excel-style recipe as B-Quest Members: click a header, get a
-    // search+sort+checkbox-list modal instead of a separate dropdown. ──
-    function columnValues(field) {
-        return [...new Set(allUsers.map(u => u[field] || '').filter(Boolean))].sort();
+    // ── Column filter popup (Member/Full Name/Department/Employee ID, and
+    // the Access tab's Member/ID/Email) — same Excel-style recipe as
+    // B-Quest Members: click a header, get a search+sort+checkbox-list
+    // modal instead of a separate dropdown. Shared modal, routed by
+    // filterPopupTarget so the two tabs' filter state never collide. ──
+    function activeColumnFilters() {
+        return filterPopupTarget === 'access' ? accColumnFilters : usrColumnFilters;
     }
 
-    function filterIcon(field) {
-        const active = !!usrColumnFilters[field];
+    // Merged view (profile fields + auth fields) — the Access tab's rows
+    // come from the Edge Function (auth.users), but Member/ID need the
+    // matching profiles row joined in by id.
+    function mergedAccountRows() {
+        return allAccounts.map(a => ({ ...(allUsersById.get(a.id) || {}), ...a }));
+    }
+
+    function columnValues(field) {
+        const dataset = filterPopupTarget === 'access' ? mergedAccountRows() : allUsers;
+        return [...new Set(dataset.map(u => u[field] || '').filter(Boolean))].sort();
+    }
+
+    function filterIcon(field, filters = usrColumnFilters) {
+        const active = !!filters[field];
         return `<i class="bi ${active ? 'bi-funnel-fill' : 'bi-funnel'} usr-filter-icon ${active ? 'active' : ''}"></i>`;
     }
 
@@ -2923,8 +3199,16 @@
         });
     }
 
-    function openColumnFilterPopup(field, label) {
+    function updateAccFilterIcons() {
+        ['nick_name', 'employee_id', 'email'].forEach(field => {
+            const el = document.getElementById(`acc-filter-${field}`);
+            if (el) el.innerHTML = filterIcon(field, accColumnFilters);
+        });
+    }
+
+    function openColumnFilterPopup(field, label, target = 'member') {
         filterPopupField = field;
+        filterPopupTarget = target;
         document.getElementById('usr-filter-title').textContent = label;
         document.getElementById('usr-filter-search').value = '';
         toggleSearchClearBtn('');
@@ -2958,7 +3242,7 @@
         const all = columnValues(field);
         const ql = searchQ.trim().toLowerCase();
         const visible = ql ? all.filter(v => v.toLowerCase().includes(ql)) : all;
-        const selected = usrColumnFilters[field];
+        const selected = activeColumnFilters()[field];
         const list = document.getElementById('usr-filter-list');
 
         const selectedTotal = selected ? selected.size : all.length;
@@ -2984,30 +3268,33 @@
 
     function toggleColumnValue(value, checked) {
         const field = filterPopupField;
-        if (usrColumnFilters[field] === null) usrColumnFilters[field] = new Set(columnValues(field));
-        checked ? usrColumnFilters[field].add(value) : usrColumnFilters[field].delete(value);
-        if (usrColumnFilters[field].size === columnValues(field).length) usrColumnFilters[field] = null;
-        applyFilters();
+        const filters = activeColumnFilters();
+        const all = columnValues(field); // computed once, reused below — same fix as toggleAllVisible already does
+        if (filters[field] === null) filters[field] = new Set(all);
+        checked ? filters[field].add(value) : filters[field].delete(value);
+        if (filters[field].size === all.length) filters[field] = null;
+        applyActiveFilters();
         renderColumnFilterList(document.getElementById('usr-filter-search')?.value || '');
     }
 
     function toggleAllVisible(checked) {
         const field = filterPopupField;
+        const filters = activeColumnFilters();
         const ql = (document.getElementById('usr-filter-search')?.value || '').trim().toLowerCase();
         const all = columnValues(field);
         const visible = ql ? all.filter(v => v.toLowerCase().includes(ql)) : all;
-        if (usrColumnFilters[field] === null) usrColumnFilters[field] = new Set(all);
-        visible.forEach(v => checked ? usrColumnFilters[field].add(v) : usrColumnFilters[field].delete(v));
-        if (usrColumnFilters[field].size === all.length) usrColumnFilters[field] = null;
-        applyFilters();
+        if (filters[field] === null) filters[field] = new Set(all);
+        visible.forEach(v => checked ? filters[field].add(v) : filters[field].delete(v));
+        if (filters[field].size === all.length) filters[field] = null;
+        applyActiveFilters();
         renderColumnFilterList(document.getElementById('usr-filter-search')?.value || '');
     }
 
     function resetColumnFilter() {
-        usrColumnFilters[filterPopupField] = null;
+        activeColumnFilters()[filterPopupField] = null;
         document.getElementById('usr-filter-search').value = '';
         toggleSearchClearBtn('');
-        applyFilters();
+        applyActiveFilters();
         renderColumnFilterList('');
     }
 
@@ -3214,8 +3501,12 @@
     }
 
     // ── Delete User ──
-    function openDelModal(codename, displayName) {
+    let pendingDeleteCallback = null;
+    // onDeleted — optional, lets the Access tab reuse this same flow and
+    // refresh its own table instead of the Member tab's (default).
+    function openDelModal(codename, displayName, onDeleted) {
         pendingDeleteUser = codename;
+        pendingDeleteCallback = onDeleted || null;
         document.getElementById('del-target-name').textContent = displayName;
         document.getElementById('del-overlay').classList.add('show');
         lockBodyScroll();
@@ -3230,6 +3521,7 @@
     async function confirmDeleteUser() {
         if (!pendingDeleteUser) return;
         const codename = pendingDeleteUser;
+        const callback = pendingDeleteCallback;
         const btn = document.getElementById('btn-del-confirm');
         btn.disabled = true;
         btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Removing...';
@@ -3247,17 +3539,243 @@
 
             // Remove from local state
             allUsers = allUsers.filter(u => u.codename !== codename);
+            deleted.forEach(u => allUsersById.delete(u.id));
             delete accessData[codename];
             delete accessChanges[codename];
 
             closeDelModal();
-            renderUsers(document.getElementById('table-search').value.trim().toLowerCase());
+            pendingDeleteCallback = null;
+            if (callback) callback();
+            else renderUsers(document.getElementById('table-search').value.trim().toLowerCase());
             notify('Removed', `${codename} has been removed from the system.`, 'success');
         } catch (e) {
             Swal.fire('Error', e.message, 'error');
         } finally {
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-trash3-fill"></i> Remove';
+        }
+    }
+
+    // ── Access tab (auth-level account actions) ──
+    // Talks to the admin-manage-account Edge Function — auth.users isn't
+    // reachable via the normal client at all, so even just listing
+    // confirm/ban/last-login status needs the service_role key, which that
+    // function holds server-side (re-verifies this caller is GOD/
+    // system_setting on every call, never trusting this page's own gating).
+    async function callAdminFn(action, payload = {}) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-manage-account`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+            body: JSON.stringify({ action, ...payload }),
+        });
+        const result = await res.json();
+        if (!result.ok) throw new Error(result.error);
+        return result;
+    }
+
+    async function loadAccounts() {
+        try {
+            const result = await callAdminFn('list');
+            // Only show accounts with a matching (non-GOD) profile — GOD is
+            // never listed in any project's member/setting table, same rule
+            // here; a ghost auth.users row with no profile has nothing this
+            // tab can act on sensibly anyway.
+            allAccounts = result.users.filter(a => allUsersById.has(a.id));
+            accountsLoaded = true;
+            renderAccounts();
+        } catch (e) {
+            document.getElementById('acc-list').innerHTML = `<tr><td colspan="9" class="usr-empty"><i class="bi bi-exclamation-triangle"></i><p>${esc(e.message)}</p></td></tr>`;
+        }
+    }
+
+    function renderAccounts() {
+        updateSortIconsFor(['nick_name', 'employee_id', 'email', 'created_at', 'last_sign_in_at'], accSort, 'acc');
+        updateAccFilterIcons();
+
+        const q = (document.getElementById('acc-search').value || '').trim().toLowerCase();
+        const matches = (a, p) => !q
+            || (a.email || '').toLowerCase().includes(q)
+            || (p?.nick_name || '').toLowerCase().includes(q)
+            || (p?.full_name || '').toLowerCase().includes(q)
+            || (p?.employee_id || '').toLowerCase().includes(q);
+        const matchColumnFilters = (merged) => Object.entries(accColumnFilters).every(([field, allowed]) => !allowed || allowed.has(merged[field] || ''));
+
+        let rows = mergedAccountRows().filter(m => matches(m, m) && matchColumnFilters(m));
+
+        if (accSort.field) {
+            rows = [...rows].sort((a, b) => {
+                const va = (a[accSort.field] || '').toLowerCase();
+                const vb = (b[accSort.field] || '').toLowerCase();
+                const cmp = va.localeCompare(vb);
+                return accSort.dir === 'asc' ? cmp : -cmp;
+            });
+        }
+
+        updateCount('acc-count', rows.length, allAccounts.length);
+
+        const container = document.getElementById('acc-list');
+        if (!rows.length) {
+            container.innerHTML = `<tr><td colspan="9" class="usr-empty"><i class="bi bi-shield-lock"></i><p>No accounts found</p></td></tr>`;
+            return;
+        }
+
+        container.innerHTML = rows.map(a => {
+            // a already has nick_name/full_name/employee_id merged in by
+            // mergedAccountRows() above — no second profile lookup needed.
+            const isBanned = !!a.banned_until && new Date(a.banned_until) > new Date();
+            const isConfirmed = !!a.email_confirmed_at;
+            const confirmedIcon = isConfirmed
+                ? `<i class="bi bi-check-circle-fill acc-confirm-icon ok" title="Confirmed"></i>`
+                : `<i class="bi bi-exclamation-circle-fill acc-confirm-icon warn" title="Pending confirmation"></i>`;
+            const email = esc(a.email);
+
+            return `
+            <tr class="usr-row ${isBanned ? 'is-banned' : ''}" data-aid="${a.id}">
+                <td class="usr-col-trash"><button class="btn-acc-action danger" onclick="openAccountDelModal('${a.id}')" title="Delete account"><i class="bi bi-trash3"></i></button></td>
+                <td class="usr-col-name">
+                    <div class="usr-name-cell">
+                        <div class="usr-avatar"><span>${esc(getInitials(a.nick_name || a.full_name || a.email))}</span></div>
+                        <div class="usr-name-fields">
+                            <div class="acc-name-main">${esc(a.nick_name) || '—'}</div>
+                            <div class="acc-name-sub">${esc(a.full_name) || '—'}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="usr-zone-divider">${esc(a.employee_id) || '—'}</td>
+                <td>${email}</td>
+                <td>${a.created_at ? new Date(a.created_at).toLocaleDateString() : '—'}</td>
+                <td>${a.last_sign_in_at ? new Date(a.last_sign_in_at).toLocaleDateString() : 'Never'}</td>
+                <td>${confirmedIcon}</td>
+                <td>
+                    <label class="bq-toggle t-sys" title="${isBanned ? 'Click to enable login' : 'Click to disable login'}">
+                        <input type="checkbox" ${isBanned ? '' : 'checked'} onchange="toggleBanAccount('${a.id}','${email}', this.checked)">
+                        <span class="bq-slider"></span>
+                    </label>
+                </td>
+                <td>
+                    <div class="acc-actions-row">
+                        <button class="btn-acc-action" onclick="openSetPwModal('${a.id}','${email}')" title="Set password"><i class="bi bi-key"></i></button>
+                        <button class="btn-acc-action" onclick="sendResetLink('${email}')" title="Send reset password link"><i class="bi bi-envelope-paper"></i></button>
+                        ${isConfirmed ? '' : `<button class="btn-acc-action" onclick="sendReconfirmLink('${email}')" title="Send re-confirm link"><i class="bi bi-envelope-check"></i></button>`}
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function openAccountDelModal(userId) {
+        const acc = allAccounts.find(a => a.id === userId);
+        const profile = allUsersById.get(userId);
+        if (!profile?.codename) return Swal.fire('Error', 'No matching profile found for this account.', 'error');
+        openDelModal(profile.codename, acc?.email || profile.codename, () => {
+            allAccounts = allAccounts.filter(a => a.id !== userId);
+            renderAccounts();
+        });
+    }
+
+    // enable=true means the toggle was just switched ON (re-enable login);
+    // enable=false means switched OFF (disable login) — a destructive-ish
+    // action, so it still gets a confirm; a cancel/failure re-renders to
+    // snap the toggle back since the checkbox's own state already flipped.
+    async function toggleBanAccount(userId, email, enable) {
+        if (!enable) {
+            const r = await Swal.fire({
+                title: 'Disable Login?',
+                html: `<b>${esc(email)}</b>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Disable',
+                confirmButtonColor: '#ef4444',
+                width: 400,
+            });
+            if (!r.isConfirmed) return renderAccounts();
+
+            // Full-popup loading state — the app's own branded bxLoader()
+            // (same spinner as every other loading state in this app, e.g.
+            // the Access tab's own table load) instead of SweetAlert2's
+            // default ring, which read as dated/not on-brand. width matches
+            // the confirm dialog above so the popup doesn't visibly resize
+            // between the two steps.
+            Swal.fire({ html: bxLoader('Disabling...'), width: 400, allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false });
+            try {
+                await callAdminFn('ban', { userId });
+                const acc = allAccounts.find(a => a.id === userId);
+                if (acc) acc.banned_until = '2999-01-01T00:00:00Z';
+                renderAccounts();
+                Swal.close();
+                notify('Disabled', `${email}'s login has been disabled.`, 'success');
+            } catch (e) {
+                Swal.fire('Error', e.message, 'error');
+                renderAccounts();
+            }
+            return;
+        }
+
+        // Re-enabling has no confirm dialog to show a loader in — disable
+        // the toggle itself for the brief moment the request is in flight
+        // instead, so a slow network doesn't look like the click did nothing.
+        const toggleInput = document.querySelector(`tr[data-aid="${userId}"] .bq-toggle input`);
+        if (toggleInput) toggleInput.disabled = true;
+        try {
+            await callAdminFn('unban', { userId });
+            const acc = allAccounts.find(a => a.id === userId);
+            if (acc) acc.banned_until = null;
+            renderAccounts();
+            notify('Enabled', `${email}'s login has been re-enabled.`, 'success');
+        } catch (e) {
+            Swal.fire('Error', e.message, 'error');
+            renderAccounts();
+        }
+    }
+
+    async function sendResetLink(email) {
+        const r = await Swal.fire({ title: 'Send Reset Link?', html: `<b>${esc(email)}</b><br>will get a password reset email.`, icon: 'question', showCancelButton: true, confirmButtonText: 'Send' });
+        if (!r.isConfirmed) return;
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/auth/reset-password.html' });
+        if (error) return Swal.fire('Error', error.message, 'error');
+        notify('Sent', `Reset link sent to ${email}.`, 'success');
+    }
+
+    async function sendReconfirmLink(email) {
+        const r = await Swal.fire({ title: 'Send Re-confirm Link?', html: `<b>${esc(email)}</b><br>will get a confirmation email.`, icon: 'question', showCancelButton: true, confirmButtonText: 'Send' });
+        if (!r.isConfirmed) return;
+        const { error } = await supabaseClient.auth.resend({ type: 'signup', email });
+        if (error) return Swal.fire('Error', error.message, 'error');
+        notify('Sent', `Re-confirm link sent to ${email}.`, 'success');
+    }
+
+    function openSetPwModal(userId, email) {
+        pendingSetPwUserId = userId;
+        document.getElementById('setpw-target-name').textContent = email;
+        document.getElementById('setpw-input').value = '';
+        document.getElementById('setpw-overlay').classList.add('show');
+        lockBodyScroll();
+    }
+
+    function closeSetPwModal() {
+        pendingSetPwUserId = null;
+        document.getElementById('setpw-overlay').classList.remove('show');
+        unlockBodyScroll();
+    }
+
+    async function confirmSetPassword() {
+        if (!pendingSetPwUserId) return;
+        const userId = pendingSetPwUserId;
+        const pw = document.getElementById('setpw-input').value;
+        if (!pw || pw.length < 6) return Swal.fire('Error', 'Password must be at least 6 characters.', 'error');
+        const btn = document.getElementById('btn-setpw-confirm');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+        try {
+            await callAdminFn('set_password', { userId, newPassword: pw });
+            closeSetPwModal();
+            notify('Updated', 'Password has been changed.', 'success');
+        } catch (e) {
+            Swal.fire('Error', e.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg"></i> Set Password';
         }
     }
 

@@ -41,7 +41,7 @@ function applyChurnColorVar(statusColorMap) {
 
 const B_ACCOUNT_CONFIG = {
     projectName: "B-ACCOUNT",
-    version: "2.2.3",
+    version: "2.3",
     accessKey: 'baccount',
     menus: [
         { name: "Account",     link: "b-account-list.html", perm: "account" },

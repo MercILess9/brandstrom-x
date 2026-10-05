@@ -332,8 +332,10 @@
         .hover-scale:hover { transform: scale(1.06); }
         .chf-sortable { cursor: pointer; user-select: none; transition: color 0.15s; }
         .chf-sortable:hover { color: #1e293b; }
-        .chf-sort-icon { font-size: 0.68rem; margin-left: 3px; opacity: 0.3; }
-        .chf-sort-icon.active { opacity: 1; color: var(--c-accent-dark); }
+        /* Sort direction is still fully functional — just not shown as a
+           separate chevron anymore, same simplification as the other
+           sortable+filterable headers across the app. */
+        .chf-sort-icon { display: none; }
         .chf-filter-icon { font-size: 0.6rem; margin-left: 3px; opacity: 0.3; }
         .chf-filter-icon.active { opacity: 1; color: var(--c-accent-dark); }
         .chf-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 1100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
@@ -1125,10 +1127,11 @@ function computeData() {
                 ownerMap.get(owner).amt += amt; ownerMap.get(owner).gp += gp; ownerMap.get(owner).deals.add(opp.opportunity_id);
                 ownerMap.get(owner).accounts.add(accKey);
                 const ownerBU = ownerMap.get(owner).byBU;
-                if (!ownerBU.has(bu)) ownerBU.set(bu, { amt: 0, gp: 0, deals: new Set() });
+                if (!ownerBU.has(bu)) ownerBU.set(bu, { amt: 0, gp: 0, deals: new Set(), accounts: new Set() });
                 ownerBU.get(bu).amt += amt;
                 ownerBU.get(bu).gp  += gp;
                 ownerBU.get(bu).deals.add(opp.opportunity_id);
+                ownerBU.get(bu).accounts.add(accKey);
 
                 if (!leadMap.has(lead)) leadMap.set(lead, { count: 0, amt: 0, gp: 0, deals: new Set() });
                 leadMap.get(lead).amt += amt; leadMap.get(lead).gp += gp; leadMap.get(lead).deals.add(opp.opportunity_id);
@@ -1166,7 +1169,7 @@ function computeData() {
     ownerMap.forEach(d => {
         d.count = d.deals.size;
         d.accountCount = d.accounts.size;
-        d.byBU.forEach(bd => { bd.count = bd.deals.size; });
+        d.byBU.forEach(bd => { bd.count = bd.deals.size; bd.accountCount = bd.accounts.size; });
     });
     leadMap.forEach(d => { d.count = d.deals.size; });
     accountMap.forEach(d => { d.count = d.deals.size; });
@@ -1346,7 +1349,7 @@ function renderKPIs({ totalDeals, grandOrigAmt, grandOrigGP, grandChurnAmt, stat
     ).join('');
     document.getElementById('kpiRow').innerHTML = `
         <div class="kpi-card">
-            <div class="kpi-label"><span class="kpi-icon-chip blue"><i class="bi bi-currency-exchange"></i></span> Amount</div>
+            <div class="kpi-label"><span class="kpi-icon-chip blue"><i class="bi bi-currency-exchange"></i></span> Amount (DV)</div>
             <div class="kpi-val">${fmtKPI(grandOrigAmt)}</div>
             <div class="kpi-sub">${fmtWhole(grandOrigAmt)}</div>
         </div>
@@ -2671,19 +2674,16 @@ function renderChurnTable() {
             </colgroup>
             <thead>
                 <tr>
-                    <th rowspan="2" class="chf-sortable" onclick="openChurnFilterPopup('opportunity_id','ID')">ID${chfHeaderSpans('opportunity_id')}</th>
-                    <th rowspan="2" class="chf-sortable" onclick="openChurnFilterPopup('opportunity','Opportunity')">Opportunity${chfHeaderSpans('opportunity')}</th>
-                    <th rowspan="2" class="c chf-sortable" style="border-left:2px solid #e2e8f0" onclick="openChurnFilterPopup('bu','BU')">BU${chfHeaderSpans('bu')}</th>
-                    <th rowspan="2" class="c chf-sortable" onclick="openChurnFilterPopup('owner','Owner')">Owner${chfHeaderSpans('owner')}</th>
-                    <th rowspan="2" class="c chf-sortable" onclick="openChurnFilterPopup('date','Date')">Date${chfHeaderSpans('date')}</th>
-                    <th colspan="4" class="c" style="border-left:2px solid #e2e8f0">Amount</th>
-                    <th rowspan="2"></th>
-                </tr>
-                <tr>
+                    <th class="chf-sortable" onclick="openChurnFilterPopup('opportunity_id','ID')">ID${chfHeaderSpans('opportunity_id')}</th>
+                    <th class="chf-sortable" onclick="openChurnFilterPopup('opportunity','Opportunity')">Opportunity${chfHeaderSpans('opportunity')}</th>
+                    <th class="c chf-sortable" style="border-left:2px solid #e2e8f0" onclick="openChurnFilterPopup('bu','BU')">BU${chfHeaderSpans('bu')}</th>
+                    <th class="c chf-sortable" onclick="openChurnFilterPopup('owner','Owner')">Owner${chfHeaderSpans('owner')}</th>
+                    <th class="c chf-sortable" onclick="openChurnFilterPopup('date','Date')">Date${chfHeaderSpans('date')}</th>
                     <th class="r chf-sortable" style="border-left:2px solid #e2e8f0" onclick="openChurnFilterPopup('origAmt','Amount')">Amount${chfHeaderSpans('origAmt')}</th>
                     <th class="r chf-sortable" onclick="openChurnFilterPopup('amt','Churn')">Churn${chfHeaderSpans('amt')}</th>
                     <th class="c chf-sortable" onclick="openChurnFilterPopup('pctVal','Churn %')">Churn%${chfHeaderSpans('pctVal')}</th>
                     <th class="r chf-sortable" onclick="openChurnFilterPopup('remainAmt','Net Amount')">Net Amount${chfHeaderSpans('remainAmt')}</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -2900,13 +2900,22 @@ function rankBadge(i) {
 // A-Z since "descending" doesn't mean anything for a name. That keeps #1
 // always meaning "the top performer by whatever's currently sorted" with
 // no ambiguity about which direction is active.
+// Share% = amt / grandTotal, a constant divisor — sorting by it always
+// produces the exact same row order as sorting by 'amt'. Kept as its own
+// sort key anyway (not just reusing 'amt') purely so the active-sort
+// highlight/arrow lands on the Share% header the user actually clicked,
+// instead of silently lighting up Amount instead. Shared by both
+// REP_SORT_FIELDS and CLIENT_SORT_FIELDS below — identical in both tables.
+const SHARE_SORT_FIELD = { label: 'Share%', get: (key, d) => d.amt, type: 'number' };
+
 const REP_SORT_FIELDS = {
     rep:     { label: 'Codename',    get: (owner, d) => owner,          type: 'string' },
     amt:     { label: 'Amount',      get: (owner, d) => d.amt,          type: 'number' },
     gp:      { label: 'GP',          get: (owner, d) => d.gp,           type: 'number' },
     gpPct:   { label: 'GP%',         get: (owner, d) => d.amt ? d.gp / d.amt : -1, type: 'number' },
     account: { label: 'Account',     get: (owner, d) => d.accountCount, type: 'number' },
-    opp:     { label: 'Opportunity', get: (owner, d) => d.count,        type: 'number' }
+    opp:     { label: 'Opportunity', get: (owner, d) => d.count,        type: 'number' },
+    share:   SHARE_SORT_FIELD,
 };
 let _repSortKey = 'amt';
 let _repOwnerMap = null; // last-rendered data, so a sort click can re-render without recomputing the whole dashboard
@@ -2952,7 +2961,7 @@ function renderRepTable({ ownerMap, grandOrigAmt }) {
             <thead><tr>
                 <th class="c">#</th>
                 ${th('rep')}
-                <th class="r">Share%</th>
+                ${th('share', 'r')}
                 ${th('amt', 'r')}
                 ${th('gp', 'r')}
                 ${th('gpPct', 'r')}
@@ -2969,9 +2978,9 @@ function renderRepTable({ ownerMap, grandOrigAmt }) {
                     const pct = grandOrigAmt > 0 ? (d.amt / grandOrigAmt * 100).toFixed(1) : '0.0';
                     const isOpen = _repExpanded.has(owner);
                     // Per-BU breakdown, only built when actually expanded —
-                    // Share%/Account don't have a clean per-BU meaning here
-                    // (Share% is "of company total", Account isn't tracked
-                    // per-BU-per-rep) so those two cells stay blank.
+                    // Share% still has no per-BU meaning (it's "of company
+                    // total", not "of this BU"), so that cell stays blank;
+                    // Account now does (see ownerBU's own accounts Set above).
                     const buRows = !isOpen ? '' : [...d.byBU.entries()]
                         .sort((a, b) => b[1].amt - a[1].amt)
                         .map(([bu, bd]) => {
@@ -2983,7 +2992,7 @@ function renderRepTable({ ownerMap, grandOrigAmt }) {
                                 <td class="r">${fmtN(bd.amt)} ฿</td>
                                 <td class="r amt-green">${fmtN(bd.gp)} ฿</td>
                                 <td class="r">${buMargin || '—'}</td>
-                                <td></td>
+                                <td class="r">${bd.accountCount}</td>
                                 <td class="r">${bd.count}</td>
                             </tr>`;
                         }).join('');
@@ -3014,15 +3023,14 @@ function renderRepTable({ ownerMap, grandOrigAmt }) {
 // Same sortable/scrollable pattern as Sales Performance — click a
 // header to sort by it (fixed direction per column, no toggle), max ~10
 // rows visible with the rest reachable by scroll instead of a hard
-// slice(0, 10) cutoff. Share% stays non-clickable for the same reason as
-// the Rep table's: it's a direct function of Amount, so sorting by it
-// would just reproduce Amount's own order under a different-looking header.
+// slice(0, 10) cutoff.
 const CLIENT_SORT_FIELDS = {
     name:  { label: 'Partner',     get: (key, d) => d.name, type: 'string' },
     opp:   { label: 'Opportunity', get: (key, d) => d.count, type: 'number' },
     amt:   { label: 'Amount',      get: (key, d) => d.amt,  type: 'number' },
     gp:    { label: 'GP',          get: (key, d) => d.gp,   type: 'number' },
-    gpPct: { label: 'GP%',         get: (key, d) => d.amt ? d.gp / d.amt : -1, type: 'number' }
+    gpPct: { label: 'GP%',         get: (key, d) => d.amt ? d.gp / d.amt : -1, type: 'number' },
+    share: SHARE_SORT_FIELD,
 };
 let _clientSortKey = 'gp';
 let _clientAccountMap = null;
@@ -3054,7 +3062,7 @@ function renderClientTable({ accountMap, grandOrigAmt }) {
                 ${th('gp', 'r')}
                 ${th('gpPct', 'r')}
                 ${th('opp', 'r')}
-                <th class="r">Share%</th>
+                ${th('share', 'r')}
             </tr></thead>
             <tbody>
                 ${rows.map(([, d], i) => {

@@ -100,8 +100,8 @@
     </form>
     
     <div class="footer-links">
-        <a href="signup.html">Sign up</a>
-        <span>•</span>
+        <a href="signup.html" id="signup-link">Sign up</a>
+        <span id="signup-link-sep">•</span>
         <a href="forgot-password.html">Forgot Password?</a>
     </div>
 </div>
@@ -112,6 +112,12 @@
     // สั่งให้ระบบเริ่มทำงาน
     if (typeof initLayout === 'function') {
         initLayout();
+        isSignupOpen().then(open => {
+            if (!open) {
+                document.getElementById('signup-link').style.display = 'none';
+                document.getElementById('signup-link-sep').style.display = 'none';
+            }
+        });
     } else {
         // กรณีหาไฟล์ system.js ไม่เจอ ให้ฝืนเปิดหน้าจอ
         document.body.classList.remove('js-enabled');

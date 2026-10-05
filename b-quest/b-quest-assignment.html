@@ -55,7 +55,10 @@
         /* ── Page header ── */
         .page-header { margin: 0 0 20px; display: flex; align-items: center; gap: 10px; }
         .page-header h1 { font-size: 1.4rem; font-weight: 800; color: var(--c-dark); margin: 0; }
-        .page-header .count-badge { background: var(--c-accent-light); color: var(--c-accent-dark); border-radius: 20px; padding: 2px 12px; font-size: 0.78rem; font-weight: 800; }
+        /* Matches the system-wide .cfg-count-badge look (Setting/Access/
+           Member tabs) instead of a solid accent pill — a quiet gray badge
+           reads as "count", not as another call-to-action next to the title. */
+        .page-header .count-badge { background: var(--c-bg); color: var(--c-slate); border: 1px solid var(--c-border); border-radius: 20px; padding: 2px 12px; font-size: 0.78rem; font-weight: 800; }
 
         .assign-wrapper { max-width: 1300px; margin: 0 auto; padding: 24px 20px 40px; }
 
@@ -245,6 +248,7 @@
     let assignFetching = false;
     let sortBy = 'last_update'; // 'deadline' | 'last_update'
     let saveBar;
+    let assignTotalCount = null; // baseline unassigned-queue count, ignoring the optional filters — see loadAssignTotalCount()
 
     // ── Init ──
     async function loadPage() {
@@ -255,6 +259,7 @@
         guardBquestPage('assign');
         await Promise.all([loadRoles(), loadAssignCandidates(), loadWorkList(), loadStatusList(), loadTypeList(), loadOwnerList(), loadProfileMap()]);
         renderRoleSeg();
+        await loadAssignTotalCount();
         await loadRows(true);
         setupSearch();
         setupInfiniteScroll();
@@ -323,6 +328,22 @@
         roleList = all.filter(r => typeof canBquestEditRole !== 'function' || canBquestEditRole(r.name, 'assign'));
         roleNameMap = Object.fromEntries(all.map(r => [r.id, r.name]));
         roleColorMap = Object.fromEntries(all.map(r => [r.id, r.color || '#64748b']));
+    }
+
+    // Baseline count — same scope as the queue itself (role permission +
+    // the unassigned filter) but none of the optional search/status/type/
+    // work/deadline filters, so the header badge can show "shown / total"
+    // the same way the Member/Access tabs' own count badges do. Needs
+    // roleList already loaded, so it runs after loadRoles() resolves
+    // rather than alongside it in the same Promise.all.
+    async function loadAssignTotalCount() {
+        const { count } = await supabaseClient
+            .from('b_quest_task_role')
+            .select('id', { count: 'exact', head: true })
+            .or('assign.is.null,assign.eq.-')
+            .not('quest_id', 'is', null)
+            .in('role_id', roleList.length ? roleList.map(r => r.id) : ['00000000-0000-0000-0000-000000000000']);
+        assignTotalCount = count ?? 0;
     }
 
     // Candidates to assign TO — only members who can Accept work in that
@@ -422,7 +443,7 @@
 
         const matchIds = await getMatchingQuestIds();
         if (matchIds !== null && matchIds.length === 0) {
-            if (isFirst) { allRows = []; renderRows([]); document.getElementById('badge-count').textContent = 0; }
+            if (isFirst) { allRows = []; renderRows([]); document.getElementById('badge-count').textContent = assignTotalCount ? `0 / ${assignTotalCount}` : '0'; }
             assignHasMore = false; assignFetching = false;
             return;
         }
@@ -467,7 +488,9 @@
         assignPage++;
         assignFetching = false;
 
-        document.getElementById('badge-count').textContent = count ?? allRows.length;
+        const shownCount = count ?? allRows.length;
+        document.getElementById('badge-count').textContent = (assignTotalCount == null || shownCount === assignTotalCount)
+            ? `${assignTotalCount ?? shownCount}` : `${shownCount} / ${assignTotalCount}`;
         renderRows(allRows);
         updateClearAllVisibility();
     }

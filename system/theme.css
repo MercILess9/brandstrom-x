@@ -32,3 +32,27 @@
        the other in plain CSS. */
     --c-accent-rgb: 189, 196, 50;
 }
+
+/* ── SweetAlert2 icon colors — fixed platform-wide, every Swal.fire()
+   call everywhere in the app (notify() and every ad-hoc confirm dialog)
+   gets these automatically since this file loads on every page.
+
+   success uses the brand accent (--c-accent) itself, by request — ties
+   every "it worked" moment back to the same lime used for active/accent
+   states everywhere else, rather than a separate semantic green. The
+   other 4 reuse colors already established elsewhere in the app (red/
+   amber are the existing danger/admin-privilege colors; blue is new here
+   since nothing elsewhere needed an "informational" color). */
+.swal2-icon.swal2-success .swal2-success-ring { border-color: rgba(var(--c-accent-rgb), 0.35); }
+.swal2-icon.swal2-success .swal2-success-line-tip,
+.swal2-icon.swal2-success .swal2-success-line-long { background-color: var(--c-accent-dark); }
+
+.swal2-icon.swal2-error { border-color: #ef4444; }
+.swal2-icon.swal2-error .swal2-x-mark-line-left,
+.swal2-icon.swal2-error .swal2-x-mark-line-right { background-color: #ef4444; }
+
+.swal2-icon.swal2-warning { border-color: #f59e0b; color: #f59e0b; }
+
+.swal2-icon.swal2-info { border-color: #2563eb; color: #2563eb; }
+
+.swal2-icon.swal2-question { border-color: #2563eb; color: #2563eb; }

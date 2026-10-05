@@ -216,7 +216,10 @@
         .mem-matrix th.mem-col-action { padding: 0 6px; }
         .mem-matrix .mem-header-filterable { cursor: pointer; user-select: none; transition: color 0.15s; }
         .mem-matrix .mem-header-filterable:hover { color: var(--c-dark); }
-        .mem-sort-icon { font-size: 0.7rem; margin-left: 2px; opacity: 0.35; }
+        /* Sort direction is still fully functional — just not shown as a
+           separate chevron anymore, same simplification as the other
+           sortable+filterable headers across the app. */
+        .mem-sort-icon { display: none; }
         .mem-filter-icon { font-size: 0.62rem; margin-left: 3px; opacity: 0.35; }
         .mem-filter-icon.active { opacity: 1; color: var(--c-accent-dark); }
         .mem-bulk-col-icon { font-size: 0.6rem; margin-left: 3px; color: #f59e0b; opacity: 0.7; }
@@ -271,7 +274,6 @@
            the unchecked (excluded) rows instead is the signal that matters. */
         .mem-filter-item:has(.modern-checkbox:not(:checked)) { opacity: 0.5; }
         .mem-filter-item.mem-filter-select-all { opacity: 1; }
-        .mem-sort-icon.active { opacity: 1; color: var(--c-accent-dark); }
         /* Single-dot toggle for the dense action grid — a plain switch
            (track + thumb) reads as visual noise once there are 4 per role
            times several roles; one circle that fills solid with the role's
@@ -356,7 +358,7 @@
     <div class="section" id="section-members">
         <div class="section-header mem-header-grid">
             <div class="section-title">
-                <i class="bi bi-people-fill"></i> Member Access
+                <i class="bi bi-people-fill"></i> Member
                 <span class="cfg-count-badge" id="table-count"></span>
                 <span class="dirty-dot"></span>
                 <button class="cfg-btn-info" onclick="openMemberPermInfoPopup(event)" title="What do New / Edit / Delete / Accept / Assign mean?"><i class="bi bi-info-circle"></i></button>

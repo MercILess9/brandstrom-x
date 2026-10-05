@@ -152,9 +152,14 @@ const B_QUEST_MODAL_HTML = `
        a same-hue pale-tint background + darkened-same-hue text — is what
        actually guarantees readable contrast for light hues like yellow/
        lime, where "same hue, just darker" still reads as washed out. */
-    .bq-status-wrap { display: none; margin-left: auto; }
+    /* flex-shrink:0 — without it, a long role name (e.g. "Performance
+       Marketing") squeezes this flex item below its own content's natural
+       width inside .role-card-header, wrapping "On Progress" onto two
+       lines inside the pill. The status pill must always keep its full
+       size; the role title is what should give way and wrap instead. */
+    .bq-status-wrap { display: none; margin-left: auto; flex-shrink: 0; }
     .bq-status-select { display: none; }
-    .bq-status-trigger { border: 2px solid #fff; border-radius: 20px; font-size: 0.68rem; font-weight: 700; padding: 3px 20px 3px 12px; min-width: 90px; text-align: center; height: 26px; cursor: pointer; font-family: inherit; letter-spacing: 0.3px; transition: transform 0.15s, filter 0.15s; box-shadow: 0 1px 4px rgba(0,0,0,0.18); position: relative; }
+    .bq-status-trigger { border: 2px solid #fff; border-radius: 20px; font-size: 0.68rem; font-weight: 700; padding: 3px 20px 3px 12px; min-width: 90px; text-align: center; height: 26px; cursor: pointer; font-family: inherit; letter-spacing: 0.3px; transition: transform 0.15s, filter 0.15s; box-shadow: 0 1px 4px rgba(0,0,0,0.18); position: relative; white-space: nowrap; }
     .bq-status-trigger:hover { transform: scale(1.05); filter: brightness(0.97); }
     .bq-status-trigger::after {
         content: ''; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);

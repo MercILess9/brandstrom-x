@@ -74,6 +74,12 @@
         .btn-main:hover { opacity: 0.9; transform: translateY(-1px); }
         .link { text-align: center; margin-top: 1.5rem; font-size: 14px; color: #666; }
         .link a { color: #000; text-decoration: none; font-weight: 700; }
+
+        .signup-closed-msg { text-align: center; padding: 1rem 0 0.5rem; }
+        .signup-closed-msg h2 { font-size: 1.1rem; font-weight: 800; color: #1e293b; margin-bottom: 10px; }
+        .signup-closed-msg p { font-size: 0.88rem; color: #666; line-height: 1.5; margin-bottom: 1.5rem; }
+        .signup-closed-back { display: inline-block; background: var(--brand-accent); color: #fff; font-weight: 700; font-size: 14px; padding: 12px 28px; border-radius: 12px; text-decoration: none; transition: 0.2s; }
+        .signup-closed-back:hover { opacity: 0.9; }
     </style>
 </head>
 <body>
@@ -81,6 +87,12 @@
 <div class="card">
     <div class="logo-wrap">
         <img id="brandbox-logo" src="" alt="Brandbox">
+    </div>
+
+    <div id="signup-closed-msg" class="signup-closed-msg" style="display:none;">
+        <h2>Signups are closed</h2>
+        <p>New registrations aren't open right now. Please contact your administrator for access.</p>
+        <a href="login.html" class="signup-closed-back">Back to Sign In</a>
     </div>
 
     <form id="regForm">
@@ -149,6 +161,18 @@
     // elsewhere — call the same two halves directly instead.
     applyCachedBranding();
     refreshBranding();
+
+    // Block the form up front when signups are closed, instead of letting
+    // someone fill it out and hit the misleading generic error at submit
+    // (see isSignupOpen()'s comment in system.js for why that error is
+    // misleading).
+    isSignupOpen().then(open => {
+        if (!open) {
+            document.getElementById('regForm').style.display = 'none';
+            document.querySelector('.link').style.display = 'none';
+            document.getElementById('signup-closed-msg').style.display = 'block';
+        }
+    });
 
     // Load departments from DB
     (async () => {

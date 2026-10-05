@@ -74,8 +74,10 @@
         .mem-matrix .mem-zone-divider { border-left: 1px solid var(--c-border); }
         .mem-matrix .mem-header-filterable { cursor: pointer; user-select: none; transition: color 0.15s; }
         .mem-matrix .mem-header-filterable:hover { color: var(--c-dark); }
-        .mem-sort-icon { font-size: 0.7rem; margin-left: 2px; opacity: 0.35; }
-        .mem-sort-icon.active { opacity: 1; color: var(--c-accent-dark); }
+        /* Sort direction is still fully functional — just not shown as a
+           separate chevron anymore, same simplification as the other
+           sortable+filterable headers across the app. */
+        .mem-sort-icon { display: none; }
         .mem-filter-icon { font-size: 0.62rem; margin-left: 3px; opacity: 0.35; }
         .mem-filter-icon.active { opacity: 1; color: var(--c-accent-dark); }
         .mem-matrix tbody tr:last-child td { border-bottom: none; }
@@ -153,7 +155,7 @@
     <div class="section" id="section-members">
         <div class="section-header mem-header-grid">
             <div class="section-title">
-                <i class="bi bi-people-fill"></i> Member Access
+                <i class="bi bi-people-fill"></i> Member
                 <span class="cfg-count-badge" id="table-count"></span>
                 <span class="dirty-dot"></span>
             </div>

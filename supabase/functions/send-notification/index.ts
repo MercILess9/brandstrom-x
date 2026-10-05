@@ -1,9 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { CORS } from '../_shared/cors.ts'
 
 const LOGO_URL = 'https://hdulohaxociujwaziszy.supabase.co/storage/v1/object/public/Brandbox/logo.png'
 

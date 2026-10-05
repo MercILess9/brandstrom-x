@@ -85,6 +85,21 @@ const B_QUEST_MODAL_HTML = `
     .bq-picker-trigger:hover { border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
     .was-validated .bq-picker-wrap:has(.bq-input-modern:invalid) .bq-picker-trigger { border-color: #dc3545 !important; background-color: #fff8f8; }
 
+    /* Re-triggering validation on a field that's already red (e.g. hit
+       Save twice without fixing it) changes nothing visually — nothing
+       draws the eye back to it. Same shake idea as b-opportunity-modal.js's
+       own shakeInvalid(). */
+    @keyframes bq-shake {
+        0%,100% { transform: translateX(0); }
+        15%     { transform: translateX(-6px); }
+        30%     { transform: translateX(6px); }
+        45%     { transform: translateX(-4px); }
+        60%     { transform: translateX(4px); }
+        75%     { transform: translateX(-2px); }
+        90%     { transform: translateX(2px); }
+    }
+    .bq-shake { animation: bq-shake 0.4s ease; }
+
     /* Search button — a soft accent tint so it still reads as "clickable"
        at a glance (unlike a fully gray/quiet icon button), but restrained
        rather than the old solid lime-highlighter block — blooms into the
@@ -1088,6 +1103,20 @@ const BQuestApp = (() => {
     // torn down.
     el('b-quest-modal')?.addEventListener('hidden.bs.modal', () => { if (typeof closeSelectPicker === 'function') closeSelectPicker(); });
 
+    // Re-draws attention to a field already marked invalid from a previous
+    // submit attempt — ref b-opportunity-modal.js's own shakeInvalid().
+    // Picker-wrapped fields (.bq-picker-wrap) style their visible trigger
+    // via a :has(:invalid) CSS rule on the wrap, not on the hidden <select>
+    // itself, so the wrap is what needs to visibly shake, not el.
+    function shakeInvalid(el) {
+        if (!el) return;
+        const target = el.closest('.bq-picker-wrap') || el;
+        target.classList.remove('bq-shake');
+        void target.offsetHeight;
+        target.classList.add('bq-shake');
+        target.addEventListener('animationend', () => target.classList.remove('bq-shake'), { once: true });
+    }
+
     return {
         async openModal(taskId = null, workData = []) {
             const form = el('b-quest-modal-form');
@@ -1200,7 +1229,12 @@ const BQuestApp = (() => {
             submitBtn.disabled = true;
             try {
 
-            if (!form.checkValidity()) { form.classList.add('was-validated'); return; }
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                const first = form.querySelector(':invalid');
+                if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); first.focus(); shakeInvalid(first); }
+                return;
+            }
 
             const currentId = el('b-quest-modal-id').value;
             const enabledRoles = State.visibleRoles.filter(r => el(`check-${r.id}`)?.checked);

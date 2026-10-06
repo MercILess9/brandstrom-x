@@ -40,6 +40,16 @@
         .settings-tab:hover { border-color: var(--c-accent); color: var(--c-dark); }
         .settings-tab.active { background: var(--c-dark); color: var(--c-accent); border-color: var(--c-dark); }
 
+        /* Setting/Cleanup/Member all render as one row of .settings-tab
+           pills (#bqsTabs) even though Setting/Cleanup are in-page JS
+           switches (switchBqsTab()) and Member is a real cross-page <a>
+           to b-quest-members.html — same look either way, so the row
+           doesn't visually betray which tabs navigate and which don't.
+           Cleanup split out of the single stacked page 2026-10-06 — same
+           reasoning as Holiday splitting out of System Setting: Merge
+           Duplicate Names is a full workflow of its own (search/select/
+           merge), not a short config list like its former neighbors. */
+
 
         .section { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; margin-bottom: 20px; overflow: hidden; }
         .section-header { display: flex; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--c-border); }
@@ -175,8 +185,14 @@
         .cfg-picker-label { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 2px 2px 6px; }
         .cfg-picker-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
         .cfg-picker-grid.icons { grid-template-columns: repeat(12, 1fr); max-height: 260px; overflow-y: auto; padding-right: 2px; margin-top: 8px; }
-        .cfg-icon-search { width: 100%; border: 1px solid var(--c-border); border-radius: 8px; padding: 7px 10px; font-size: 0.8rem; outline: none; font-family: inherit; }
-        .cfg-icon-search:focus { border-color: var(--c-accent); }
+        /* Matches system/multi-select.js's .bx-ms-search exactly (tinted
+           bg, 10px radius, icon inset) — the canonical search-input look
+           every dropdown/picker in the app shares; this one had drifted
+           to a plain bare input with no icon. */
+        .cfg-search-wrap { position: relative; margin-bottom: 10px; }
+        .cfg-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.78rem; pointer-events: none; }
+        .cfg-icon-search { width: 100%; box-sizing: border-box; border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 10px 7px 30px; font-size: 0.8rem; outline: none; font-family: inherit; background: #f8fafc; transition: 0.2s; }
+        .cfg-icon-search:focus { border-color: var(--c-accent); background: #fff; }
         .cfg-picker-icon { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--c-border); background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--c-slate); font-size: 0.85rem; }
         .cfg-picker-icon:hover { background: var(--c-bg); }
         .cfg-picker-icon.sel { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
@@ -349,13 +365,22 @@
         .wc-pct-sign { font-size: 0.72rem; color: var(--c-muted); font-weight: 700; }
 
         /* ── Notifications & Email — settings only, see the state comment
-           in the script block below. Two independent tabs since
-           who sees an in-app ping vs who gets emailed are often genuinely
-           different audiences, not just a channel flag on one rule. ── */
+           in the script block below. Notification and Email render as two
+           always-visible columns (not a tab toggle) since who sees an
+           in-app ping vs who gets emailed are often genuinely different
+           audiences, worth comparing side by side rather than flipping
+           back and forth. .np-tabs/.np-tab (below) are kept only for the
+           unrelated #cleanup-tabs switcher further down this page. ── */
         .np-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
         .np-tab { border: 1px solid var(--c-border); background: #fff; color: var(--c-slate); font-size: 0.74rem; font-weight: 700; font-family: inherit; border-radius: 20px; padding: 5px 14px; cursor: pointer; transition: 0.15s; }
         .np-tab:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
         .np-tab.active { background: var(--c-dark); border-color: var(--c-dark); color: var(--c-accent); }
+        .np-channel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+        .np-channel-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+        .np-channel-head { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 800; color: var(--c-dark); padding-bottom: 12px; border-bottom: 2px solid var(--c-border); }
+        .np-channel-head i { font-size: 0.9rem; color: var(--c-accent-dark); }
+        .np-channel-col:first-child { border-right: 1px dashed var(--c-border); padding-right: 24px; }
+        @media (max-width: 760px) { .np-channel-grid { grid-template-columns: 1fr; } .np-channel-col:first-child { border-right: none; padding-right: 0; } }
         .np-rows { display: flex; flex-direction: column; gap: 14px; }
         /* Card per action, not just a divider line — an all-empty section
            (the common first-run state) still needs to look intentional
@@ -376,9 +401,27 @@
         .np-quick-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
         .np-quick-chip { display: flex; align-items: center; gap: 6px; border: 1px solid var(--c-border); border-radius: 20px; padding: 5px 12px; font-size: 0.76rem; font-weight: 700; color: var(--c-slate); cursor: pointer; }
         .np-quick-chip:has(input:checked) { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
-        .np-scroll-list { max-height: 160px; overflow-y: auto; margin-bottom: 10px; }
+        .np-scroll-list { max-height: 220px; overflow-y: auto; margin-bottom: 2px; }
         .np-list-item { display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-size: 0.8rem; font-weight: 600; color: var(--c-dark); cursor: pointer; border-radius: 7px; }
-        .np-list-item:hover { background: var(--c-bg); }
+        .np-list-item:hover { background: var(--c-accent-light); }
+
+        /* "Add recipient" picker — Quick/Department/Codename as tabs
+           instead of one long stacked scroll, same segmented-pill look as
+           every other tab switcher in the app (e.g. System Setting's top
+           tabs), scaled down to fit inside a 460px popup. Prefixed
+           .np-picker-* (not .np-tabs/.np-tab) since those names are
+           already taken by the Merge Duplicate Names section's own tab
+           switcher elsewhere on this page — same class name on two
+           unrelated tab systems was silently fighting over margin-bottom. */
+        .np-picker-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+        .np-picker-tab-btn { flex: 1; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 10px; font-size: 0.74rem; font-weight: 800; color: var(--c-slate); cursor: pointer; transition: 0.15s; font-family: inherit; }
+        .np-picker-tab-btn:hover { border-color: var(--c-accent); color: var(--c-dark); }
+        .np-picker-tab-btn.active { background: var(--c-dark); border-color: var(--c-dark); color: var(--c-accent); }
+        /* Small dot badge on a tab whose section already has a selection —
+           so switching away from Quick after checking "Owner" doesn't
+           hide the fact that something's chosen in there. */
+        .np-picker-tab-btn .np-tab-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--c-accent); margin-left: 5px; vertical-align: middle; }
+        .np-picker-tab-btn.active .np-tab-dot { background: var(--c-accent); }
 
         /* ── Toggle switch (shared) ── */
         .bq-toggle { position: relative; display: inline-block; width: 34px; height: 19px; flex-shrink: 0; }
@@ -400,11 +443,31 @@
            admin select the variants that are really the same thing, and
            bulk-rewrites every task that used any of them to one chosen
            name. ── */
+        /* Search moved into the section-header row (same mem-header-grid
+           3-col recipe as the Member/Access tabs in system/setting.html:
+           title left, search centered, empty spacer right so the search
+           box doesn't skew left) instead of sitting in section-body below
+           the Account/Opportunity Name tabs. */
+        .section-header.mem-header-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,320px) minmax(0,1fr); align-items: center; }
+        .mem-header-grid .section-title { justify-self: start; }
+        .mem-header-grid .cleanup-search-wrap { width: 100%; margin: 0; justify-self: stretch; }
         .cleanup-search-wrap { position: relative; margin-bottom: 10px; }
         .cleanup-search-input { width: 100%; border: 1px solid var(--c-border); border-radius: 10px; padding: 8px 12px 8px 34px; font-size: 0.85rem; outline: none; font-family: inherit; background: var(--c-bg); transition: 0.2s; box-sizing: border-box; }
         .cleanup-search-input:focus { border-color: var(--c-accent); background: #fff; }
         .cleanup-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.82rem; pointer-events: none; }
-        .cleanup-list { max-height: 320px; overflow-y: auto; border: 1px solid var(--c-border); border-radius: 12px; }
+        /* Sortable Name/Tasks column head — click-to-sort only, no filter
+           popup, so (unlike system/setting.html's usr-header-sortable
+           columns) the chevron stays visible at all times as the only
+           sort-direction indicator. */
+        .cleanup-col-head { display: flex; align-items: center; gap: 10px; padding: 6px 12px; font-size: 0.64rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .cleanup-col-head-name { flex: 1; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 3px; transition: color 0.15s; }
+        .cleanup-col-head-count { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 3px; transition: color 0.15s; }
+        .cleanup-col-head-name:hover, .cleanup-col-head-count:hover { color: var(--c-dark); }
+        .cleanup-sort-icon { font-size: 0.7rem; opacity: 0.4; }
+        .cleanup-sort-icon.active { opacity: 1; color: var(--c-accent-dark); }
+        /* No max-height/scroll clip — the list flows the full page length
+           instead of being boxed into a small scrollable pane. */
+        .cleanup-list { border: 1px solid var(--c-border); border-radius: 12px; }
         .cleanup-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; cursor: pointer; transition: background 0.15s; }
         .cleanup-row:last-child { border-bottom: none; }
         .cleanup-row:hover { background: var(--c-bg); }
@@ -412,10 +475,16 @@
         .cleanup-row-name { flex: 1; font-weight: 600; color: var(--c-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .cleanup-row-count { font-size: 0.68rem; font-weight: 700; color: var(--c-muted); background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 1px 9px; flex-shrink: 0; }
         .cleanup-empty { padding: 28px; text-align: center; color: var(--c-muted); font-size: 0.82rem; font-weight: 600; }
-        .cleanup-merge-bar { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 12px; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 12px; }
+        /* Tabs + merge bar share one row — merge bar sits on the right,
+           appearing only once something is selected, so it's always in
+           view without needing to scroll back up past a long (uncapped)
+           list to find the Merge button. */
+        .cleanup-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+        .cleanup-toolbar-row .np-tabs { margin-bottom: 0; }
+        .cleanup-merge-bar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 12px; flex: 0 1 420px; min-width: 260px; }
         .cleanup-merge-count { font-size: 0.78rem; font-weight: 700; color: var(--c-dark); white-space: nowrap; }
         .cleanup-merge-bar i.bi-arrow-right { color: var(--c-muted); }
-        .cleanup-merge-input { flex: 1; border: 1px solid var(--c-border); border-radius: 8px; padding: 7px 10px; font-size: 0.85rem; outline: none; font-family: inherit; background: #fff; min-width: 0; }
+        .cleanup-merge-input { flex: 1; border: 1px solid var(--c-border); border-radius: 8px; padding: 6px 10px; font-size: 0.82rem; outline: none; font-family: inherit; background: #fff; min-width: 0; }
         .cleanup-merge-input:focus { border-color: var(--c-accent); }
         .cleanup-merge-btn { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 8px; padding: 8px 16px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: 0.15s; }
         .cleanup-merge-btn:hover { background: #0f172a; }
@@ -430,10 +499,13 @@
         <h1><i class="bi bi-gear-fill me-2" style="color:var(--c-accent)"></i>B-QUEST Setting</h1>
     </div>
 
-    <div class="settings-tabnav">
-        <a href="b-quest-settings.html" class="settings-tab active"><i class="bi bi-gear-fill"></i> Setting</a>
+    <div class="settings-tabnav" id="bqsTabs">
+        <button type="button" class="settings-tab active" data-bqs-tab="config" onclick="switchBqsTab('config')"><i class="bi bi-gear-fill"></i> Setting</button>
+        <button type="button" class="settings-tab" data-bqs-tab="cleanup" onclick="switchBqsTab('cleanup')"><i class="bi bi-magic"></i> Cleanup</button>
         <a href="b-quest-members.html" class="settings-tab"><i class="bi bi-people-fill"></i> Member</a>
     </div>
+
+    <div id="bqs-tab-config">
 
     <!-- Section 1: Roles / Statuses / Types — 3 separate boxes, side by side -->
     <div class="cfg-carousel-wrap" id="cfgCarouselWrap">
@@ -632,39 +704,57 @@
             </div>
         </div>
         <div class="section-body">
-            <div class="np-tabs" id="notify-tabs">
-                <button type="button" class="np-tab active" data-channel="notify" onclick="toggleNotifyChannel('notify')">Notification</button>
-                <button type="button" class="np-tab" data-channel="email" onclick="toggleNotifyChannel('email')">Email</button>
+            <div class="np-channel-grid">
+                <div class="np-channel-col">
+                    <div class="np-channel-head"><i class="bi bi-bell-fill"></i> Notification</div>
+                    <div class="np-rows" id="notify-rows-notify"></div>
+                </div>
+                <div class="np-channel-col">
+                    <div class="np-channel-head"><i class="bi bi-envelope-fill"></i> Email</div>
+                    <div class="np-rows" id="notify-rows-email"></div>
+                </div>
             </div>
-            <div class="np-rows" id="notify-rows"></div>
         </div>
     </div>
 
+    </div><!-- /#bqs-tab-config -->
+
+    <div id="bqs-tab-cleanup" style="display:none;">
+
     <!-- Section: Merge Duplicate Names -->
     <div class="section" id="section-cleanup">
-        <div class="section-header">
+        <div class="section-header mem-header-grid">
             <div class="section-title">
                 <i class="bi bi-magic"></i> Merge Duplicate Names
-            </div>
-        </div>
-        <div class="section-body">
-            <div class="np-tabs" id="cleanup-tabs">
-                <button type="button" class="np-tab active" data-field="account_name" onclick="switchCleanupTab('account_name')">Account Name</button>
-                <button type="button" class="np-tab" data-field="opportunity_name" onclick="switchCleanupTab('opportunity_name')">Opportunity Name</button>
             </div>
             <div class="cleanup-search-wrap">
                 <i class="bi bi-search cleanup-search-icon"></i>
                 <input type="text" class="cleanup-search-input" id="cleanup-search" placeholder="Search..." oninput="onCleanupSearch(this.value)">
             </div>
-            <div class="cleanup-list" id="cleanup-list"></div>
-            <div class="cleanup-merge-bar" id="cleanup-merge-bar" style="display:none;">
-                <span class="cleanup-merge-count" id="cleanup-merge-count"></span>
-                <i class="bi bi-arrow-right"></i>
-                <input type="text" class="cleanup-merge-input" id="cleanup-merge-input" placeholder="Merge into..." oninput="this.dataset.touched='1'">
-                <button class="cleanup-merge-btn" onclick="mergeCleanup()"><i class="bi bi-check2"></i> Merge</button>
+            <div></div>
+        </div>
+        <div class="section-body">
+            <div class="cleanup-toolbar-row">
+                <div class="np-tabs" id="cleanup-tabs">
+                    <button type="button" class="np-tab active" data-field="account_name" onclick="switchCleanupTab('account_name')">Account Name</button>
+                    <button type="button" class="np-tab" data-field="opportunity_name" onclick="switchCleanupTab('opportunity_name')">Opportunity Name</button>
+                </div>
+                <div class="cleanup-merge-bar" id="cleanup-merge-bar" style="display:none;">
+                    <span class="cleanup-merge-count" id="cleanup-merge-count"></span>
+                    <i class="bi bi-arrow-right"></i>
+                    <input type="text" class="cleanup-merge-input" id="cleanup-merge-input" placeholder="Merge into..." oninput="this.dataset.touched='1'">
+                    <button class="cleanup-merge-btn" onclick="mergeCleanup()"><i class="bi bi-check2"></i> Merge</button>
+                </div>
             </div>
+            <div class="cleanup-col-head">
+                <span class="cleanup-col-head-name" onclick="setCleanupSort('value')">Name<span id="cleanup-sort-value"></span></span>
+                <span class="cleanup-col-head-count" onclick="setCleanupSort('count')">Tasks<span id="cleanup-sort-count"></span></span>
+            </div>
+            <div class="cleanup-list" id="cleanup-list"></div>
         </div>
     </div>
+
+    </div><!-- /#bqs-tab-cleanup -->
 
     <!-- Admin Access removed 2026-09-13 — merged into b-quest-members.html's
          Role Permission matrix as an "Access" column instead (a person's
@@ -761,7 +851,6 @@
     // fetching emails, handling the same person matching multiple rules)
     // is separate future work once this is wired to real trigger events.
     let originalDepartments = []; // [name, ...], loaded once from system_department table
-    let notifyChannel = 'notify'; // 'notify' | 'email' — which tab is showing
     let notifyChanges = {}; // rule -> staged value, same flat-bucket shape as configChanges
     const notifyDeletes = new Set(); // never populated, same story as configDeletes
     let roleIdSeq = -1; // negative temp ids for unsaved new rows
@@ -781,6 +870,11 @@
         await loadWork();
         setupCarouselFade('cfgCarousel', 'cfgCarouselWrap');
         setupCarouselFade('work-cols', 'workCarouselWrap');
+        // Member page's Cleanup tab button links here as a clean URL with
+        // ?tab=cleanup (not .html — Vercel's cleanUrls redirect drops query
+        // strings on a .html-suffixed request) so it can land directly on
+        // this in-page tab instead of always defaulting to Setting.
+        if (new URLSearchParams(location.search).get('tab') === 'cleanup') switchBqsTab('cleanup');
     }
 
     // Generic left/right scroll-fade hint — shared by the Role/Status/Type
@@ -800,6 +894,15 @@
         // since content width settles within a frame or two of insertion).
         update();
         setTimeout(update, 300);
+    }
+
+    // Config/Cleanup in-page tabs — purely a show/hide + active-class
+    // toggle. Dirty/save-bar state stays document-wide regardless of which
+    // tab a .section sits under (see the CSS comment above #bqsTabs).
+    function switchBqsTab(tab) {
+        document.getElementById('bqsTabs').querySelectorAll('[data-bqs-tab]').forEach(b => b.classList.toggle('active', b.dataset.bqsTab === tab));
+        document.getElementById('bqs-tab-config').style.display = tab === 'config' ? '' : 'none';
+        document.getElementById('bqs-tab-cleanup').style.display = tab === 'cleanup' ? '' : 'none';
     }
 
     function guardPermission() {
@@ -1464,7 +1567,7 @@
         panel.classList.remove('medium');
         panel.classList.add('wide');
         panel.innerHTML = `
-            <input type="text" class="cfg-icon-search" id="picker-icon-search" placeholder="Search icons..." oninput="filterIconGrid(this.value)">
+            <div class="cfg-search-wrap"><i class="bi bi-search cfg-search-icon"></i><input type="text" class="cfg-icon-search" id="picker-icon-search" placeholder="Search icons..." oninput="filterIconGrid(this.value)"></div>
             <div class="cfg-picker-grid icons" id="picker-icon-grid"></div>
         `;
         renderIconGrid(ICON_PALETTE, item.icon);
@@ -1867,11 +1970,6 @@
         markDirty('section-notify');
     }
 
-    function toggleNotifyChannel(channel) {
-        notifyChannel = channel;
-        renderNotifySection();
-    }
-
     // ═══════════════════════════════════════════
     // Merge Duplicate Names — Account Name / Opportunity Name are plain
     // free-text fields on b-quest-modal.js (search button there just
@@ -1888,6 +1986,9 @@
     let cleanupTab = 'account_name';
     let cleanupSelected = { account_name: new Set(), opportunity_name: new Set() };
     let cleanupSearchQ = { account_name: '', opportunity_name: '' };
+    // 'count' desc by default (biggest duplicates first, the common
+    // triage order) — clicking Name/Tasks in the column head re-sorts.
+    let cleanupSort = { account_name: { key: 'count', dir: 'desc' }, opportunity_name: { key: 'count', dir: 'desc' } };
 
     async function loadNameCleanup() {
         const { data } = await supabaseClient.from('b_quest_list').select('account_name, opportunity_name');
@@ -1922,10 +2023,40 @@
         renderCleanupList();
     }
 
+    function setCleanupSort(key) {
+        const s = cleanupSort[cleanupTab];
+        if (s.key === key) {
+            s.dir = s.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+            s.key = key;
+            s.dir = key === 'value' ? 'asc' : 'desc'; // name defaults A→Z, count defaults biggest-first
+        }
+        renderCleanupList();
+    }
+
+    function updateCleanupSortIcons() {
+        const sort = cleanupSort[cleanupTab];
+        ['value', 'count'].forEach(key => {
+            const el = document.getElementById(`cleanup-sort-${key}`);
+            if (!el) return;
+            el.innerHTML = sort.key !== key
+                ? '<i class="bi bi-chevron-expand cleanup-sort-icon"></i>'
+                : (sort.dir === 'asc' ? '<i class="bi bi-chevron-up cleanup-sort-icon active"></i>' : '<i class="bi bi-chevron-down cleanup-sort-icon active"></i>');
+        });
+    }
+
     function renderCleanupList() {
         const field = cleanupTab;
         const q = cleanupSearchQ[field].trim().toLowerCase();
-        const rows = cleanupData[field].filter(r => !q || r.value.toLowerCase().includes(q));
+        const sort = cleanupSort[field];
+        const rows = cleanupData[field]
+            .filter(r => !q || r.value.toLowerCase().includes(q))
+            .slice()
+            .sort((a, b) => {
+                const cmp = sort.key === 'value' ? a.value.localeCompare(b.value, 'th') : a.count - b.count;
+                return sort.dir === 'asc' ? cmp : -cmp;
+            });
+        updateCleanupSortIcons();
         const list = document.getElementById('cleanup-list');
         list.innerHTML = rows.length ? rows.map(r => {
             const checked = cleanupSelected[field].has(r.value);
@@ -1994,11 +2125,11 @@
     }
 
     function renderNotifySection() {
-        const tabs = document.getElementById('notify-tabs');
-        if (tabs) tabs.querySelectorAll('.np-tab').forEach(b => b.classList.toggle('active', b.dataset.channel === notifyChannel));
-        const list = document.getElementById('notify-rows');
-        if (!list) return;
-        list.innerHTML = NOTIFY_ACTIONS.map(action => renderNotifyRow(action, notifyChannel)).join('');
+        ['notify', 'email'].forEach(channel => {
+            const list = document.getElementById(`notify-rows-${channel}`);
+            if (!list) return;
+            list.innerHTML = NOTIFY_ACTIONS.map(action => renderNotifyRow(action, channel)).join('');
+        });
     }
 
     function renderNotifyRow(action, channel) {
@@ -2048,30 +2179,55 @@
 
     // "Add recipient" — Owner/Leads/Assignee as quick checkboxes (fixed,
     // no search needed) plus Department and Codename as searchable lists.
+    // Tabbed (not stacked) so the popup stays a fixed, scannable height
+    // regardless of how many departments/people exist — a dot on a tab's
+    // own label shows it has a selection without having to switch to it.
     function openNotifyRecipientPicker(evt, action, channel) {
         pickerTarget = { kind: 'notify-add', action, channel };
         const rule = notifyRule(action, channel);
         const panel = document.getElementById('picker-panel');
         panel.classList.remove('medium');
         panel.classList.add('wide');
+
+        const quickOn = rule.owner || rule.leads || rule.assignee;
+        const deptOn = rule.departments.length > 0;
+        const codenameOn = rule.codenames.length > 0;
+        const dot = on => on ? '<span class="np-tab-dot"></span>' : '';
+
         panel.innerHTML = `
-            <div class="cfg-picker-label">Quick</div>
-            <div class="np-quick-row">
-                <label class="np-quick-chip"><input type="checkbox" class="modern-checkbox" ${rule.owner ? 'checked' : ''} onchange="toggleNotifyFlag('${action}','${channel}','owner',this.checked)"> Owner</label>
-                <label class="np-quick-chip"><input type="checkbox" class="modern-checkbox" ${rule.leads ? 'checked' : ''} onchange="toggleNotifyFlag('${action}','${channel}','leads',this.checked)"> Leads</label>
-                <label class="np-quick-chip"><input type="checkbox" class="modern-checkbox" ${rule.assignee ? 'checked' : ''} onchange="toggleNotifyFlag('${action}','${channel}','assignee',this.checked)"> Assignee</label>
+            <div class="np-picker-tabs">
+                <button class="np-picker-tab-btn active" data-np-tab="quick" onclick="switchNotifyPickerTab(this)">Quick${dot(quickOn)}</button>
+                ${originalDepartments.length ? `<button class="np-picker-tab-btn" data-np-tab="department" onclick="switchNotifyPickerTab(this)">Department${dot(deptOn)}</button>` : ''}
+                <button class="np-picker-tab-btn" data-np-tab="codename" onclick="switchNotifyPickerTab(this)">Codename${dot(codenameOn)}</button>
+            </div>
+            <div class="np-tab-panel" data-tab="quick">
+                <div class="np-quick-row">
+                    <label class="np-quick-chip"><input type="checkbox" class="modern-checkbox" ${rule.owner ? 'checked' : ''} onchange="toggleNotifyFlag('${action}','${channel}','owner',this.checked)"> Owner</label>
+                    <label class="np-quick-chip"><input type="checkbox" class="modern-checkbox" ${rule.leads ? 'checked' : ''} onchange="toggleNotifyFlag('${action}','${channel}','leads',this.checked)"> Leads</label>
+                    <label class="np-quick-chip"><input type="checkbox" class="modern-checkbox" ${rule.assignee ? 'checked' : ''} onchange="toggleNotifyFlag('${action}','${channel}','assignee',this.checked)"> Assignee</label>
+                </div>
             </div>
             ${originalDepartments.length ? `
-            <div class="cfg-picker-label">Department</div>
-            <div class="np-scroll-list">
-                ${originalDepartments.map(d => `<label class="np-list-item"><input type="checkbox" class="modern-checkbox" ${rule.departments.includes(d) ? 'checked' : ''} onchange="toggleNotifyDept('${action}','${channel}','${esc(d)}',this.checked)"> ${esc(d)}</label>`).join('')}
+            <div class="np-tab-panel" data-tab="department" style="display:none">
+                <div class="np-scroll-list">
+                    ${originalDepartments.map(d => `<label class="np-list-item"><input type="checkbox" class="modern-checkbox" ${rule.departments.includes(d) ? 'checked' : ''} onchange="toggleNotifyDept('${action}','${channel}','${esc(d)}',this.checked)"> ${esc(d)}</label>`).join('')}
+                </div>
             </div>` : ''}
-            <div class="cfg-picker-label">Codename</div>
-            <input type="text" class="cfg-icon-search" id="np-codename-search" placeholder="Search..." oninput="renderNotifyCodenameList(this.value)">
-            <div class="np-scroll-list" id="np-codename-list"></div>
+            <div class="np-tab-panel" data-tab="codename" style="display:none">
+                <div class="cfg-search-wrap"><i class="bi bi-search cfg-search-icon"></i><input type="text" class="cfg-icon-search" id="np-codename-search" placeholder="Search..." oninput="renderNotifyCodenameList(this.value)"></div>
+                <div class="np-scroll-list" id="np-codename-list"></div>
+            </div>
         `;
         renderNotifyCodenameList('');
         positionPicker(evt);
+    }
+
+    function switchNotifyPickerTab(btn) {
+        const tab = btn.dataset.npTab;
+        btn.parentElement.querySelectorAll('.np-picker-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+        btn.closest('#picker-panel').querySelectorAll('.np-tab-panel').forEach(p => {
+            p.style.display = p.dataset.tab === tab ? '' : 'none';
+        });
     }
 
     // "Without" — codename only (excluding by whole department/role isn't
@@ -2084,7 +2240,7 @@
         panel.classList.add('medium');
         panel.innerHTML = `
             <div class="cfg-picker-label">Exclude Codename</div>
-            <input type="text" class="cfg-icon-search" id="np-codename-search" placeholder="Search..." oninput="renderNotifyCodenameList(this.value)">
+            <div class="cfg-search-wrap"><i class="bi bi-search cfg-search-icon"></i><input type="text" class="cfg-icon-search" id="np-codename-search" placeholder="Search..." oninput="renderNotifyCodenameList(this.value)"></div>
             <div class="np-scroll-list" id="np-codename-list"></div>
         `;
         renderNotifyCodenameList('');

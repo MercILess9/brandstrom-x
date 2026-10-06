@@ -352,6 +352,10 @@
 
     <div class="settings-tabnav">
         <a href="b-quest-settings.html" class="settings-tab"><i class="bi bi-gear-fill"></i> Setting</a>
+        <!-- Clean URL (no .html) since this carries a query string —
+             cleanUrls' redirect drops query strings on a .html-suffixed
+             request, see CLAUDE.md's Vercel note. -->
+        <a href="b-quest-settings?tab=cleanup" class="settings-tab"><i class="bi bi-magic"></i> Cleanup</a>
         <a href="b-quest-members.html" class="settings-tab active"><i class="bi bi-people-fill"></i> Member</a>
     </div>
 

@@ -927,6 +927,10 @@
          minimal is itself a security benefit. GOD + system_setting only. -->
     <div id="tab-accounts" style="display:none;">
         <div class="section" id="section-accounts">
+            <!-- Purely visual clone of the real header, same recipe as
+                 the Member tab's #usr-sticky-hdr — shown once the real
+                 thead scrolls out of view (setupAccHeaderHintObserver()). -->
+            <div class="usr-sticky-hdr" id="acc-sticky-hdr" style="display:none;"></div>
             <div class="section-header mem-header-grid">
                 <div class="section-title">
                     <i class="bi bi-shield-lock-fill"></i> Access
@@ -941,7 +945,7 @@
             <div class="section-body" style="padding: 20px 24px;">
                 <div class="usr-matrix-wrap" id="acc-list-wrap">
                     <table class="usr-matrix acc-matrix">
-                        <colgroup>
+                        <colgroup id="acc-colgroup">
                             <col style="width:46px">
                             <col style="width:228px">
                             <col style="width:120px">
@@ -952,7 +956,7 @@
                             <col style="width:110px">
                             <col style="width:150px">
                         </colgroup>
-                        <thead>
+                        <thead id="acc-thead">
                             <tr>
                                 <th class="usr-col-trash"></th>
                                 <th class="usr-col-name usr-header-sortable" style="text-align:left" onclick="openColumnFilterPopup('nick_name','Member','access')">Member<span id="acc-sort-nick_name"></span><span id="acc-filter-nick_name"></span></th>
@@ -1255,6 +1259,7 @@
         renderUsrTableHead();
         renderUsers();
         setupUsrHeaderHintObserver();
+        setupAccHeaderHintObserver();
     }
 
     // ── Departments ──
@@ -2841,6 +2846,7 @@
         document.getElementById('tab-access').style.display = tab === 'access' ? '' : 'none';
         document.getElementById('tab-accounts').style.display = tab === 'accounts' ? '' : 'none';
         if (tab !== 'access') { const bar = document.getElementById('usr-sticky-hdr'); if (bar) bar.style.display = 'none'; }
+        if (tab !== 'accounts') { const bar = document.getElementById('acc-sticky-hdr'); if (bar) bar.style.display = 'none'; }
         // Lazy-load — the Edge Function call only needs to happen the
         // first time someone actually opens this tab, not on every page load.
         if (tab === 'accounts' && !accountsLoaded) loadAccounts();
@@ -2953,6 +2959,49 @@
         usrHeaderHintObserver.observe(thead);
         wrap.addEventListener('scroll', syncUsrStickyHdrPosition);
         window.addEventListener('resize', syncUsrStickyHdrPosition);
+    }
+
+    // Access tab's floating header clone — same recipe as the Member
+    // tab's trio above, just against a static (not JS-rendered) thead
+    // since the Access tab's columns are fixed, not permission-driven.
+    function rebuildAccStickyHdrClone() {
+        const bar = document.getElementById('acc-sticky-hdr');
+        const colgroup = document.getElementById('acc-colgroup');
+        const thead = document.getElementById('acc-thead');
+        if (!bar || !colgroup || !thead) return;
+        const stripped = thead.innerHTML.replace(/\sid="[^"]*"/g, '').replace(/\sonclick="[^"]*"/g, '');
+        bar.innerHTML = `<table class="usr-matrix"><colgroup>${colgroup.innerHTML}</colgroup><thead>${stripped}</thead></table>`;
+    }
+
+    function syncAccStickyHdrPosition() {
+        const bar = document.getElementById('acc-sticky-hdr');
+        const wrap = document.getElementById('acc-list-wrap');
+        if (!bar || !wrap || bar.style.display === 'none') return;
+        const rect = wrap.getBoundingClientRect();
+        bar.style.left = rect.left + 'px';
+        bar.style.width = rect.width + 'px';
+        const table = bar.querySelector('table');
+        if (table) table.style.transform = `translateX(${-wrap.scrollLeft}px)`;
+    }
+
+    let accHeaderHintObserver = null;
+    function setupAccHeaderHintObserver() {
+        const thead = document.getElementById('acc-thead');
+        const bar = document.getElementById('acc-sticky-hdr');
+        const wrap = document.getElementById('acc-list-wrap');
+        if (!thead || !bar || !wrap || accHeaderHintObserver) return;
+        rebuildAccStickyHdrClone();
+        const navHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 64;
+        accHeaderHintObserver = new IntersectionObserver((entries) => {
+            const theadVisible = entries[0].isIntersecting;
+            const onAccountsTab = document.getElementById('tab-accounts').style.display !== 'none';
+            const show = !theadVisible && onAccountsTab;
+            bar.style.display = show ? 'block' : 'none';
+            if (show) syncAccStickyHdrPosition();
+        }, { rootMargin: `-${navHeight}px 0px 0px 0px`, threshold: 0 });
+        accHeaderHintObserver.observe(thead);
+        wrap.addEventListener('scroll', syncAccStickyHdrPosition);
+        window.addEventListener('resize', syncAccStickyHdrPosition);
     }
 
     // Show/hide each top-tab button per the viewer's own Setting/Holiday/

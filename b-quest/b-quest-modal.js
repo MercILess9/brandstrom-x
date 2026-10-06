@@ -1269,6 +1269,13 @@ const BQuestApp = (() => {
             }
 
             const payload = Object.fromEntries(new FormData(form).entries());
+            // Trim every text field before it ever reaches the DB — a
+            // leading/trailing space on Account/Opportunity Name is
+            // invisible in the UI but creates a real duplicate value (see
+            // Merge Duplicate Names' ␣ marker in b-quest-settings.html,
+            // added to clean up existing ones; this stops new ones at
+            // the source instead).
+            Object.keys(payload).forEach(k => { if (typeof payload[k] === 'string') payload[k] = payload[k].trim(); });
             ['publish_date', 'detail', 'link'].forEach(f => { if (payload[f] === '') payload[f] = null; });
             // id used to be a UUID (36 chars), hence the old length check —
             // it's now the short "BQ-0001" text id (never > 10 chars), so

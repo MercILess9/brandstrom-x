@@ -451,6 +451,7 @@
         .section-header.mem-header-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,320px) minmax(0,1fr); align-items: center; }
         .mem-header-grid .section-title { justify-self: start; }
         .mem-header-grid .cleanup-search-wrap { width: 100%; margin: 0; justify-self: stretch; }
+        .cleanup-header-right { justify-self: end; }
         .cleanup-search-wrap { position: relative; margin-bottom: 10px; }
         .cleanup-search-input { width: 100%; border: 1px solid var(--c-border); border-radius: 10px; padding: 8px 12px 8px 34px; font-size: 0.85rem; outline: none; font-family: inherit; background: var(--c-bg); transition: 0.2s; box-sizing: border-box; }
         .cleanup-search-input:focus { border-color: var(--c-accent); background: #fff; }
@@ -482,6 +483,9 @@
            list to find the Merge button. */
         .cleanup-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
         .cleanup-toolbar-row .np-tabs { margin-bottom: 0; }
+        .cleanup-action-group { display: flex; align-items: center; gap: 8px; }
+        .cleanup-trim-btn { background: #fff; color: var(--c-dark); border: 1px solid var(--c-border); border-radius: 10px; padding: 7px 14px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: 0.15s; font-family: inherit; }
+        .cleanup-trim-btn:hover { border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent-dark); }
         .cleanup-merge-bar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 12px; flex: 0 1 420px; min-width: 260px; }
         .cleanup-merge-count { font-size: 0.78rem; font-weight: 700; color: var(--c-dark); white-space: nowrap; }
         .cleanup-merge-bar i.bi-arrow-right { color: var(--c-muted); }
@@ -732,7 +736,14 @@
                 <i class="bi bi-search cleanup-search-icon"></i>
                 <input type="text" class="cleanup-search-input" id="cleanup-search" placeholder="Search..." oninput="onCleanupSearch(this.value)">
             </div>
-            <div></div>
+            <div class="cleanup-header-right">
+                <!-- Always-on, no selection needed — scans every name in
+                     the current tab for a hidden leading/trailing space
+                     (see formatCleanupName()'s ␣ marker) and fixes all of
+                     them in one click. Separate from Merge/Rename below,
+                     which needs an explicit selection + typed name. -->
+                <button type="button" class="cleanup-trim-btn" onclick="trimAllWhitespace()"><i class="bi bi-eraser-fill"></i> Trim All</button>
+            </div>
         </div>
         <div class="section-body">
             <div class="cleanup-toolbar-row">
@@ -740,11 +751,17 @@
                     <button type="button" class="np-tab active" data-field="account_name" onclick="switchCleanupTab('account_name')">Account Name</button>
                     <button type="button" class="np-tab" data-field="opportunity_name" onclick="switchCleanupTab('opportunity_name')">Opportunity Name</button>
                 </div>
-                <div class="cleanup-merge-bar" id="cleanup-merge-bar" style="display:none;">
-                    <span class="cleanup-merge-count" id="cleanup-merge-count"></span>
-                    <i class="bi bi-arrow-right"></i>
-                    <input type="text" class="cleanup-merge-input" id="cleanup-merge-input" placeholder="Merge into..." oninput="this.dataset.touched='1'">
-                    <button class="cleanup-merge-btn" onclick="mergeCleanup()"><i class="bi bi-check2"></i> Merge</button>
+                <div class="cleanup-action-group">
+                    <!-- Doubles as Rename when exactly 1 item is selected
+                         (same bar, same flow — just update that one value
+                         to a typed name, e.g. fixing a typo) and as Merge
+                         when 2+ are selected. -->
+                    <div class="cleanup-merge-bar" id="cleanup-merge-bar" style="display:none;">
+                        <span class="cleanup-merge-count" id="cleanup-merge-count"></span>
+                        <i class="bi bi-arrow-right"></i>
+                        <input type="text" class="cleanup-merge-input" id="cleanup-merge-input" placeholder="Merge into..." oninput="this.dataset.touched='1'">
+                        <button class="cleanup-merge-btn" onclick="mergeCleanup()"><i class="bi bi-check2"></i> Merge</button>
+                    </div>
                 </div>
             </div>
             <div class="cleanup-col-head">
@@ -2093,16 +2110,21 @@
         renderCleanupList();
     }
 
+    // Also serves as Rename when exactly 1 item is selected — same bar,
+    // same flow, just a single-value update instead of a multi-value one
+    // (e.g. fixing a typo in one name doesn't need a second duplicate to
+    // exist first).
     function renderCleanupMergeBar() {
         const field = cleanupTab;
         const selected = [...cleanupSelected[field]];
         const bar = document.getElementById('cleanup-merge-bar');
-        if (selected.length < 2) { bar.style.display = 'none'; return; }
+        if (selected.length < 1) { bar.style.display = 'none'; return; }
         bar.style.display = 'flex';
-        document.getElementById('cleanup-merge-count').textContent = `${selected.length} selected`;
+        document.getElementById('cleanup-merge-count').textContent = selected.length === 1 ? 'Rename' : `${selected.length} selected`;
         const input = document.getElementById('cleanup-merge-input');
         // Default to the most-used selected value — usually the "correct"
-        // spelling — but only when the box is still untouched/empty so a
+        // spelling (or, with 1 selected, just that value itself, ready to
+        // edit) — but only when the box is still untouched/empty so a
         // reselect doesn't clobber something the admin already typed.
         if (!input.dataset.touched) {
             const sorted = selected.map(v => cleanupData[field].find(r => r.value === v)).filter(Boolean).sort((a, b) => b.count - a.count);
@@ -2113,18 +2135,21 @@
     async function mergeCleanup() {
         const field = cleanupTab;
         const selected = [...cleanupSelected[field]];
-        if (selected.length < 2) return;
+        if (selected.length < 1) return;
         const target = document.getElementById('cleanup-merge-input').value.trim();
         if (!target) return Swal.fire('Wait!', 'Type the name to merge into.', 'warning');
 
         const totalCount = selected.reduce((s, v) => s + (cleanupData[field].find(r => r.value === v)?.count || 0), 0);
         const fieldLabel = field === 'account_name' ? 'Account Name' : 'Opportunity Name';
+        const html = selected.length === 1
+            ? `This will rename <b>1</b> ${esc(fieldLabel)} value to "<b>${esc(target)}</b>" across <b>${totalCount}</b> task(s). This can't be undone.`
+            : `This will rename <b>${selected.length}</b> different ${esc(fieldLabel)} values into "<b>${esc(target)}</b>" across <b>${totalCount}</b> task(s). This can't be undone.`;
         const result = await Swal.fire({
-            title: 'Merge these names?',
-            html: `This will rename <b>${selected.length}</b> different ${esc(fieldLabel)} values into "<b>${esc(target)}</b>" across <b>${totalCount}</b> task(s). This can't be undone.`,
+            title: selected.length === 1 ? 'Rename this name?' : 'Merge these names?',
+            html,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Merge',
+            confirmButtonText: selected.length === 1 ? 'Rename' : 'Merge',
             confirmButtonColor: '#dc3545'
         });
         if (!result.isConfirmed) return;
@@ -2132,9 +2157,42 @@
         const { error } = await supabaseClient.from('b_quest_list').update({ [field]: target }).in(field, selected);
         if (error) { Swal.fire('Error', error.message, 'error'); return; }
 
-        Swal.fire({ icon: 'success', title: 'Merged!', showConfirmButton: false, timer: 1200 });
+        Swal.fire({ icon: 'success', title: selected.length === 1 ? 'Renamed!' : 'Merged!', showConfirmButton: false, timer: 1200 });
         cleanupSelected[field].clear();
         document.getElementById('cleanup-merge-input').dataset.touched = '';
+        await loadNameCleanup();
+    }
+
+    // Always-clickable, no selection needed — scans every name in the
+    // current tab for a hidden leading/trailing space (see
+    // formatCleanupName()'s ␣ marker) and fixes all of them at once. If
+    // trimming makes a value collide with an existing clean entry, this
+    // IS the merge for that pair — same single update, no extra step.
+    async function trimAllWhitespace() {
+        const field = cleanupTab;
+        const changes = cleanupData[field]
+            .filter(r => r.value !== r.value.trim())
+            .map(r => ({ from: r.value, to: r.value.trim(), count: r.count }));
+        if (!changes.length) return Swal.fire({ icon: 'info', title: 'Nothing to trim', text: 'No names with extra leading/trailing space found.', timer: 1800, showConfirmButton: false });
+
+        const totalCount = changes.reduce((s, c) => s + c.count, 0);
+        const fieldLabel = field === 'account_name' ? 'Account Name' : 'Opportunity Name';
+        const result = await Swal.fire({
+            title: 'Trim whitespace?',
+            html: `This will strip leading/trailing spaces from <b>${changes.length}</b> ${esc(fieldLabel)} value(s) across <b>${totalCount}</b> task(s). Any that match an existing name after trimming will merge into it.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Trim',
+            confirmButtonColor: '#dc3545'
+        });
+        if (!result.isConfirmed) return;
+
+        for (const c of changes) {
+            const { error } = await supabaseClient.from('b_quest_list').update({ [field]: c.to }).eq(field, c.from);
+            if (error) { Swal.fire('Error', error.message, 'error'); return; }
+        }
+
+        Swal.fire({ icon: 'success', title: 'Trimmed!', showConfirmButton: false, timer: 1200 });
         await loadNameCleanup();
     }
 

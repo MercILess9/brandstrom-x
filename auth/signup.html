@@ -228,7 +228,7 @@
         // comment), so relying on that round trip shows the wrong message.
         const domainOk = await isEmailDomainAllowed(email);
         if (!domainOk) {
-            return Swal.fire("Error", "This email domain is not allowed to register. Please contact your administrator.", "error");
+            return Swal.fire("Error", "This email domain is not allowed to register.", "error");
         }
 
         const employee_id = document.getElementById("emp_id").value.trim();

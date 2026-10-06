@@ -3679,6 +3679,7 @@
                         <button class="btn-acc-action" onclick="openSetPwModal('${a.id}','${email}')" title="Set password"><i class="bi bi-key"></i></button>
                         <button class="btn-acc-action" onclick="sendResetLink('${email}')" title="Send reset password link"><i class="bi bi-envelope-paper"></i></button>
                         ${isConfirmed ? '' : `<button class="btn-acc-action" onclick="sendReconfirmLink('${email}')" title="Send re-confirm link"><i class="bi bi-envelope-check"></i></button>`}
+                        <button class="btn-acc-action" onclick="forceLogoutAccount('${a.id}','${email}')" title="Force logout — sign out of every device"><i class="bi bi-box-arrow-right"></i></button>
                     </div>
                 </td>
             </tr>`;
@@ -3764,6 +3765,17 @@
         const { error } = await supabaseClient.auth.resend({ type: 'signup', email });
         if (error) return Swal.fire('Error', error.message, 'error');
         notify('Sent', `Re-confirm link sent to ${email}.`, 'success');
+    }
+
+    async function forceLogoutAccount(userId, email) {
+        const r = await Swal.fire({ title: 'Force Logout?', html: `<b>${esc(email)}</b><br>will be signed out of every device.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Force Logout', confirmButtonColor: '#ef4444' });
+        if (!r.isConfirmed) return;
+        try {
+            await callAdminFn('force_logout', { userId });
+            notify('Done', `${email} has been signed out everywhere.`, 'success');
+        } catch (e) {
+            Swal.fire('Error', e.message, 'error');
+        }
     }
 
     function openSetPwModal(userId, email) {

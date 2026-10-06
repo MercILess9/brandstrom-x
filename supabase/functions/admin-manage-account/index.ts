@@ -4,8 +4,9 @@ import { CORS } from '../_shared/cors.ts'
 
 // Admin-only actions on auth.users that the client-side Supabase SDK has no
 // public-safe way to do itself (set someone else's password, ban/unban a
-// login, or list every account's confirm/ban/last-login status) — all
-// require the service_role key, which must never reach the browser. This
+// login, force-logout every device, or list every account's confirm/ban/
+// last-login status) — all require the service_role key, which must never
+// reach the browser. This
 // function holds it instead; every request re-verifies the caller is
 // actually GOD or holds `system_setting` before touching anything, never
 // trusting the client's own UI gating alone.
@@ -97,6 +98,14 @@ serve(async (req) => {
       if (error) throw error
     } else if (action === 'unban') {
       const { error } = await admin.auth.admin.updateUserById(userId, { ban_duration: 'none' })
+      if (error) throw error
+    } else if (action === 'force_logout') {
+      // Deletes the user's auth.sessions rows (fn_force_logout_user, SQL
+      // function — service_role has no direct table access to the auth
+      // schema), invalidating every refresh token tied to them. Signs
+      // them out of every device at once, without banning or deleting
+      // the account — they can just log back in right after.
+      const { error } = await admin.rpc('fn_force_logout_user', { target_id: userId })
       if (error) throw error
     } else {
       throw new Error('Unknown action')

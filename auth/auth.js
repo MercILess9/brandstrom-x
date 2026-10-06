@@ -65,7 +65,7 @@ async function handleSignup(email, password, metadata) {
         } else if (msg.includes('currently closed')) {
             friendly = 'Signups are currently closed. Please contact your administrator.';
         } else if (msg.includes('not allowed to register')) {
-            friendly = 'Your email domain is not allowed to register. Please contact your administrator.';
+            friendly = 'Your email domain is not allowed to register.';
         } else if (msg.includes('database error') || msg.includes('unexpected_failure') || !msg || msg === '{}') {
             // Deliberately neutral — this bucket catches whatever specific
             // server-side rejection Supabase Auth swallowed before it

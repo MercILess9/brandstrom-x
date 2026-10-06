@@ -60,6 +60,23 @@ $$;
 ALTER FUNCTION "public"."delete_auth_user_on_profile_delete"() OWNER TO "postgres";
 
 
+
+-- Added 2026-10-06 (see 20261006000002_force_logout_function.sql) — not
+-- yet live on BX/CB at the time this baseline was dumped, folded in here
+-- too so a brand-new instance starts correct from day one.
+CREATE OR REPLACE FUNCTION "public"."fn_force_logout_user"("target_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+begin
+  delete from auth.sessions where user_id = target_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."fn_force_logout_user"("uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."fn_cascade_codename_delete"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'

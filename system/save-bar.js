@@ -22,7 +22,7 @@
         const style = document.createElement('style');
         style.textContent = `
             .bx-save-bar { position: fixed; bottom: -120px; left: 50%; transform: translateX(-50%);
-                width: calc(100% - 48px); max-width: 640px; background: #1e293b; border-radius: 16px;
+                width: calc(100% - 48px); max-width: 640px; background: var(--c-dark, #1e293b); border-radius: 16px;
                 padding: 14px 22px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
                 box-shadow: 0 8px 40px rgba(0,0,0,0.25); transition: bottom 0.4s cubic-bezier(0.34,1.56,0.64,1); z-index: 999; }
             .bx-save-bar.visible { bottom: 24px; }

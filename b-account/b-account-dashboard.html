@@ -74,13 +74,13 @@
         /* Every headline number shares one neutral ink color — color lives
            only in the icon chip + % badge now, not painted across the whole
            card, per the "one accent at a time" premium-dashboard note. */
-        .kpi-val { font-size: 1.45rem; font-weight: 800; color: #1e293b; line-height: 1.1; letter-spacing: -0.5px; }
+        .kpi-val { font-size: 1.45rem; font-weight: 800; color: var(--c-dark, #1e293b); line-height: 1.1; letter-spacing: -0.5px; }
         .kpi-sub { font-size: 0.8rem; color: #94a3b8; margin-top: 3px; }
         .kpi-val-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .kpi-status-rows { display: flex; flex-direction: column; gap: 4px; }
         .kpi-status-row { display: flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--c-slate); font-weight: 600; }
         .kpi-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .kpi-status-cnt { margin-left: auto; font-weight: 800; color: #1e293b; }
+        .kpi-status-cnt { margin-left: auto; font-weight: 800; color: var(--c-dark, #1e293b); }
         .kpi-badge { display: inline-flex; align-items: center; flex-shrink: 0; font-size: 0.85rem; font-weight: 800; padding: 3px 11px; border-radius: 20px; background: rgba(22,163,74,0.1); border: 1px solid rgba(22,163,74,0.35); color: #16a34a; text-transform: none; letter-spacing: normal; }
         .kpi-badge.warn { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.35); color: #b45309; }
 
@@ -88,7 +88,7 @@
         .sec-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
         .sec-hd-bar { width: 4px; height: 18px; background: var(--c-accent); border-radius: 2px; flex-shrink: 0; }
         .sec-hd-bar.c-red { background: #ef4444; }
-        .sec-hd-title { font-size: 0.75rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .sec-hd-title { font-size: 0.75rem; font-weight: 800; color: var(--c-dark, #1e293b); text-transform: uppercase; letter-spacing: 0.5px; }
         /* The page's own name/identity, not just a section label — allowed
            to stand out a bit more than the plain section headers below it. */
         .sec-hd-title-main { font-size: 1.05rem; display: inline-flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: normal; }
@@ -108,7 +108,7 @@
         .bu-card-pct-wrap { display: flex; align-items: baseline; gap: 5px; flex-shrink: 0; }
         .bu-card-pct-label { font-size: 0.55rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
         .bu-card-pct { font-size: 0.72rem; font-weight: 800; color: #94a3b8; }
-        .bu-card-amt { font-size: 1.15rem; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
+        .bu-card-amt { font-size: 1.15rem; font-weight: 800; color: var(--c-dark, #1e293b); margin-bottom: 4px; }
         .bu-card-gp-row { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; color: #16a34a; font-weight: 700; margin-bottom: 3px; }
         .bu-card-gp-badge { display: inline-flex; align-items: center; font-size: 0.65rem; font-weight: 800; padding: 1px 8px; border-radius: 20px; background: rgba(22,163,74,0.1); border: 1px solid rgba(22,163,74,0.35); color: #16a34a; }
         .bu-card-deals { font-size: 0.68rem; color: #94a3b8; }
@@ -143,7 +143,7 @@
            right-aligned column like the base .leg-pct — a name-hugging
            width let each row's % land at a different x position depending
            on how long that BU's name was, reading as misaligned. */
-        #buChartLegend .leg-pct { width: 52px; font-size: 0.85rem; font-weight: 800; color: #1e293b; }
+        #buChartLegend .leg-pct { width: 52px; font-size: 0.85rem; font-weight: 800; color: var(--c-dark, #1e293b); }
 
         /* ── Monthly chart ── */
         .monthly-wrap { height: 320px; }
@@ -247,7 +247,7 @@
         .churn-stat-list { flex: 1; display: flex; align-items: stretch; gap: 16px; min-width: 0; }
         .churn-stat-item { flex: 1; min-width: 0; background: #fff; border: 1px solid #eef2f7; border-left: 4px solid #dc2626; border-radius: 16px; padding: 14px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: center; gap: 4px; }
         .churn-stat-label { font-size: 0.65rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; }
-        .churn-stat-val { font-size: 1.1rem; font-weight: 800; color: #1e293b; white-space: nowrap; }
+        .churn-stat-val { font-size: 1.1rem; font-weight: 800; color: var(--c-dark, #1e293b); white-space: nowrap; }
         .churn-stat-badge { display: inline-flex; align-items: center; font-size: 0.62rem; font-weight: 800; padding: 1px 7px; border-radius: 20px; background: #e2e8f0; color: #475569; margin-left: 6px; }
         @media (max-width: 640px) {
             .churn-hero-row { flex-direction: column; align-items: stretch; gap: 14px; }
@@ -287,7 +287,7 @@
         .dash-tbl td:first-child { font-variant-numeric: normal; }
         .dash-tbl tr:last-child td { border-bottom: none; }
         .dash-tbl tbody tr:hover td { background: #f8fafc; }
-        .dash-tbl .strong { font-weight: 700; color: #1e293b; }
+        .dash-tbl .strong { font-weight: 700; color: var(--c-dark, #1e293b); }
         .dash-tbl .amt-red { color: #dc2626; font-weight: 700; }
         .dash-tbl .amt-green { color: #16a34a; font-weight: 700; }
         /* table-layout:fixed (scoped to this one table via .churn-tbl, not
@@ -331,7 +331,7 @@
         .hover-scale { transition: transform 0.15s; }
         .hover-scale:hover { transform: scale(1.06); }
         .chf-sortable { cursor: pointer; user-select: none; transition: color 0.15s; }
-        .chf-sortable:hover { color: #1e293b; }
+        .chf-sortable:hover { color: var(--c-dark, #1e293b); }
         /* Sort direction is still fully functional — just not shown as a
            separate chevron anymore, same simplification as the other
            sortable+filterable headers across the app. */
@@ -343,13 +343,13 @@
         .chf-modal { background: #fff; border-radius: 20px; width: 400px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.18); transform: translateY(12px); transition: transform 0.2s; overflow: hidden; }
         .chf-overlay.show .chf-modal { transform: translateY(0); }
         .chf-modal-header { padding: 20px 24px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-        .chf-modal-title { font-size: 0.95rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+        .chf-modal-title { font-size: 0.95rem; font-weight: 800; color: var(--c-dark, #1e293b); display: flex; align-items: center; gap: 8px; }
         .chf-header-actions { display: flex; align-items: center; gap: 8px; }
         .chf-reset-link { background: none; border: 1px solid transparent; color: #94a3b8; font-size: 0.7rem; font-weight: 700; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 7px; transition: 0.15s; opacity: 0.5; }
-        .chf-reset-link:hover { background: #f1f5f9; color: #1e293b; opacity: 1; }
+        .chf-reset-link:hover { background: #f1f5f9; color: var(--c-dark, #1e293b); opacity: 1; }
         .chf-reset-link.active { opacity: 1; background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
         .chf-modal-close { background: #f1f5f9; border: none; border-radius: 8px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: #94a3b8; transition: 0.2s; }
-        .chf-modal-close:hover { background: #e2e8f0; color: #1e293b; }
+        .chf-modal-close:hover { background: #e2e8f0; color: var(--c-dark, #1e293b); }
         .chf-modal-body { padding: 16px 24px 20px; overflow-y: auto; }
         .chf-search-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
         .chf-search-wrap { position: relative; flex: 1; }
@@ -357,12 +357,12 @@
         .chf-search-input:focus { border-color: var(--c-accent); background: #fff; }
         .chf-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.85rem; pointer-events: none; }
         .chf-search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; font-size: 1rem; cursor: pointer; padding: 3px; display: flex; align-items: center; transition: 0.15s; }
-        .chf-search-clear:hover { color: #1e293b; }
+        .chf-search-clear:hover { color: var(--c-dark, #1e293b); }
         .chf-btn-sort { background: none; border: 1px solid #e2e8f0; color: #64748b; border-radius: 9px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; flex-shrink: 0; transition: 0.15s; }
-        .chf-btn-sort:hover { background: #f1f5f9; border-color: #cbd5e1; color: #1e293b; }
+        .chf-btn-sort:hover { background: #f1f5f9; border-color: #cbd5e1; color: var(--c-dark, #1e293b); }
         .chf-count { font-size: 0.72rem; font-weight: 700; color: #94a3b8; margin-left: 2px; }
         .chf-list { max-height: 260px; overflow-y: auto; border-top: 1px solid #f1f5f9; padding-top: 4px; }
-        .chf-item { display: flex; align-items: center; gap: 12px; padding: 9px 10px; font-size: 0.82rem; font-weight: 600; color: #1e293b; cursor: pointer; border-radius: 12px; transition: background 0.15s, opacity 0.15s; }
+        .chf-item { display: flex; align-items: center; gap: 12px; padding: 9px 10px; font-size: 0.82rem; font-weight: 600; color: var(--c-dark, #1e293b); cursor: pointer; border-radius: 12px; transition: background 0.15s, opacity 0.15s; }
         .chf-item:hover { background: var(--c-accent-light); }
         .chf-item:has(.modern-checkbox:not(:checked)) { opacity: 0.5; }
         .chf-item.chf-select-all { opacity: 1; font-weight: 800; border-bottom: 1px solid #f1f5f9; margin-bottom: 4px; padding-bottom: 12px; }
@@ -1880,7 +1880,7 @@ function renderTrendAmtGP(labels, amts, gps) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: '#1e293b',
+                    backgroundColor: cssVar('--c-dark') || '#1e293b',
                     cornerRadius: 10,
                     padding: 12,
                     boxPadding: 4,
@@ -2003,7 +2003,7 @@ function renderTrendByBU(buMonthMap, axis) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: '#1e293b',
+                    backgroundColor: cssVar('--c-dark') || '#1e293b',
                     cornerRadius: 10,
                     padding: 12,
                     boxPadding: 4,
@@ -2084,7 +2084,7 @@ function renderCompareGroupedChart(keys, labels, years, getVal) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: '#1e293b', cornerRadius: 10, padding: 12, boxPadding: 4,
+                    backgroundColor: cssVar('--c-dark') || '#1e293b', cornerRadius: 10, padding: 12, boxPadding: 4,
                     bodySpacing: 5, bodyAlign: 'right', titleColor: '#fff', titleFont: { size: 13, weight: '700' },
                     bodyColor: '#e2e8f0', bodyFont: { size: 12 },
                     callbacks: { label: c => c.raw === 0 ? null : ` ${c.dataset.label}: ${Math.round(c.raw).toLocaleString('en-US')} ฿` }
@@ -2129,7 +2129,7 @@ function renderCompareBUChart(keys, labels, years, buMonthMap) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: '#1e293b', cornerRadius: 10, padding: 12, boxPadding: 4,
+                    backgroundColor: cssVar('--c-dark') || '#1e293b', cornerRadius: 10, padding: 12, boxPadding: 4,
                     bodySpacing: 5, bodyAlign: 'right', titleColor: '#fff', titleFont: { size: 13, weight: '700' },
                     bodyColor: '#e2e8f0', bodyFont: { size: 12 },
                     callbacks: {

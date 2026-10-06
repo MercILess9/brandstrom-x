@@ -67,7 +67,14 @@ async function handleSignup(email, password, metadata) {
         } else if (msg.includes('not allowed to register')) {
             friendly = 'Your email domain is not allowed to register. Please contact your administrator.';
         } else if (msg.includes('database error') || msg.includes('unexpected_failure') || !msg || msg === '{}') {
-            friendly = 'Registration failed — Employee ID or codename may already be taken. Please contact admin.';
+            // Deliberately neutral — this bucket catches whatever specific
+            // server-side rejection Supabase Auth swallowed before it
+            // reached here (confirmed to have hit this exact path for both
+            // "signups closed" and "domain not allowed" before each got
+            // its own client-side pre-check). Guessing a specific cause
+            // here has been wrong more than once; "contact admin" is the
+            // one honest next step regardless of which check actually failed.
+            friendly = 'Registration failed. Please try again or contact your administrator.';
         } else {
             friendly = err.message;
         }

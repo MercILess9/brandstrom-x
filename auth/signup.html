@@ -222,6 +222,15 @@
             return Swal.fire("Error", "Passwords do not match!", "error");
         }
 
+        // Checked client-side first — the server-side rejection for this
+        // gets swallowed into a generic "Database error" before it reaches
+        // auth.js's error mapping (see isEmailDomainAllowed()'s own
+        // comment), so relying on that round trip shows the wrong message.
+        const domainOk = await isEmailDomainAllowed(email);
+        if (!domainOk) {
+            return Swal.fire("Error", "This email domain is not allowed to register. Please contact your administrator.", "error");
+        }
+
         const employee_id = document.getElementById("emp_id").value.trim();
         const nick_name = document.getElementById("nick").value.trim();
         const metadata = {

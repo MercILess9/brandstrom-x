@@ -44,7 +44,7 @@
                 display: flex; align-items: center; justify-content: center; transition: 0.15s; }
             .bx-drp-year-btn:hover { background: var(--c-accent-light); }
             .bx-drp-year-btn:disabled { opacity: 0.3; cursor: default; background: transparent; }
-            .bx-drp-year-label { font-size: 0.95rem; font-weight: 800; color: #1e293b; cursor: pointer;
+            .bx-drp-year-label { font-size: 0.95rem; font-weight: 800; color: var(--c-dark, #1e293b); cursor: pointer;
                 border-radius: 8px; padding: 2px 10px; transition: 0.15s; }
             .bx-drp-year-label:hover { background: var(--c-bg, #f8fafc); }
             .bx-drp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 14px 16px 16px; }

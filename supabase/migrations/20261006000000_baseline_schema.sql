@@ -1170,6 +1170,14 @@ CREATE POLICY "system_config_write_authenticated" ON "public"."system_setting" T
 
 
 
+-- Added 2026-10-06 (see 20261006000001_system_setting_select_anon.sql) —
+-- not yet live on BX/CB at the time this baseline was dumped, folded in
+-- here too so a brand-new instance starts correct from day one instead of
+-- inheriting the same gap.
+CREATE POLICY "system_setting_select_anon" ON "public"."system_setting" FOR SELECT TO "anon" USING (true);
+
+
+
 ALTER TABLE "public"."system_department" ENABLE ROW LEVEL SECURITY;
 
 

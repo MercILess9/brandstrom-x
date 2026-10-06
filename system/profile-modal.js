@@ -148,7 +148,7 @@ if (!document.getElementById('pfm-styles')) {
         .pfm-header-title { font-weight: 800; font-size: 1.02rem; color: var(--c-dark, #1e293b); }
         .pfm-header-title i { margin-right: 8px; color: var(--c-accent, #bdc432); }
         .pfm-close-btn { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #94a3b8; transition: background 0.15s, color 0.15s; }
-        .pfm-close-btn:hover { background: #e2e8f0; color: #1e293b; }
+        .pfm-close-btn:hover { background: #e2e8f0; color: var(--c-dark, #1e293b); }
 
         .pfm-body { padding: 18px 24px; max-height: 70vh; overflow-y: auto; }
 

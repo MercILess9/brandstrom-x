@@ -66,7 +66,7 @@
                 width: 30px; height: 30px; border-radius: 50%; font-size: 0.9rem; cursor: pointer;
                 display: flex; align-items: center; justify-content: center; transition: 0.15s; }
             .bx-dtp-nav-btn:hover { background: var(--c-accent-light); }
-            .bx-dtp-month-label { font-size: 0.95rem; font-weight: 800; color: #1e293b; cursor: pointer;
+            .bx-dtp-month-label { font-size: 0.95rem; font-weight: 800; color: var(--c-dark, #1e293b); cursor: pointer;
                 border-radius: 8px; padding: 2px 10px; transition: 0.15s; }
             .bx-dtp-month-label:not(.bx-dtp-label-top):hover { background: var(--c-bg, #f8fafc); }
             .bx-dtp-month-label.bx-dtp-label-top { cursor: default; }

@@ -54,6 +54,17 @@ function applyBrandingValues(cfg) {
     }
     if (cfg.theme_accent_light) root.setProperty('--c-accent-light', cfg.theme_accent_light);
     if (cfg.theme_accent_dark) root.setProperty('--c-accent-dark', cfg.theme_accent_dark);
+    // --c-dark is declared per-project (each project's own CSS), not in
+    // theme.css with the accent family — this inline override still wins
+    // over any of those declarations (inline style beats stylesheet rules),
+    // so one Branding setting reaches every project's dark buttons/headers.
+    // --c-text-main rides along too — every project declares it with the
+    // exact same default value as --c-dark (general body text color), so
+    // keeping them in sync here avoids the two silently drifting apart.
+    if (cfg.theme_dark) {
+        root.setProperty('--c-dark', cfg.theme_dark);
+        root.setProperty('--c-text-main', cfg.theme_dark);
+    }
 
     if (cfg.logo_header_url) {
         const headerLogo = document.querySelector('.sys-logo-img');
@@ -108,6 +119,30 @@ async function isSignupOpen() {
         const { data } = await supabaseClient.from('system_setting').select('value').eq('key', 'signup_allow_new').single();
         return data?.value !== 'false'; // fail open — no row / fetch error shouldn't silently lock everyone out
     } catch { return true; }
+}
+
+// Pre-checks the Email Domain lock client-side before signup.html ever
+// calls auth.signUp(). Needed because the actual server-side rejection
+// (fn_handle_new_user()'s RAISE EXCEPTION 'Your email domain is not
+// allowed to register...') gets swallowed by Supabase Auth into a generic
+// "Database error" before it reaches the client — the same masking
+// problem documented for the "Signups are closed" case. Checking here
+// first means the specific, correct message always shows, instead of
+// depending on string-matching server error text that doesn't survive
+// the round trip.
+async function isEmailDomainAllowed(email) {
+    if (!supabaseClient) return true;
+    try {
+        const { data } = await supabaseClient.from('system_setting')
+            .select('key, value').in('key', ['signup_domain_lock_enabled', 'signup_allowed_domains']);
+        const cfg = {};
+        (data || []).forEach(row => { cfg[row.key] = row.value; });
+        if (cfg.signup_domain_lock_enabled !== 'true') return true; // lock off — fail open
+        const allowed = (cfg.signup_allowed_domains || '').split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
+        if (!allowed.length) return true; // lock on but no domains configured yet — fail open, not fail closed
+        const domain = (email.split('@')[1] || '').toLowerCase();
+        return allowed.includes(domain);
+    } catch { return true; } // fetch error shouldn't silently lock everyone out
 }
 
 // Body scroll lock for the many custom fixed-overlay popups across the
@@ -226,7 +261,7 @@ if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') 
         .swal2-popup:has(.swal2-icon.swal2-success)::before { background: linear-gradient(90deg, #a8b02c, #bdc432); }
         .swal2-popup:has(.swal2-icon.swal2-warning)::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
         .swal2-popup:has(.swal2-icon.swal2-error)::before   { background: linear-gradient(90deg, #dc2626, #ef4444); }
-        .swal2-title { font-size: 1.5rem !important; font-weight: 800 !important; color: #1e293b !important; padding: 0 !important; margin: 14px 0 0 !important; }
+        .swal2-title { font-size: 1.5rem !important; font-weight: 800 !important; color: var(--c-dark, #1e293b) !important; padding: 0 !important; margin: 14px 0 0 !important; }
         .swal2-html-container { font-size: 1rem !important; color: #64748b !important; font-weight: 500 !important; margin: 10px 0 0 !important; }
 
         /* Flat filled circle with a soft colored glow underneath, not a
@@ -268,7 +303,7 @@ if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') 
         .swal2-styled.swal2-deny:hover { background: #fecaca; }
 
         .swal2-close { color: #94a3b8 !important; border-radius: 8px !important; transition: 0.2s !important; }
-        .swal2-close:hover { color: #1e293b !important; background: #f1f5f9 !important; }
+        .swal2-close:hover { color: var(--c-dark, #1e293b) !important; background: #f1f5f9 !important; }
         .swal2-timer-progress-bar { background: #bdc432 !important; }
 
         /* Future text-input popups (Swal.fire({ input: 'text', ... })) */
@@ -317,7 +352,7 @@ function bxLoader(label) {
             .bx-loader__arc circle { fill:none; stroke:url(#bx-grad); stroke-width:6; stroke-linecap:round; stroke-dasharray:320; stroke-dashoffset:90; }
             .bx-loader__logo { position:absolute; inset:0; width:80px; height:80px; object-fit:contain; margin:auto; top:0; left:0; right:0; bottom:0; }
             @keyframes bx-rotate { to { transform: rotate(360deg); } }
-            .bx-label { font-size:1.5rem; font-weight:700; color:#1e293b; margin-top:4px; text-align:center; }
+            .bx-label { font-size:1.5rem; font-weight:700; color:var(--c-dark, #1e293b); margin-top:4px; text-align:center; }
         </style>
         <div class="bx-loader" role="status" aria-label="Loading">
             <svg class="bx-loader__arc" viewBox="0 0 100 100">

@@ -43,7 +43,7 @@
             .bx-ap-title { font-size: 1rem; font-weight: 800; color: var(--c-dark); margin: 0; display: flex; align-items: center; gap: 8px; }
             .bx-ap-title i { color: var(--c-accent); }
             .bx-ap-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #94a3b8; transition: 0.2s; flex-shrink: 0; }
-            .bx-ap-close:hover { background: #e2e8f0; color: #1e293b; }
+            .bx-ap-close:hover { background: #e2e8f0; color: var(--c-dark, #1e293b); }
             .bx-ap-search-wrap { position: relative; margin-bottom: 14px; }
             .bx-ap-search { width: 100%; border-radius: 12px; padding: 9px 34px 9px 14px; font-size: 0.85rem; border: 1px solid var(--c-border); outline: none; font-family: inherit; transition: 0.2s; background: var(--c-bg); box-sizing: border-box; }
             .bx-ap-search:focus { border-color: var(--c-accent); background: #fff; box-shadow: none; }

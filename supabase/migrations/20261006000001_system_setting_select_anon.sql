@@ -1,0 +1,13 @@
+-- isSignupOpen() (system.js) reads system_setting from login.html/signup.html,
+-- both visited by not-yet-logged-in (anon role) users — but system_setting's
+-- only SELECT policy was "authenticated" only, so the read always silently
+-- returned zero rows under RLS for anon. isSignupOpen() fails open on no
+-- data (so a bug here can't accidentally lock everyone out), meaning
+-- "Close Signups" never actually took effect no matter what was saved.
+--
+-- Same gap system_department already had fixed via its own
+-- departments_select_anon policy (signup.html's Department dropdown works
+-- today because of that). Nothing in system_setting is sensitive (theme
+-- colors, logo URLs, the signup-open flag), so a plain anon-readable
+-- policy is the right fix, matching departments' own pattern.
+CREATE POLICY "system_setting_select_anon" ON "public"."system_setting" FOR SELECT TO "anon" USING (true);

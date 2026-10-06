@@ -86,7 +86,7 @@
             .cs-cp-label { font-size: 0.6rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin: 2px 2px 6px; }
             .cs-cp-grid { display: grid; grid-template-columns: repeat(9, 1fr); row-gap: 8px; column-gap: 6px; margin-bottom: 12px; }
             .cs-cp-swatch { width: 25px; height: 25px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
-            .cs-cp-swatch.sel { border-color: #1e293b; }
+            .cs-cp-swatch.sel { border-color: var(--c-dark, #1e293b); }
 
             /* Saturation/Value square — the classic 2-gradient CSS trick:
                a white-to-transparent gradient (left→right = saturation)

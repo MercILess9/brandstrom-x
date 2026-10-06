@@ -46,11 +46,11 @@
             .bx-pp-overlay.show .bx-pp-modal { transform: translateY(0); }
             .bx-pp-header { padding: 24px 28px 18px; border-bottom: 1px solid #e2e8f0; display: flex;
                 align-items: center; justify-content: space-between; flex-shrink: 0; }
-            .bx-pp-title { font-size: 1rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+            .bx-pp-title { font-size: 1rem; font-weight: 800; color: var(--c-dark, #1e293b); display: flex; align-items: center; gap: 8px; }
             .bx-pp-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px;
                 cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem;
                 color: #94a3b8; transition: 0.2s; }
-            .bx-pp-close:hover { background: #e2e8f0; color: #1e293b; }
+            .bx-pp-close:hover { background: #e2e8f0; color: var(--c-dark, #1e293b); }
             .bx-pp-search-wrap { padding: 14px 24px; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; position: relative; }
             .bx-pp-search { width: 100%; box-sizing: border-box; border: 1px solid #e2e8f0; border-radius: 12px;
                 padding: 9px 14px 9px 38px; font-size: 0.85rem; outline: none; font-family: inherit;
@@ -70,7 +70,7 @@
             .bx-pp-avatar span { font-size: 0.72rem; }
             .bx-pp-item.checked .bx-pp-avatar { background: var(--c-accent); }
             .bx-pp-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-            .bx-pp-nick { font-size: 0.88rem; font-weight: 700; color: #1e293b; overflow: hidden;
+            .bx-pp-nick { font-size: 0.88rem; font-weight: 700; color: var(--c-dark, #1e293b); overflow: hidden;
                 text-overflow: ellipsis; white-space: nowrap; }
             .bx-pp-line2 { font-size: 0.76rem; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             .bx-pp-dept { flex-shrink: 0; width: 220px; font-size: 0.76rem; font-weight: 600; color: #626e7f;
@@ -91,7 +91,7 @@
             .bx-pp-btn-cancel { background: #f1f5f9; color: #626e7f; }
             .bx-pp-btn-cancel:hover { background: #e2e8f0; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.08); }
             .bx-pp-btn-cancel:active { transform: translateY(0); box-shadow: none; }
-            .bx-pp-btn-confirm { background: #1e293b; color: var(--c-accent); }
+            .bx-pp-btn-confirm { background: var(--c-dark, #1e293b); color: var(--c-accent); }
             .bx-pp-btn-confirm:hover:not(:disabled) { background: #0f172a; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
             .bx-pp-btn-confirm:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
             .bx-pp-btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; }

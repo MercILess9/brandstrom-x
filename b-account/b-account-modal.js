@@ -19,7 +19,7 @@ const B_ACCOUNT_MODAL_HTML = `
     .bac-owner-icon img { width: 100%; height: 100%; object-fit: cover; }
     .bac-owner-icon span { font-size: 0.62rem; }
     .bac-owner-label { font-size: 0.52rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; line-height: 1; margin-bottom: 2px; }
-    .bac-owner-name { font-size: 0.82rem; font-weight: 700; color: #1e293b; line-height: 1; }
+    .bac-owner-name { font-size: 0.82rem; font-weight: 700; color: var(--c-dark, #1e293b); line-height: 1; }
     .bac-header-right { display: flex; align-items: center; gap: 12px; }
     .bac-status-wrap { display: none; align-items: center; }
     .bac-status-wrap.visible { display: flex; }

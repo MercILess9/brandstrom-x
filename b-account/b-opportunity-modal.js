@@ -6,7 +6,7 @@ const B_OPP_MODAL_HTML = `
     .bopp-modal-wrap { max-width: 1200px !important; }
 
     /* ── Header ── */
-    .bopp-header { background: #1e293b; padding: 15px 28px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .bopp-header { background: var(--c-dark, #1e293b); padding: 15px 28px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .bopp-header-left { display: flex; align-items: center; gap: 10px; }
     .bopp-header-bar { width: 4px; height: 22px; background: var(--c-accent); border-radius: 2px; flex-shrink: 0; }
     .bopp-header-icon { color: var(--c-accent); font-size: 1rem; }
@@ -116,7 +116,7 @@ const B_OPP_MODAL_HTML = `
 
     .bopp-qt-co-wrap { position: relative; min-width: 140px; }
     .bopp-qt-co-wrap select.bopp-qt-co { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
-    .bopp-qt-co-trigger { appearance: none; -webkit-appearance: none; position: relative; width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; padding: 0 22px 0 10px; height: 30px; font-size: 0.8rem; font-weight: 700; color: #1e293b; font-family: inherit; cursor: pointer; text-align: center; }
+    .bopp-qt-co-trigger { appearance: none; -webkit-appearance: none; position: relative; width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; padding: 0 22px 0 10px; height: 30px; font-size: 0.8rem; font-weight: 700; color: var(--c-dark, #1e293b); font-family: inherit; cursor: pointer; text-align: center; }
     .bopp-qt-co-trigger:hover { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
     .bopp-qt-co-trigger::after {
         content: ''; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
@@ -198,14 +198,14 @@ const B_OPP_MODAL_HTML = `
     .bopp-qt-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; margin-bottom: 10px; overflow: hidden; border-left: 3px solid var(--c-accent); }
     .bopp-qt-head { background: #f1f5f9; border-bottom: 1px solid #e2e8f0; padding: 9px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-    .bopp-qt-num { border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; padding: 0 10px; height: 30px; font-size: 0.8rem; font-weight: 700; color: #1e293b; width: 148px; font-family: inherit; outline: none; transition: 0.2s; flex-shrink: 0; }
+    .bopp-qt-num { border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; padding: 0 10px; height: 30px; font-size: 0.8rem; font-weight: 700; color: var(--c-dark, #1e293b); width: 148px; font-family: inherit; outline: none; transition: 0.2s; flex-shrink: 0; }
     .bopp-qt-num:hover { border-color: var(--c-accent); }
     .bopp-qt-num:focus { border-color: var(--c-accent); box-shadow: 0 0 0 2px rgba(var(--c-accent-rgb), 0.15); }
-    .bopp-qt-co { border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; padding: 0 10px; height: 30px; font-size: 0.8rem; font-weight: 700; color: #1e293b; outline: none; font-family: inherit; cursor: pointer; min-width: 140px; text-align: center; text-align-last: center; }
+    .bopp-qt-co { border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; padding: 0 10px; height: 30px; font-size: 0.8rem; font-weight: 700; color: var(--c-dark, #1e293b); outline: none; font-family: inherit; cursor: pointer; min-width: 140px; text-align: center; text-align-last: center; }
     .bopp-qt-co:focus { border-color: var(--c-accent); }
     .bopp-qt-totals { margin-left: auto; display: flex; align-items: center; gap: 14px; }
     .bopp-qt-tbox { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
-    .bopp-qt-tval { font-size: 0.88rem; font-weight: 800; color: #1e293b; }
+    .bopp-qt-tval { font-size: 0.88rem; font-weight: 800; color: var(--c-dark, #1e293b); }
     .bopp-qt-tval.gp { color: #16a34a; }
     .bopp-qt-tlbl { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #94a3b8; }
     .bopp-qt-pct-badge { background: #dcfce7; color: #16a34a; border-radius: 100px; padding: 4px 9px; font-size: 0.78rem; font-weight: 800; line-height: 1; white-space: nowrap; }
@@ -242,7 +242,7 @@ const B_OPP_MODAL_HTML = `
     .bopp-item-sel { width: 100%; border: 1px solid transparent; background: transparent; font-family: inherit; font-size: 0.78rem; color: #334155; outline: none; cursor: pointer; text-align: center; text-align-last: center; }
     .bopp-item-sel:focus { background: #fff; border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
     .bopp-item-ta { height: auto; min-height: calc(3 * 1.5em + 10px); max-height: calc(3 * 1.5em + 10px); overflow-y: auto; resize: none; vertical-align: top; padding-top: 5px; }
-    .bopp-item-amt { font-size: 0.78rem; font-weight: 700; color: #1e293b; text-align: right; white-space: nowrap; }
+    .bopp-item-amt { font-size: 0.78rem; font-weight: 700; color: var(--c-dark, #1e293b); text-align: right; white-space: nowrap; }
     .bopp-item-disc { font-size: 0.78rem; color: #ef4444; text-align: right; white-space: nowrap; }
     .bopp-item-gp-val { font-size: 0.78rem; font-weight: 700; text-align: right; white-space: nowrap; }
     .bopp-item-gp-pct { font-size: 0.63rem; font-weight: 700; color: #16a34a; text-align: right; line-height: 1; margin-top: 2px; }
@@ -288,7 +288,7 @@ const B_OPP_MODAL_HTML = `
     .bopp-add-qt-row { position: relative; margin-top: 6px; display: flex; justify-content: center; }
     .bopp-btn-cancel { border: 1px solid #e2e8f0; background: #fff; color: #64748b; border-radius: 10px; font-weight: 700; height: 40px; padding: 0 18px; font-size: 0.85rem; cursor: pointer; font-family: inherit; transition: 0.2s; }
     .bopp-btn-cancel:hover { background: #f8fafc; border-color: #cbd5e1; }
-    .bopp-btn-save { background: #1e293b; color: var(--c-accent); border: none; padding: 0 24px; border-radius: 10px; font-weight: 800; height: 40px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); font-family: inherit; }
+    .bopp-btn-save { background: var(--c-dark, #1e293b); color: var(--c-accent); border: none; padding: 0 24px; border-radius: 10px; font-weight: 800; height: 40px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); font-family: inherit; }
     .bopp-btn-save:hover { background: #0f172a; transform: translateY(-2px) scale(1.04); box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
     .bopp-btn-save:active { transform: translateY(0) scale(0.97); box-shadow: none; transition-duration: 0.1s; }
     .bopp-btn-save:disabled { opacity: 0.6; pointer-events: none; }

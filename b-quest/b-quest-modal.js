@@ -9,7 +9,7 @@ const B_QUEST_MODAL_HTML = `
     /* Was plain Bootstrap .btn-close (no custom hover) — matches the same
        close-button recipe used everywhere else (Add Member, Column Filter). */
     .bq-modal-close { background: #f1f5f9; border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #94a3b8; transition: 0.2s; flex-shrink: 0; }
-    .bq-modal-close:hover { background: #e2e8f0; color: #1e293b; }
+    .bq-modal-close:hover { background: #e2e8f0; color: var(--c-dark, #1e293b); }
 
     /* Task ID pill — shown only when editing an existing task (a new one
        has no id yet), sits beside the Owner block. Ref b-quest-view.html's
@@ -28,7 +28,7 @@ const B_QUEST_MODAL_HTML = `
     .bq-owner-icon img { width: 100%; height: 100%; object-fit: cover; }
     .bq-owner-icon span { font-size: 0.62rem; }
     .bq-owner-label { font-size: 0.52rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; line-height: 1; margin-bottom: 2px; }
-    .bq-owner-name { font-size: 0.82rem; font-weight: 700; color: #1e293b; line-height: 1; }
+    .bq-owner-name { font-size: 0.82rem; font-weight: 700; color: var(--c-dark, #1e293b); line-height: 1; }
 
     /* ── Body ── */
     .bq-modern-body { padding: 20px 28px; }
@@ -122,7 +122,7 @@ const B_QUEST_MODAL_HTML = `
     .role-card-header { padding: 14px 18px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 18px; transition: background 0.15s, box-shadow 0.15s; }
     .role-card:not(.active):not(.disabled) .role-card-header:hover { background: #f1f5f9; box-shadow: inset 0 -2px 0 #e2e8f0; }
     .role-card.active .role-card-header { border-radius: 18px 18px 0 0; }
-    .role-card-title { font-size: 0.85rem; font-weight: 800; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 5px; line-height: 1; }
+    .role-card-title { font-size: 0.85rem; font-weight: 800; color: var(--c-dark, #1e293b); margin: 0; display: flex; align-items: center; gap: 5px; line-height: 1; }
     .role-card-title i.role-icon { color: var(--role-color); }
     /* Toggle */
     .bq-role-toggle-wrap { display: flex; align-items: center; gap: 7px; flex-shrink: 0; line-height: 1; }

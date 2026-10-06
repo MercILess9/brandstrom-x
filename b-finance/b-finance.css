@@ -275,7 +275,7 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 }
 .company-item:hover { background: var(--c-accent-light); color: var(--c-accent-dark); }
 .company-item.active {
-    background: #1e293b; color: var(--c-accent);
+    background: var(--c-dark); color: var(--c-accent);
     font-weight: 700;
 }
 
@@ -481,7 +481,7 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 .qt-num { font-size: 0.88rem; font-weight: 800; color: var(--c-dark); }
 .qt-co-badge {
     font-size: 0.68rem; font-weight: 800; color: var(--c-accent);
-    background: #1e293b; border-radius: 6px; padding: 3px 9px; flex-shrink: 0;
+    background: var(--c-dark); border-radius: 6px; padding: 3px 9px; flex-shrink: 0;
 }
 .qt-nums { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-shrink: 0; }
 .qt-num-item { text-align: right; }
@@ -589,7 +589,7 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 .fin-save-bar {
     position: fixed; bottom: -120px; left: 50%; transform: translateX(-50%);
     width: calc(100% - 48px); max-width: 560px; z-index: 999;
-    background: #1e293b; color: #fff;
+    background: var(--c-dark); color: #fff;
     display: flex; align-items: center; justify-content: space-between; gap: 16px;
     padding: 14px 22px; border-radius: 16px;
     box-shadow: 0 8px 40px rgba(0,0,0,0.25);

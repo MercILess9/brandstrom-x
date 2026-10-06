@@ -86,5 +86,5 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 .modern-checkbox:checked::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid var(--c-accent-dark); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 
 /* ── FAB ── */
-.fab-add { position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px; background: #1e293b; color: var(--c-accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); cursor: pointer; border: none; z-index: 1000; transition: 0.3s; }
+.fab-add { position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px; background: var(--c-dark); color: var(--c-accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); cursor: pointer; border: none; z-index: 1000; transition: 0.3s; }
 .fab-add:hover { transform: scale(1.1) rotate(90deg); background: #0f172a; }

@@ -1165,7 +1165,7 @@
     let deptDragState = null; // key of the row currently being dragged
 
     // ── Branding State ──
-    const BRAND_DEFAULTS = { theme_accent: '#bdc432', theme_accent_light: '#f4f7a1', theme_accent_dark: '#7a8500' };
+    const BRAND_DEFAULTS = { theme_accent: '#bdc432', theme_accent_light: '#f4f7a1', theme_accent_dark: '#7a8500', theme_dark: '#1e293b' };
     let brandingData = {};          // key -> value, as loaded from system_setting
     let brandingChanges = {};       // key -> new value (color hex strings only)
     let brandingLogoFiles = {};     // 'header'|'icon' -> staged File object, uploaded on Save
@@ -1491,6 +1491,13 @@
         { key: 'theme_accent',       label: 'Primary' },
         { key: 'theme_accent_light', label: 'Primary Light' },
         { key: 'theme_accent_dark',  label: 'Primary Dark' },
+        // Independent of Primary — not auto-derived from it. Backs the
+        // "dark button" pattern (Add buttons, active nav tab — dark bg +
+        // accent-colored text/icon) via --c-dark, which every project's own
+        // CSS currently hardcodes to #1e293b. Set manually, same as the
+        // other three, since an auto-contrast formula can't reliably pick
+        // "the right dark" for every possible Primary hue on its own.
+        { key: 'theme_dark',         label: 'Dark Base' },
     ];
 
     function renderBranding() {
@@ -1867,9 +1874,19 @@
     function deriveThemeShades(baseHex) {
         const hsl = hexToHsl(baseHex);
         if (!hsl) return null;
+        // Dark Base — plain contrast inversion against Master, same
+        // luminance formula as system.js's bxContrastTextColor(): a light
+        // Master keeps the original dark base (#1e293b); a dark Master
+        // flips it to a light neutral (--c-bg's own #f8fafc) instead, so
+        // the "dark button" pattern it backs stays legible either way.
+        const m = /^#?([0-9a-f]{6})$/i.exec(baseHex);
+        const n = parseInt(m[1], 16);
+        const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
         return {
             light: hslToHex(hsl.h, Math.min(hsl.s * 1.4, 90), 80),
             dark: hslToHex(hsl.h, Math.min(hsl.s * 1.5, 100), 25),
+            base: luminance > 0.5 ? '#1e293b' : '#f8fafc',
         };
     }
 
@@ -1882,6 +1899,10 @@
                 brandingChanges.theme_accent = base;
                 brandingChanges.theme_accent_light = shades.light;
                 brandingChanges.theme_accent_dark = shades.dark;
+                // Dark Base rides along with Master too — still has its own
+                // swatch to manually override afterward if this guess isn't
+                // quite right for a given hue.
+                brandingChanges.theme_dark = shades.base;
                 markDirtyBranding();
                 renderBranding();
             },
